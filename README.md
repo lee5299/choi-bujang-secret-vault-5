@@ -1,6 +1,49 @@
 # BYTE BACK 방어전 시작 틀 R5
 
-이 저장소는 1단계에서 학생 본인이 GitHub 저장소와 Vercel 배포를 만드는 출발점입니다. 포함된 메모 네 건은 가상 자료입니다. 실제 학생 자료, 토큰, 비밀키를 넣지 마세요.
+이 저장소는 R5 시작 틀에서 이어가는 자료실입니다. 현재 작업은 2단계이며 아래 1단계 안내는 시작 상태의 기록입니다. 메모 네 건은 가상 자료입니다. 실제 학생 자료, 토큰, 비밀키를 넣지 마세요.
+
+## 2단계 현재 구현과 실행
+
+`data.json`과 `public/data.json`은 빈 메모 목록입니다. 빌드는 원본 메모를 복사하지 않고 빈 공개 파일을 생성합니다. 화면은 Vercel 서버 함수 `/api/notes`를 통해 Supabase의 `public.library_notes`를 읽습니다. 화면 코드와 정적 파일에는 메모 본문이나 DB 키를 넣지 않습니다.
+
+1. 로컬 전용 `local-only/migrate-notes.sql`을 Supabase **SQL Editor → New query → Run**에서 한 번 실행합니다. 기존 테이블이 있으면 중단됩니다. 네 행, `owner_id uuid`, 외래키 없음, RLS 활성화, anon/authenticated 읽기 권한 false를 확인합니다. 이 파일은 Git에서 제외되어 있으므로 다른 컴퓨터에는 자동으로 전달되지 않습니다.
+2. Vercel **프로젝트 → Settings → Environment Variables**의 비밀 입력란에 `SUPABASE_URL`과 서버 전용 `SUPABASE_SECRET_KEY`를 직접 설정합니다. 브라우저 공개용 접두사를 붙이지 마세요. 값은 채팅이나 코드에 넣지 않습니다.
+3. 설정을 적용한 새 배포에서 `/`의 네 카드와 `/data.json`의 빈 목록을 확인합니다. 로컬 정적 빌드 확인 명령은 `npm run build -- --local`입니다. 이 명령만으로 서버 API나 DB 연결은 실행되지 않습니다.
+
+정상: 관리자 SQL Editor에서 네 행을 읽고, DB 설정이 완료된 배포의 화면에 네 카드가 표시됩니다. 거부: anon/authenticated의 테이블 읽기, API의 GET 외 메서드(405). 설정 누락은 503, DB 오류는 502로 일반 오류만 응답합니다.
+
+### 공개 문장 확인 절차
+
+로컬 최신 파일은 아래 명령으로 검색합니다. 출력이 없어야 합니다. Git에서 제외한 로컬 SQL과 과거 커밋은 이 검사 범위에 포함되지 않습니다.
+
+```powershell
+git grep -En '실습용 가상 (과제|포트폴리오|리추얼|행정) 기록' -- .
+rg -n '실습용 가상 (과제|포트폴리오|리추얼|행정) 기록' public
+```
+
+커밋·푸시 뒤 GitHub 최신 브랜치에서도 `data.json`, `public/data.json`, `public/index.html`, `api/notes.js`를 확인합니다. 로컬 검사만으로 원격 최신 버전이 바뀌었다고 판단하지 않습니다.
+
+새 배포의 정적 파일은 다음처럼 검색합니다. API 응답에는 의도적으로 가상 메모가 있으므로 정적 파일과 별도로 확인합니다.
+
+```powershell
+$libraryUrl = 'https://choi-bujang-secret-vault-5.vercel.app'
+foreach ($routePath in @('/', '/data.json', '/aleph.json')) {
+  $page = Invoke-WebRequest -Uri ($libraryUrl + $routePath)
+  [pscustomobject]@{ Path = $routePath; Status = [int]$page.StatusCode; ContainsMemo = [bool]($page.Content -match '실습용 가상 (과제|포트폴리오|리추얼|행정) 기록') }
+}
+```
+
+세 경로의 상태는 200, ContainsMemo는 false여야 합니다. 브라우저 시크릿 창에서 `/`의 네 카드와 `/api/notes`의 네 가상 메모도 따로 확인합니다.
+
+### 확인 기록과 남은 약점
+
+- 로컬 확인: `npm run build -- --local` 성공. 현재 Git 추적 파일과 public의 위 문장 검색 결과 0건. API 가상 응답·오류 처리 시험 및 기존 R5 시험 총 3건 통과. 실제 DB 연결이나 심판 판정 결과는 아닙니다.
+- Supabase SQL 실행과 권한 확인: 미실행.
+- 새 배포에서 네 카드·정적 파일 검색·API 연결 확인: 미실행.
+- GitHub 최신 파일 반영·검색: 미실행(아직 커밋·푸시하지 않음).
+- `/api/notes`는 아직 로그인 확인 없이 누구나 호출할 수 있습니다. RLS와 역할 권한 제한은 DB 직접 접근을 막지만, 서버 전용 권한으로 읽는 공개 API의 호출자는 제한하지 않습니다. 실제 개인정보를 넣지 마세요.
+- 옛 공개 Git 커밋과 옛 배포는 삭제되지 않았습니다. 최신 파일에서 메모를 제거해도 과거 노출이 해소됐다고 볼 수 없습니다.
+- 현재 `aleph.config.json`과 `/aleph.json`의 단계 표시는 시작 틀의 1단계 값입니다. 단계 식별 계약 변경은 이번 제작 범위에서 수행하지 않았습니다. `src/attack-check.mjs` 역시 1단계 자기 점검이므로 이번 단계의 보호 성공 근거로 사용하지 않습니다.
 
 ## 학생이 하는 일: 세 걸음
 

@@ -4,11 +4,11 @@
 
 ## 2단계 현재 구현과 실행
 
-`data.json`과 `public/data.json`은 빈 메모 목록입니다. 빌드는 원본 메모를 복사하지 않고 빈 공개 파일을 생성합니다. 화면은 Vercel 서버 함수 `/api/notes`를 통해 Supabase의 `public.library_notes`를 읽습니다. 화면 코드와 정적 파일에는 메모 본문이나 DB 키를 넣지 않습니다.
+원본 `data.json`은 빈 메모 목록이며 배포 대상이 아닙니다. `public/data.json`은 삭제했고 빌드에서도 생성하지 않습니다. 이전 빌드에 이 파일이 남아 있으면 빌드가 제거합니다. 새 배포의 `/data.json`은 404여야 합니다. 화면은 Vercel 서버 함수 `/api/notes`를 통해 Supabase의 `public.library_notes`를 읽습니다. 화면 코드와 정적 파일에는 메모 본문이나 DB 키를 넣지 않습니다.
 
 1. 로컬 전용 `local-only/migrate-notes.sql`을 Supabase **SQL Editor → New query → Run**에서 한 번 실행합니다. 기존 테이블이 있으면 중단됩니다. 네 행, `owner_id uuid`, 외래키 없음, RLS 활성화, anon/authenticated 읽기 권한 false를 확인합니다. 이 파일은 Git에서 제외되어 있으므로 다른 컴퓨터에는 자동으로 전달되지 않습니다.
 2. Vercel **프로젝트 → Settings → Environment Variables**의 비밀 입력란에 `SUPABASE_URL`과 서버 전용 `SUPABASE_SECRET_KEY`를 직접 설정합니다. 브라우저 공개용 접두사를 붙이지 마세요. 값은 채팅이나 코드에 넣지 않습니다.
-3. 설정을 적용한 새 배포에서 `/`의 네 카드와 `/data.json`의 빈 목록을 확인합니다. 로컬 정적 빌드 확인 명령은 `npm run build -- --local`입니다. 이 명령만으로 서버 API나 DB 연결은 실행되지 않습니다.
+3. 설정을 적용한 새 배포에서 `/`의 네 카드와 `/data.json`의 404를 확인합니다. 로컬 정적 빌드 확인 명령은 `npm run build -- --local`입니다. 이 명령만으로 서버 API나 DB 연결은 실행되지 않습니다.
 
 정상: 관리자 SQL Editor에서 네 행을 읽고, DB 설정이 완료된 배포의 화면에 네 카드가 표시됩니다. 거부: anon/authenticated의 테이블 읽기, API의 GET 외 메서드(405). 설정 누락은 503, DB 오류는 502로 일반 오류만 응답합니다.
 
@@ -21,25 +21,25 @@ git grep -En '실습용 가상 (과제|포트폴리오|리추얼|행정) 기록'
 rg -n '실습용 가상 (과제|포트폴리오|리추얼|행정) 기록' public
 ```
 
-커밋·푸시 뒤 GitHub 최신 브랜치에서도 `data.json`, `public/data.json`, `public/index.html`, `api/notes.js`를 확인합니다. 로컬 검사만으로 원격 최신 버전이 바뀌었다고 판단하지 않습니다.
+커밋·푸시 뒤 GitHub 최신 브랜치에서도 `data.json`이 비어 있고 `public/data.json`이 없으며, `public/index.html`과 `api/notes.js`에 메모 문장이 없는지 확인합니다. 로컬 검사만으로 원격 최신 버전이 바뀌었다고 판단하지 않습니다.
 
 새 배포의 정적 파일은 다음처럼 검색합니다. API 응답에는 의도적으로 가상 메모가 있으므로 정적 파일과 별도로 확인합니다.
 
 ```powershell
 $libraryUrl = 'https://choi-bujang-secret-vault-5.vercel.app'
 foreach ($routePath in @('/', '/data.json', '/aleph.json')) {
-  $page = Invoke-WebRequest -Uri ($libraryUrl + $routePath)
+  $page = Invoke-WebRequest -Uri ($libraryUrl + $routePath) -SkipHttpErrorCheck
   [pscustomobject]@{ Path = $routePath; Status = [int]$page.StatusCode; ContainsMemo = [bool]($page.Content -match '실습용 가상 (과제|포트폴리오|리추얼|행정) 기록') }
 }
 ```
 
-세 경로의 상태는 200, ContainsMemo는 false여야 합니다. 브라우저 시크릿 창에서 `/`의 네 카드와 `/api/notes`의 네 가상 메모도 따로 확인합니다.
+위 명령은 PowerShell 7에서 실행합니다. `/`와 `/aleph.json`은 200, `/data.json`은 404, 세 경로의 ContainsMemo는 false여야 합니다. 브라우저 시크릿 창에서 `/`의 네 카드와 `/api/notes`의 네 가상 메모도 따로 확인합니다.
 
 ### 확인 기록과 남은 약점
 
 - 로컬 확인: `npm run build -- --local` 성공. 현재 Git 추적 파일과 public의 위 문장 검색 결과 0건. API 가상 응답·오류 처리 시험 및 기존 R5 시험 총 3건 통과. 실제 DB 연결이나 심판 판정 결과는 아닙니다.
 - Supabase SQL: 학생이 제공한 관리자 SQL Editor 화면에서 네 행 확인. service_role의 스키마 사용·테이블 읽기는 학생이 true로 확인. anon/authenticated 권한과 RLS의 최종 재확인은 미실행.
-- 2026-10-06 배포 확인: 비로그인 `/api/notes` HTTP 200·네 행, 실제 브라우저 화면 네 카드, `/data.json` HTTP 200·빈 목록. `/`·`/data.json`·`/aleph.json`의 메모 문장 검색 0건.
+- 2026-10-06 이전 배포 확인: 비로그인 `/api/notes` HTTP 200·네 행, 실제 브라우저 화면 네 카드, `/data.json` HTTP 200·빈 목록. 이후 공개 data.json을 완전히 제외하도록 수정했으므로 새 배포에서는 `/data.json` HTTP 404를 확인합니다.
 - 2026-10-06 GitHub 확인: 공개 main의 `d620bbf` 커밋과 배포 커밋 일치, 최신 파일의 메모 문장 검색 0건, 로컬 SQL 미포함. 이전 이력은 검색 대상에서 제외. 비밀값 패턴에 잡힌 한 파일은 실제 키가 아닌 `scripts/bundle.mjs`의 검사 정규식이었음.
 - `/api/notes`는 아직 로그인 확인 없이 누구나 호출할 수 있습니다. RLS와 역할 권한 제한은 DB 직접 접근을 막지만, 서버 전용 권한으로 읽는 공개 API의 호출자는 제한하지 않습니다. 실제 개인정보를 넣지 마세요.
 - 옛 공개 Git 커밋과 옛 배포는 삭제되지 않았습니다. 최신 파일에서 메모를 제거해도 과거 노출이 해소됐다고 볼 수 없습니다.

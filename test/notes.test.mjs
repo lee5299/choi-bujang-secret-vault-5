@@ -21,10 +21,12 @@ test('notes API limits methods, handles missing settings and hides upstream erro
     let result = makeResponse();
     await handler({ method: 'POST' }, result);
     assert.equal(result.code, 405);
+    assert.deepEqual(result.body, { message: '지원하지 않는 요청 방식입니다.' });
     result = makeResponse();
     await handler({ method: 'GET' }, result);
     assert.equal(result.code, 503);
-    assert.equal(result.body.reason, 'ENV_MISSING');
+    assert.equal(diagnostics.at(-1)[1].reason, 'ENV_MISSING');
+    assert.deepEqual(result.body, { message: '자료를 불러올 수 없습니다. 잠시 후 다시 시도하세요.' });
 
     process.env.SUPABASE_SECRET_KEY = 'test-placeholder';
     process.env.SUPABASE_URL = 'https://dashboard.example/project/incorrect';
@@ -32,7 +34,8 @@ test('notes API limits methods, handles missing settings and hides upstream erro
     result = makeResponse();
     await handler({ method: 'GET' }, result);
     assert.equal(result.code, 503);
-    assert.equal(result.body.reason, 'PROJECT_URL_INVALID');
+    assert.equal(diagnostics.at(-1)[1].reason, 'PROJECT_URL_INVALID');
+    assert.deepEqual(result.body, { message: '자료를 불러올 수 없습니다. 잠시 후 다시 시도하세요.' });
 
     process.env.SUPABASE_URL = 'https://database.example';
     process.env.SUPABASE_SECRET_KEY = 'test-placeholder';
@@ -56,7 +59,8 @@ test('notes API limits methods, handles missing settings and hides upstream erro
     result = makeResponse();
     await handler({ method: 'GET' }, result);
     assert.equal(result.code, 502);
-    assert.deepEqual(result.body, { error: 'NOTES_UNAVAILABLE', reason: 'DB_CONNECTION_FAILED' });
+    assert.deepEqual(result.body, { message: '자료를 불러올 수 없습니다. 잠시 후 다시 시도하세요.' });
+    assert.equal(diagnostics.at(-1)[1].reason, 'DB_CONNECTION_FAILED');
 
     for (const [status, reason] of [
       [401, 'DB_AUTH_REJECTED'], [403, 'DB_ACCESS_DENIED'],
@@ -67,14 +71,16 @@ test('notes API limits methods, handles missing settings and hides upstream erro
       result = makeResponse();
       await handler({ method: 'GET' }, result);
       assert.equal(result.code, 502);
-      assert.deepEqual(result.body, { error: 'NOTES_UNAVAILABLE', reason, upstreamStatus: status });
+      assert.deepEqual(result.body, { message: '자료를 불러올 수 없습니다. 잠시 후 다시 시도하세요.' });
+      assert.deepEqual(diagnostics.at(-1)[1], { reason, upstreamStatus: status });
     }
 
     globalThis.fetch = async () => new Response('test-placeholder invalid JSON');
     result = makeResponse();
     await handler({ method: 'GET' }, result);
     assert.equal(result.code, 502);
-    assert.equal(result.body.reason, 'DB_RESPONSE_INVALID');
+    assert.equal(diagnostics.at(-1)[1].reason, 'DB_RESPONSE_INVALID');
+    assert.deepEqual(result.body, { message: '자료를 불러올 수 없습니다. 잠시 후 다시 시도하세요.' });
     assert.doesNotMatch(JSON.stringify(diagnostics), /test-placeholder|database\.example|private detail/);
     assert.ok(diagnostics.every(([label, record]) => label === 'notes_api_failure'
       && Object.keys(record).every(key => ['reason', 'upstreamStatus'].includes(key))));

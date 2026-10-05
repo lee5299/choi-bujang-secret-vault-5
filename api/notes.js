@@ -4,14 +4,14 @@ function unavailable(response, status, reason, upstreamStatus) {
   const diagnostic = { reason };
   if (upstreamStatus !== undefined) diagnostic.upstreamStatus = upstreamStatus;
   console.error('notes_api_failure', diagnostic);
-  return response.status(status).json({ error: 'NOTES_UNAVAILABLE', ...diagnostic });
+  return response.status(status).json({ message: '자료를 불러올 수 없습니다. 잠시 후 다시 시도하세요.' });
 }
 
 export default async function handler(request, response) {
   response.setHeader('Cache-Control', 'no-store');
   if (request.method !== 'GET') {
     response.setHeader('Allow', 'GET');
-    return response.status(405).json({ error: 'METHOD_NOT_ALLOWED' });
+    return response.status(405).json({ message: '지원하지 않는 요청 방식입니다.' });
   }
 
   const databaseUrl = process.env.SUPABASE_URL?.trim();

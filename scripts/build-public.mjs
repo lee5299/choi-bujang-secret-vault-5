@@ -6,7 +6,7 @@ const root = resolve(import.meta.dirname, '..');
 const output = resolve(root, 'public', 'data.json');
 const config = JSON.parse(await readFile(resolve(root, 'aleph.config.json'), 'utf8'));
 await mkdir(resolve(root, 'public'), { recursive: true });
-await writeFile(output, `${JSON.stringify({ sampleMarker: config.sampleMarker, notes: [] }, null, 2)}\n`, 'utf8');
+await writeFile(output, `${JSON.stringify({ notes: [] }, null, 2)}\n`, 'utf8');
 console.log('메모 본문이 없는 public/data.json을 생성했습니다.');
 if (!process.argv.includes('--local')) {
   const identity = deploymentIdentity(process.env, config);

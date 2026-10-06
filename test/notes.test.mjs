@@ -19,14 +19,23 @@ test('authenticated virtual memo CRUD and rejection contracts', async t => {
   const now = Math.floor(Date.now() / 1000);
   const userA = '00000000-0000-4000-8000-000000000001';
   const userB = '00000000-0000-4000-8000-000000000002';
+  const sessionA = randomUUID();
+  const sessionB = randomUUID();
   const tokenFor = (claims = {}, signingKey = trusted.privateKey) => new SignJWT({
     iss: config.identityProvider.issuer, aud: config.identityProvider.audience,
-    sub: userA, role: 'authenticated', iat: now, exp: now + 300, ...claims,
+    sub: userA, session_id: sessionA, role: 'authenticated', iat: now, exp: now + 300, ...claims,
   }).setProtectedHeader({ alg: 'ES256', kid: publicJwk.kid }).sign(signingKey);
   const validToken = await tokenFor();
-  const tokenB = await tokenFor({ sub: userB });
-  const bearerA = `Bearer ${validToken}`;
+  const tokenB = await tokenFor({ sub: userB, session_id: sessionB });
+  let bearerA = `Bearer ${validToken}`;
   const bearerB = `Bearer ${tokenB}`;
+  const authUsers = new Map([
+    [validToken, { id: userA, session: sessionA }],
+    [tokenB, { id: userB, session: sessionB }],
+  ]);
+  const revokedSessions = new Set();
+  let authCalls = 0;
+  let authReply;
   let databaseCalls = 0;
   let lastDbRequest;
   let databaseReply;
@@ -47,8 +56,21 @@ test('authenticated virtual memo CRUD and rejection contracts', async t => {
     console.error = (...args) => diagnostics.push(args);
     globalThis.fetch = async (input, options) => {
       const url = new URL(typeof input === 'string' || input instanceof URL ? input : input.url);
-      if (url.href === config.identityProvider.jwksUrl) {
+      if (url.href === config.identityProvider.jwksUrl || url.href === `${config.judgeIssuer}/.well-known/jwks.json`) {
         return new Response(JSON.stringify({ keys: [publicJwk] }), { headers: { 'Content-Type': 'application/json' } });
+      }
+      if (url.href === `${config.identityProvider.issuer}/user`) {
+        assert.equal(options.cache, 'no-store');
+        assert.equal(options.redirect, 'error');
+        assert.ok(options.signal);
+        assert.equal(options.headers.apikey, 'test-placeholder');
+        authCalls++;
+        if (authReply) return authReply();
+        const user = authUsers.get(options.headers.Authorization?.slice('Bearer '.length));
+        if (!user || revokedSessions.has(user.session)) {
+          return Response.json({ code: 'session_not_found', message: 'Synthetic ended session' }, { status: 403 });
+        }
+        return Response.json({ id: user.id });
       }
       assert.equal(url.pathname, '/rest/v1/library_notes');
       assert.equal(url.searchParams.get('select'), 'id,title,content');
@@ -94,6 +116,7 @@ test('authenticated virtual memo CRUD and rejection contracts', async t => {
         }
       }
       assert.equal(databaseCalls, 0);
+      assert.equal(authCalls, 0);
     });
     await t.test('missing settings produce generic 503', async () => {
       assert.equal((await request(bearerA)).code, 503);
@@ -115,6 +138,7 @@ test('authenticated virtual memo CRUD and rejection contracts', async t => {
           assert.equal((await request(`Bearer ${token}`, method, { id, body: { title: 'Virtual', body: 'Fixture' }, query: { userId: userA, role: 'authenticated' } })).code, 401);
         }
         assert.equal(databaseCalls, 0);
+        assert.equal(authCalls, 0);
       });
     }
     await t.test('invalid input and unsupported methods never reach DB', async () => {
@@ -178,6 +202,60 @@ test('authenticated virtual memo CRUD and rejection contracts', async t => {
       assert.ok(!(await request(bearerB)).body.some(note => note.id === id));
       assert.equal((await request(bearerB, 'DELETE', { id })).code, 200);
       assert.equal((await request(bearerA, 'GET', { id })).code, 404);
+    });
+    await t.test('ended session rejects every memo operation with old unexpired tokens; re-login works', async () => {
+      const id = (await request(bearerA, 'POST', { body: { title: 'Logout fixture', body: 'Preserve this virtual row' } })).body.id;
+      const anotherTokenInSameSession = await tokenFor({ iat: now - 1 });
+      authUsers.set(anotherTokenInSameSession, { id: userA, session: sessionA });
+      // JWT는 여전히 유효하게 서명되어 있지만 Auth 세션은 종료된 상태입니다.
+      revokedSessions.add(sessionA);
+      const callsBefore = databaseCalls;
+      const authBefore = authCalls;
+      for (const token of [validToken, anotherTokenInSameSession]) {
+        for (const [method, note] of [['GET'], ['POST'], ['GET', id], ['PUT', id], ['DELETE', id]]) {
+          const result = await request(`Bearer ${token}`, method, { id: note, body: { title: 'Denied fixture', body: '' } });
+          assert.equal(result.code, 401);
+          assert.deepEqual(Object.keys(result.body), ['message']);
+        }
+      }
+      assert.equal(databaseCalls, callsBefore);
+      assert.equal(authCalls, authBefore + 10); // 요청마다 세션을 확인합니다.
+      assert.equal(rows.get(id).title, 'Logout fixture');
+      assert.equal((await request(bearerB)).code, 200); // 다른 세션은 유지합니다.
+      const freshSession = randomUUID();
+      const freshToken = await tokenFor({ session_id: freshSession });
+      authUsers.set(freshToken, { id: userA, session: freshSession });
+      bearerA = `Bearer ${freshToken}`;
+      assert.equal((await request(bearerA, 'GET', { id })).code, 200);
+      assert.equal((await request(bearerA, 'PUT', { id, body: { title: 'Fresh login', body: '' } })).code, 200);
+      assert.equal((await request(bearerA, 'DELETE', { id })).code, 200);
+    });
+    await t.test('Auth identity mismatch and service errors fail closed without DB access', async () => {
+      const before = databaseCalls;
+      authReply = async () => Response.json({ id: userB });
+      assert.equal((await request(bearerA)).code, 401);
+      authReply = async () => Response.json({ message: 'Synthetic auth failure' }, { status: 500 });
+      assert.equal((await request(bearerA, 'DELETE', { id: randomUUID() })).code, 503);
+      assert.equal(diagnostics.at(-1)[1].reason, 'AUTH_SERVICE_UNAVAILABLE');
+      authReply = async () => { throw new Error('Synthetic connection failure'); };
+      assert.equal((await request(bearerA)).code, 503);
+      assert.equal(databaseCalls, before);
+      authReply = undefined;
+    });
+    await t.test('verified judge tokens retain the separate issuer flow without Supabase user lookup', async () => {
+      const judgeToken = await new SignJWT({
+        iss: config.judgeIssuer, aud: new URL(config.publicAppUrl).hostname,
+        sub: userA, iat: now, exp: now + 300,
+        aleph_run: randomUUID(), aleph_role: 'judge', aleph_identity: 'a',
+      }).setProtectedHeader({ alg: 'ES256', kid: publicJwk.kid }).sign(trusted.privateKey);
+      const before = authCalls;
+      const authorization = `Bearer ${judgeToken}`;
+      const created = await request(authorization, 'POST', { body: { title: 'Judge fixture', body: '' } });
+      assert.equal(created.code, 201);
+      assert.equal(rows.get(created.body.id).owner_id, userA);
+      assert.equal((await request(authorization, 'GET', { id: created.body.id })).code, 200);
+      assert.equal((await request(authorization, 'DELETE', { id: created.body.id })).code, 200);
+      assert.equal(authCalls, before);
     });
     await t.test('mismatched DB URL does not contact DB', async () => {
       const before = databaseCalls;

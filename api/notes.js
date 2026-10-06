@@ -1,6 +1,7 @@
 import config from '../aleph.config.json' with { type: 'json' };
 import { createLoginVerifier } from '../src/verify-login.mjs';
 import { randomUUID } from 'node:crypto';
+import { createClient } from '@supabase/supabase-js';
 
 let loginVerifier;
 let verifierSecretKey;
@@ -47,6 +48,29 @@ export async function handleNotes(request, response, noteId = null) {
   }
   const identity = await loginVerifier(authorization);
   if (!identity?.userId) return unauthorized(response);
+
+  // 서명과 만료 검사를 통과해도 Supabase에서 종료된 세션일 수 있습니다.
+  // 심판 토큰은 Supabase 세션이 아니므로 기존 도우미의 별도 검증을 유지합니다.
+  if (identity.kind === 'student') {
+    try {
+      const authClient = createClient(new URL(config.identityProvider.issuer).origin, secretKey, {
+        auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
+        global: {
+          fetch: (input, options) => fetch(input, {
+            ...options, redirect: 'error', cache: 'no-store', signal: AbortSignal.timeout(5000),
+          }),
+        },
+      });
+      // 명시적으로 전달한 이 요청의 토큰만 사용하며 사용자/세션 응답을 캐시하지 않습니다.
+      const { data, error } = await authClient.auth.getUser(authorization.slice('Bearer '.length));
+      if (error?.name === 'AuthRetryableFetchError' || error?.status >= 500) {
+        return unavailable(response, 503, 'AUTH_SERVICE_UNAVAILABLE');
+      }
+      if (error || data?.user?.id !== identity.userId) return unauthorized(response);
+    } catch {
+      return unavailable(response, 503, 'AUTH_SERVICE_UNAVAILABLE');
+    }
+  }
   // 사용자 ID와 역할은 요청 본문/쿼리가 아니라 위 도우미의 검증 결과만 사용합니다.
   const detail = noteId !== null;
   if (detail && (typeof noteId !== 'string' || !uuid.test(noteId))) {

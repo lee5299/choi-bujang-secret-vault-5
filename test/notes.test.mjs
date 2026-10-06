@@ -1,89 +1,215 @@
 import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
 import { test } from 'node:test';
+import { exportJWK, generateKeyPair, SignJWT } from 'jose';
+import config from '../aleph.config.json' with { type: 'json' };
 import handler from '../api/notes.js';
+import detailHandler from '../api/notes/[id].js';
 
-test('notes API limits methods, handles missing settings and hides upstream errors', async () => {
+// 실제 학생 계정·DB·심판 대신 메모리 DB와 일회성 가상 서명만 사용합니다.
+test('authenticated virtual memo CRUD and rejection contracts', async t => {
   const savedUrl = process.env.SUPABASE_URL;
   const savedKey = process.env.SUPABASE_SECRET_KEY;
   const originalFetch = globalThis.fetch;
   const originalConsoleError = console.error;
   const diagnostics = [];
-  const makeResponse = () => ({
-    headers: {},
-    setHeader(name, value) { this.headers[name] = value; },
-    status(code) { this.code = code; return this; },
-    json(body) { this.body = body; return this; },
-  });
+  const trusted = await generateKeyPair('ES256');
+  const attacker = await generateKeyPair('ES256');
+  const publicJwk = { ...await exportJWK(trusted.publicKey), kid: randomUUID(), alg: 'ES256', use: 'sig' };
+  const now = Math.floor(Date.now() / 1000);
+  const userA = '00000000-0000-4000-8000-000000000001';
+  const userB = '00000000-0000-4000-8000-000000000002';
+  const tokenFor = (claims = {}, signingKey = trusted.privateKey) => new SignJWT({
+    iss: config.identityProvider.issuer, aud: config.identityProvider.audience,
+    sub: userA, role: 'authenticated', iat: now, exp: now + 300, ...claims,
+  }).setProtectedHeader({ alg: 'ES256', kid: publicJwk.kid }).sign(signingKey);
+  const validToken = await tokenFor();
+  const tokenB = await tokenFor({ sub: userB });
+  const bearerA = `Bearer ${validToken}`;
+  const bearerB = `Bearer ${tokenB}`;
+  let databaseCalls = 0;
+  let lastDbRequest;
+  let databaseReply;
+  const rows = new Map();
+  const request = async (authorization, method = 'GET', { id, body, headers = {}, query = {} } = {}) => {
+    const result = {
+      headers: {}, setHeader(name, value) { this.headers[name] = value; },
+      status(code) { this.code = code; return this; },
+      json(value) { this.body = value; return this; },
+    };
+    const req = { method, body, query: { ...query, ...(id !== undefined ? { id } : {}) },
+      headers: { ...(authorization !== undefined ? { authorization } : {}),
+        ...(body !== undefined ? { 'content-type': 'application/json' } : {}), ...headers } };
+    await (id === undefined ? handler : detailHandler)(req, result);
+    return result;
+  };
   try {
     console.error = (...args) => diagnostics.push(args);
-    delete process.env.SUPABASE_URL;
-    delete process.env.SUPABASE_SECRET_KEY;
-    let result = makeResponse();
-    await handler({ method: 'POST' }, result);
-    assert.equal(result.code, 405);
-    assert.deepEqual(result.body, { message: '지원하지 않는 요청 방식입니다.' });
-    result = makeResponse();
-    await handler({ method: 'GET' }, result);
-    assert.equal(result.code, 503);
-    assert.equal(diagnostics.at(-1)[1].reason, 'ENV_MISSING');
-    assert.deepEqual(result.body, { message: '자료를 불러올 수 없습니다. 잠시 후 다시 시도하세요.' });
-
-    process.env.SUPABASE_SECRET_KEY = 'test-placeholder';
-    process.env.SUPABASE_URL = 'https://dashboard.example/project/incorrect';
-    globalThis.fetch = async () => { throw new Error('must not send invalid URL'); };
-    result = makeResponse();
-    await handler({ method: 'GET' }, result);
-    assert.equal(result.code, 503);
-    assert.equal(diagnostics.at(-1)[1].reason, 'PROJECT_URL_INVALID');
-    assert.deepEqual(result.body, { message: '자료를 불러올 수 없습니다. 잠시 후 다시 시도하세요.' });
-
-    process.env.SUPABASE_URL = 'https://database.example';
-    process.env.SUPABASE_SECRET_KEY = 'test-placeholder';
-    globalThis.fetch = async (url, options) => {
+    globalThis.fetch = async (input, options) => {
+      const url = new URL(typeof input === 'string' || input instanceof URL ? input : input.url);
+      if (url.href === config.identityProvider.jwksUrl) {
+        return new Response(JSON.stringify({ keys: [publicJwk] }), { headers: { 'Content-Type': 'application/json' } });
+      }
       assert.equal(url.pathname, '/rest/v1/library_notes');
-      assert.equal(url.searchParams.get('select'), 'title,content');
+      assert.equal(url.searchParams.get('select'), 'id,title,content');
       assert.equal(options.headers.apikey, 'test-placeholder');
       assert.equal(options.redirect, 'error');
-      return new Response(JSON.stringify(Array.from({ length: 4 }, (_, index) => ({
-        title: `Example ${index}`, content: 'Fictional fixture', owner_id: 'omit',
-      }))));
+      lastDbRequest = { url, options };
+      databaseCalls++;
+      if (databaseReply) return databaseReply();
+      const id = url.searchParams.get('id')?.replace(/^eq\./u, '');
+      const owner = url.searchParams.get('owner_id')?.replace(/^eq\./u, '');
+      let matches = [...rows.values()].filter(row => (!id || row.id === id) && (!owner || row.owner_id === owner));
+      if (options.method === 'POST') {
+        assert.equal(options.headers.Prefer, 'return=representation');
+        const row = JSON.parse(options.body);
+        if (rows.has(row.id)) return new Response('{}', { status: 409 });
+        rows.set(row.id, row);
+        matches = [row];
+      } else if (options.method === 'PATCH') {
+        assert.ok(id);
+        assert.equal(owner, undefined); // 소유자 제한은 4단계에 구현합니다.
+        assert.equal(options.headers.Prefer, 'return=representation');
+        const update = JSON.parse(options.body);
+        assert.deepEqual(Object.keys(update).sort(), ['content', 'title']);
+        matches.forEach(row => Object.assign(row, update));
+      } else if (options.method === 'DELETE') {
+        assert.ok(id);
+        assert.equal(owner, undefined);
+        assert.equal(options.headers.Prefer, 'return=representation');
+        matches.forEach(row => rows.delete(row.id));
+      }
+      return new Response(JSON.stringify(matches));
     };
-    result = makeResponse();
-    await handler({ method: 'GET' }, result);
-    assert.equal(result.code, 200);
-    assert.equal(result.body.notes.length, 4);
-    assert.deepEqual(Object.keys(result.body.notes[0]), ['title', 'content']);
-    assert.equal(result.headers['Cache-Control'], 'no-store');
 
-    globalThis.fetch = async () => { throw new Error('test-placeholder'); };
-    result = makeResponse();
-    await handler({ method: 'GET' }, result);
-    assert.equal(result.code, 502);
-    assert.deepEqual(result.body, { message: '자료를 불러올 수 없습니다. 잠시 후 다시 시도하세요.' });
-    assert.equal(diagnostics.at(-1)[1].reason, 'DB_CONNECTION_FAILED');
+    await t.test('anonymous requests to every route return JSON 401 before DB access', async () => {
+      delete process.env.SUPABASE_URL;
+      delete process.env.SUPABASE_SECRET_KEY;
+      for (const [method, id] of [['GET'], ['POST'], ['GET', randomUUID()], ['PUT', randomUUID()], ['DELETE', randomUUID()]]) {
+        for (const authorization of [undefined, '', 'Bearer not-a-token', 'Basic ignored']) {
+          const result = await request(authorization, method, { id, body: { userId: userA, role: 'admin' } });
+          assert.equal(result.code, 401);
+          assert.deepEqual(Object.keys(result.body), ['message']);
+          assert.equal(result.headers['Cache-Control'], 'no-store');
+        }
+      }
+      assert.equal(databaseCalls, 0);
+    });
+    await t.test('missing settings produce generic 503', async () => {
+      assert.equal((await request(bearerA)).code, 503);
+      assert.equal(diagnostics.at(-1)[1].reason, 'ENV_MISSING');
+      assert.equal(databaseCalls, 0);
+    });
+    process.env.SUPABASE_URL = new URL(config.identityProvider.issuer).origin;
+    process.env.SUPABASE_SECRET_KEY = 'test-placeholder';
 
-    for (const [status, reason] of [
-      [401, 'DB_AUTH_REJECTED'], [403, 'DB_ACCESS_DENIED'],
-      [404, 'DB_RESOURCE_NOT_FOUND'], [400, 'DB_QUERY_REJECTED'],
-      [500, 'DB_HTTP_ERROR'],
+    for (const [name, token] of [
+      ['forged signature', await tokenFor({}, attacker.privateKey)],
+      ['expired login', await tokenFor({ exp: now - 30 })],
+      ['another issuer', await tokenFor({ iss: 'https://other-project.supabase.co/auth/v1' })],
+      ['another audience', await tokenFor({ aud: 'another-service' })],
+      ['untrusted role', await tokenFor({ role: 'service_role' })],
     ]) {
-      globalThis.fetch = async () => new Response('test-placeholder upstream private detail', { status });
-      result = makeResponse();
-      await handler({ method: 'GET' }, result);
-      assert.equal(result.code, 502);
-      assert.deepEqual(result.body, { message: '자료를 불러올 수 없습니다. 잠시 후 다시 시도하세요.' });
-      assert.deepEqual(diagnostics.at(-1)[1], { reason, upstreamStatus: status });
+      await t.test(`${name} rejects reads and writes without DB access`, async () => {
+        for (const [method, id] of [['GET'], ['POST'], ['GET', randomUUID()], ['PUT', randomUUID()], ['DELETE', randomUUID()]]) {
+          assert.equal((await request(`Bearer ${token}`, method, { id, body: { title: 'Virtual', body: 'Fixture' }, query: { userId: userA, role: 'authenticated' } })).code, 401);
+        }
+        assert.equal(databaseCalls, 0);
+      });
     }
-
-    globalThis.fetch = async () => new Response('test-placeholder invalid JSON');
-    result = makeResponse();
-    await handler({ method: 'GET' }, result);
-    assert.equal(result.code, 502);
-    assert.equal(diagnostics.at(-1)[1].reason, 'DB_RESPONSE_INVALID');
-    assert.deepEqual(result.body, { message: '자료를 불러올 수 없습니다. 잠시 후 다시 시도하세요.' });
-    assert.doesNotMatch(JSON.stringify(diagnostics), /test-placeholder|database\.example|private detail/);
-    assert.ok(diagnostics.every(([label, record]) => label === 'notes_api_failure'
-      && Object.keys(record).every(key => ['reason', 'upstreamStatus'].includes(key))));
+    await t.test('invalid input and unsupported methods never reach DB', async () => {
+      for (const body of [null, [], {}, { title: '', body: '' }, { title: 'Virtual', body: 1 },
+        { title: 'x'.repeat(201), body: '' }, { title: 'Virtual', body: 'x'.repeat(10001) },
+        { id: 'bad-id', title: 'Virtual', body: '' }, '{broken']) {
+        assert.equal((await request(bearerA, 'POST', { body })).code, 400);
+      }
+      assert.equal((await request(bearerA, 'POST', { body: {}, headers: { 'content-type': 'text/plain' } })).code, 415);
+      assert.equal((await request(bearerA, 'GET', { id: 'bad-id' })).code, 400);
+      assert.equal((await request(bearerA, 'PUT')).code, 405);
+      assert.equal((await request(bearerA, 'POST', { id: randomUUID() })).code, 405);
+      assert.equal(databaseCalls, 0);
+    });
+    let noteId;
+    await t.test('POST generates UUID and stamps verified owner despite spoofed fields', async () => {
+      const result = await request(bearerA, 'POST', { body: { title: 'Virtual', body: 'Fixture', owner_id: userB, userId: userB, role: 'admin' } });
+      assert.equal(result.code, 201);
+      assert.deepEqual(Object.keys(result.body), ['id']);
+      noteId = result.body.id;
+      assert.match(noteId, /^[0-9a-f-]{36}$/u);
+      assert.deepEqual(rows.get(noteId), { id: noteId, title: 'Virtual', content: 'Fixture', owner_id: userA });
+    });
+    await t.test('explicit UUID accepted; duplicates return 409', async () => {
+      const id = randomUUID();
+      const body = { id, title: 'Virtual B', body: 'Fixture B' };
+      assert.deepEqual((await request(bearerB, 'POST', { body: JSON.stringify(body) })).body, { id });
+      assert.equal((await request(bearerB, 'POST', { body })).code, 409);
+    });
+    await t.test('list is an array filtered by verified owner, ignoring spoofed query', async () => {
+      const a = await request(bearerA, 'GET', { query: { userId: userB, owner_id: userB, id: noteId } });
+      assert.equal(a.code, 200);
+      assert.deepEqual(a.body, [{ id: noteId, title: 'Virtual', body: 'Fixture' }]);
+      assert.equal(lastDbRequest.url.searchParams.get('owner_id'), `eq.${userA}`);
+      assert.equal(lastDbRequest.url.searchParams.get('id'), null);
+      const b = await request(bearerB);
+      assert.equal(b.body.length, 1);
+      assert.notEqual(b.body[0].id, noteId);
+    });
+    await t.test('A detail GET and PUT return the exact contract and preserve owner', async () => {
+      assert.deepEqual((await request(bearerA, 'GET', { id: noteId })).body, { id: noteId, title: 'Virtual', body: 'Fixture' });
+      const updated = await request(bearerA, 'PUT', { id: noteId, body: { id: randomUUID(), title: 'Edited', body: 'Changed', owner_id: userB } });
+      assert.equal(updated.code, 200);
+      assert.deepEqual(updated.body, { id: noteId, title: 'Edited', body: 'Changed' });
+      assert.equal(rows.get(noteId).owner_id, userA);
+    });
+    await t.test('A deletion removes memo and subsequent detail requests return JSON 404', async () => {
+      assert.equal((await request(bearerA, 'DELETE', { id: noteId })).code, 200);
+      for (const method of ['GET', 'PUT', 'DELETE']) {
+        const result = await request(bearerA, method, { id: noteId, body: { title: 'Virtual', body: '' } });
+        assert.equal(result.code, 404);
+        assert.deepEqual(Object.keys(result.body), ['message']);
+      }
+      assert.deepEqual((await request(bearerA)).body, []);
+    });
+    await t.test('intentional stage 4 gap: B can GET, PUT, DELETE A detail but not list it', async () => {
+      const id = (await request(bearerA, 'POST', { body: { title: 'Virtual A', body: '' } })).body.id;
+      assert.equal((await request(bearerB, 'GET', { id })).code, 200);
+      assert.equal((await request(bearerB, 'PUT', { id, body: { title: 'Changed by B', body: '' } })).code, 200);
+      assert.equal(rows.get(id).owner_id, userA);
+      assert.ok(!(await request(bearerB)).body.some(note => note.id === id));
+      assert.equal((await request(bearerB, 'DELETE', { id })).code, 200);
+      assert.equal((await request(bearerA, 'GET', { id })).code, 404);
+    });
+    await t.test('mismatched DB URL does not contact DB', async () => {
+      const before = databaseCalls;
+      for (const url of ['https://dashboard.example/project/incorrect', 'https://another-project.supabase.co']) {
+        process.env.SUPABASE_URL = url;
+        assert.equal((await request(bearerA)).code, 503);
+        assert.equal(diagnostics.at(-1)[1].reason, 'PROJECT_URL_INVALID');
+      }
+      process.env.SUPABASE_URL = new URL(config.identityProvider.issuer).origin;
+      assert.equal(databaseCalls, before);
+    });
+    await t.test('DB failures expose generic messages and no secrets in diagnostics', async () => {
+      databaseReply = async () => { throw new Error('test-placeholder'); };
+      assert.equal((await request(bearerA)).code, 502);
+      assert.equal(diagnostics.at(-1)[1].reason, 'DB_CONNECTION_FAILED');
+      for (const [status, reason] of [[401, 'DB_AUTH_REJECTED'], [403, 'DB_ACCESS_DENIED'], [404, 'DB_RESOURCE_NOT_FOUND'], [400, 'DB_QUERY_REJECTED'], [500, 'DB_HTTP_ERROR']]) {
+        databaseReply = async () => new Response('upstream private detail', { status });
+        const result = await request(bearerA);
+        assert.equal(result.code, 502);
+        assert.deepEqual(result.body, { message: '자료를 불러올 수 없습니다. 잠시 후 다시 시도하세요.' });
+        assert.deepEqual(diagnostics.at(-1)[1], { reason, upstreamStatus: status });
+      }
+      for (const value of ['invalid JSON', '[{"title":"missing id"}]']) {
+        databaseReply = async () => new Response(value);
+        assert.equal((await request(bearerA)).code, 502);
+        assert.equal(diagnostics.at(-1)[1].reason, 'DB_RESPONSE_INVALID');
+      }
+      const logs = JSON.stringify(diagnostics);
+      assert.ok(!logs.includes(validToken));
+      assert.doesNotMatch(logs, /test-placeholder|private detail/);
+      assert.ok(diagnostics.every(([label, record]) => label === 'notes_api_failure' && Object.keys(record).every(key => ['reason', 'upstreamStatus'].includes(key))));
+    });
   } finally {
     globalThis.fetch = originalFetch;
     console.error = originalConsoleError;

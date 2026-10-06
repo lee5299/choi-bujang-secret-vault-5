@@ -16,36 +16,365 @@
     li { border: 1px solid #51667c; border-radius: 14px; padding: 17px 19px; background: #1a2a3d; }
     strong { display: block; font-size: 18px; margin-bottom: 5px; }
     li span { color: #bfd0e5; }
+    .auth { margin: 24px 0; padding: 20px; border: 1px solid #51667c; border-radius: 14px; background: #1a2a3d; }
+    .auth h2 { margin-top: 0; }
+    fieldset { border: 0; padding: 0; margin: 0; display: grid; gap: 12px; }
+    label { display: grid; gap: 6px; }
+    input, textarea, button { font: inherit; padding: 11px 13px; border-radius: 8px; border: 1px solid #71869b; }
+    input, textarea { min-width: 0; background: #101a28; color: #ecf4ff; }
+    textarea { resize: vertical; min-height: 100px; }
+    .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    li span { white-space: pre-wrap; overflow-wrap: anywhere; }
+    button { background: #8ad8df; color: #101a28; cursor: pointer; }
+    button:disabled { opacity: .6; cursor: wait; }
+    input:focus-visible, textarea:focus-visible, button:focus-visible { outline: 3px solid #8ad8df; outline-offset: 3px; }
+    #auth-error { color: #ffc5ce; }
+    [hidden] { display: none !important; }
   </style>
 </head>
 <body>
   <main>
-    <div class="eyebrow">BYTE BACK · 2단계</div>
+    <div class="eyebrow">BYTE BACK · 3단계</div>
     <h1>내 자료실</h1>
     <p>아래 기록은 모두 실습을 위해 만든 가상 자료입니다.</p>
-    <div class="notice">현재는 로그인하지 않은 방문자도 자료를 볼 수 있습니다. 가상 자료만 사용하세요.</div>
-    <ul id="notes" aria-live="polite"><li>가상 자료를 불러오는 중입니다.</li></ul>
+    <section class="auth" aria-labelledby="auth-heading">
+      <h2 id="auth-heading">로그인</h2>
+      <p id="auth-status" role="status">로그인 상태를 확인하는 중입니다.</p>
+      <form id="login-form">
+        <fieldset id="login-fields" disabled>
+          <label for="login-email">이메일
+            <input id="login-email" name="email" type="email" autocomplete="username" required>
+          </label>
+          <label for="login-password">비밀번호
+            <input id="login-password" name="password" type="password" autocomplete="current-password" required>
+          </label>
+          <button type="submit">로그인</button>
+        </fieldset>
+      </form>
+      <button id="logout-button" type="button" hidden>로그아웃</button>
+      <p id="auth-error" role="alert"></p>
+    </section>
+    <div class="notice">자료를 보려면 로그인하세요. 가상 자료만 사용하세요.</div>
+    <section id="memo-editor" class="auth" aria-labelledby="memo-heading" hidden>
+      <h2 id="memo-heading">가상 메모 추가</h2>
+      <form id="memo-form">
+        <fieldset id="memo-fields">
+          <label for="memo-title">제목
+            <input id="memo-title" maxlength="200" required>
+          </label>
+          <label for="memo-body">본문
+            <textarea id="memo-body" maxlength="10000"></textarea>
+          </label>
+          <div class="actions">
+            <button id="memo-save" type="submit">추가</button>
+            <button id="memo-cancel" type="button" hidden>수정 취소</button>
+          </div>
+        </fieldset>
+      </form>
+      <button id="memo-refresh" type="button">목록 새로고침</button>
+      <p id="memo-status" role="status"></p>
+    </section>
+    <ul id="notes" aria-live="polite"><li>로그인 후 자료를 확인할 수 있습니다.</li></ul>
   </main>
   <script type="module">
-    const list = document.querySelector('#notes');
-    try {
-      const response = await fetch('/api/notes', { cache: 'no-store' });
-      if (!response.ok) throw new Error('자료를 불러올 수 없습니다. 잠시 후 다시 시도하세요.');
-      const data = await response.json();
-      if (!Array.isArray(data.notes)) throw new Error('자료 형식이 맞지 않습니다.');
-      list.replaceChildren(...data.notes.map(note => {
-        const item = document.createElement('li');
-        const title = document.createElement('strong');
-        const content = document.createElement('span');
-        title.textContent = note.title;
-        content.textContent = note.content;
-        item.append(title, content);
-        return item;
-      }));
-    } catch (error) {
+    const loginForm = document.querySelector('#login-form');
+    const loginFields = document.querySelector('#login-fields');
+    const emailInput = document.querySelector('#login-email');
+    const passwordInput = document.querySelector('#login-password');
+    const logoutButton = document.querySelector('#logout-button');
+    const authStatus = document.querySelector('#auth-status');
+    const authError = document.querySelector('#auth-error');
+    const notesList = document.querySelector('#notes');
+    const memoEditor = document.querySelector('#memo-editor');
+    const memoHeading = document.querySelector('#memo-heading');
+    const memoForm = document.querySelector('#memo-form');
+    const memoFields = document.querySelector('#memo-fields');
+    const memoTitle = document.querySelector('#memo-title');
+    const memoBody = document.querySelector('#memo-body');
+    const memoSave = document.querySelector('#memo-save');
+    const memoCancel = document.querySelector('#memo-cancel');
+    const memoRefresh = document.querySelector('#memo-refresh');
+    const memoStatus = document.querySelector('#memo-status');
+    let ready = false;
+    let busy = false;
+    let signedIn = false;
+    let lastAccessToken;
+    let notesVersion = 0;
+    let notesAbort;
+    let currentSession;
+    let sessionVersion = 0;
+    let editId = null;
+    let memoBusy = false;
+    let memoAbort;
+
+    function resetEditor() {
+      editId = null;
+      memoForm.reset();
+      memoHeading.textContent = '가상 메모 추가';
+      memoSave.textContent = '추가';
+      memoCancel.hidden = true;
+    }
+
+    function apiError(status) {
+      if (status === 401 || status === 403) return '로그인 정보를 확인하지 못했습니다. 다시 로그인하세요.';
+      if (status === 404) return '메모를 찾을 수 없습니다. 목록을 새로고침하세요.';
+      if (status === 400 || status === 415) return '제목과 본문 입력을 확인하세요.';
+      if (status === 409) return '이미 사용 중인 메모 ID입니다.';
+      return '메모 요청을 처리하지 못했습니다. 잠시 후 다시 시도하세요.';
+    }
+
+    async function noteAction(method, id, payload, onSuccess) {
+      if (!ready || busy || memoBusy || !currentSession?.access_token) return;
+      const session = currentSession;
+      const version = sessionVersion;
+      const controller = new AbortController();
+      memoAbort = controller;
+      memoBusy = true;
+      memoStatus.textContent = '메모 요청을 처리하는 중입니다.';
+      updateControls();
+      try {
+        const response = await fetch(id ? `/api/notes/${encodeURIComponent(id)}` : '/api/notes', {
+          method, cache: 'no-store', signal: controller.signal,
+          headers: {
+            Authorization: `Bearer ${session.access_token}`, Accept: 'application/json',
+            ...(payload ? { 'Content-Type': 'application/json' } : {}),
+          },
+          ...(payload ? { body: JSON.stringify(payload) } : {}),
+        });
+        if (version !== sessionVersion) return;
+        if (!response.ok) {
+          memoStatus.textContent = apiError(response.status);
+          return;
+        }
+        const result = await response.json();
+        if (version !== sessionVersion) return;
+        onSuccess(result);
+        if (method !== 'GET') await loadNotes(currentSession);
+      } catch {
+        if (version === sessionVersion) memoStatus.textContent = '메모 요청을 처리하지 못했습니다. 잠시 후 다시 시도하세요.';
+      } finally {
+        if (version === sessionVersion) {
+          memoBusy = false;
+          memoAbort = undefined;
+          updateControls();
+        }
+      }
+    }
+
+    memoForm.addEventListener('submit', event => {
+      event.preventDefault();
+      const updating = editId !== null;
+      void noteAction(updating ? 'PUT' : 'POST', editId,
+        { title: memoTitle.value, body: memoBody.value }, () => {
+          resetEditor();
+          memoStatus.textContent = updating ? '메모를 수정했습니다.' : '메모를 추가했습니다.';
+        });
+    });
+    memoCancel.addEventListener('click', () => {
+      if (memoBusy) return;
+      resetEditor();
+      memoStatus.textContent = '';
+    });
+    memoRefresh.addEventListener('click', () => { if (!memoBusy) void loadNotes(currentSession); });
+
+    function showNotesMessage(message) {
       const item = document.createElement('li');
-      item.textContent = error.message;
-      list.replaceChildren(item);
+      item.textContent = message;
+      notesList.replaceChildren(item);
+    }
+
+    async function loadNotes(session) {
+      const version = ++notesVersion;
+      notesAbort?.abort();
+      if (!session?.access_token) {
+        showNotesMessage('로그인 후 자료를 확인할 수 있습니다.');
+        return;
+      }
+      notesAbort = new AbortController();
+      showNotesMessage('가상 자료를 불러오는 중입니다.');
+      try {
+        const response = await fetch('/api/notes', {
+          cache: 'no-store', signal: notesAbort.signal,
+          headers: { Authorization: `Bearer ${session.access_token}`, Accept: 'application/json' },
+        });
+        if (version !== notesVersion) return;
+        if (response.status === 401 || response.status === 403) {
+          showNotesMessage('로그인 정보를 확인하지 못했습니다. 로그아웃 후 다시 로그인하세요.');
+          return;
+        }
+        if (!response.ok) throw new Error('notes_unavailable');
+        const data = await response.json();
+        if (version !== notesVersion) return;
+        if (!Array.isArray(data) || data.some(note =>
+          typeof note?.id !== 'string' || typeof note?.title !== 'string' || typeof note?.body !== 'string')) {
+          throw new Error('invalid_notes');
+        }
+        if (!data.length) {
+          showNotesMessage('표시할 가상 자료가 없습니다.');
+          return;
+        }
+        notesList.replaceChildren(...data.map(note => {
+          const item = document.createElement('li');
+          const title = document.createElement('strong');
+          const content = document.createElement('span');
+          title.textContent = note.title;
+          content.textContent = note.body;
+          item.append(title, content);
+          const actions = document.createElement('div');
+          actions.className = 'actions';
+          const edit = document.createElement('button');
+          edit.type = 'button';
+          edit.textContent = '수정';
+          edit.addEventListener('click', () => {
+            void noteAction('GET', note.id, null, result => {
+              if (result?.id !== note.id || typeof result.title !== 'string' || typeof result.body !== 'string') {
+                memoStatus.textContent = '메모 응답을 확인하지 못했습니다.';
+                return;
+              }
+              editId = result.id;
+              memoTitle.value = result.title;
+              memoBody.value = result.body;
+              memoHeading.textContent = '가상 메모 수정';
+              memoSave.textContent = '수정 저장';
+              memoCancel.hidden = false;
+              memoStatus.textContent = '제목과 본문을 바꾼 뒤 수정 저장을 누르세요.';
+              memoTitle.focus();
+            });
+          });
+          const remove = document.createElement('button');
+          remove.type = 'button';
+          remove.textContent = '삭제';
+          remove.addEventListener('click', () => {
+            void noteAction('DELETE', note.id, null, () => {
+              if (editId === note.id) resetEditor();
+              memoStatus.textContent = '메모를 삭제했습니다.';
+            });
+          });
+          actions.append(edit, remove);
+          item.append(actions);
+          return item;
+        }));
+        updateControls();
+      } catch {
+        if (version === notesVersion) {
+          showNotesMessage('자료를 불러올 수 없습니다. 잠시 후 다시 시도하세요.');
+        }
+      }
+    }
+
+    function updateControls() {
+      loginFields.disabled = !ready || busy;
+      logoutButton.disabled = !ready || busy;
+      loginForm.setAttribute('aria-busy', String(busy));
+      memoFields.disabled = !ready || !signedIn || busy || memoBusy;
+      memoRefresh.disabled = memoFields.disabled;
+      memoForm.setAttribute('aria-busy', String(memoBusy));
+      notesList.querySelectorAll('button').forEach(button => { button.disabled = memoFields.disabled; });
+    }
+
+    function showSession(session) {
+      signedIn = Boolean(session);
+      currentSession = session;
+      loginForm.hidden = signedIn;
+      logoutButton.hidden = !signedIn;
+      memoEditor.hidden = !signedIn;
+      authStatus.textContent = signedIn ? '로그인되었습니다.' : '로그인하지 않은 상태입니다.';
+      if (signedIn) passwordInput.value = '';
+      updateControls();
+      const token = session?.access_token ?? null;
+      if (token !== lastAccessToken) {
+        sessionVersion++;
+        memoAbort?.abort();
+        memoBusy = false;
+        resetEditor();
+        memoStatus.textContent = '';
+        lastAccessToken = token;
+        updateControls();
+        // 콜백 안에서 SDK 메서드를 다시 호출하지 않습니다.
+        void loadNotes(session);
+      }
+    }
+
+    function failureReason(error) {
+      const reasons = {
+        invalid_credentials: '이메일 또는 비밀번호가 올바르지 않습니다.',
+        email_not_confirmed: '이메일 인증을 완료한 뒤 다시 로그인하세요.',
+        user_banned: '로그인이 제한된 계정입니다.',
+        over_request_rate_limit: '요청이 너무 많습니다. 잠시 후 다시 시도하세요.',
+        email_provider_disabled: '이메일 로그인이 비활성화되어 있습니다.',
+        signup_disabled: '등록된 계정으로 로그인하세요.',
+        session_not_found: '로그인 세션을 찾을 수 없습니다. 다시 로그인하세요.',
+      };
+      if (error?.name === 'AuthRetryableFetchError' || error instanceof TypeError) {
+        return '인증 서비스에 연결할 수 없습니다. 인터넷 연결을 확인하세요.';
+      }
+      return reasons[error?.code] ?? '인증 요청을 처리하지 못했습니다. 잠시 후 다시 시도하세요.';
+    }
+
+    try {
+      const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/+esm');
+      const authClient = createClient(
+        'https://kwmdcywakbaydceasxpx.supabase.co',
+        'sb_publishable_FHpQGcCi6e0ZVZIfC-59Zg_Foo0b45U',
+      );
+      // 세션 저장과 갱신은 공식 SDK에 맡기며 토큰을 화면이나 로그에 출력하지 않습니다.
+      authClient.auth.onAuthStateChange((event, session) => {
+        showSession(session);
+        if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') authError.textContent = '';
+      });
+      const { data, error } = await authClient.auth.getSession();
+      if (error) throw error;
+      ready = true;
+      showSession(data.session);
+
+      loginForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        if (busy || !ready || signedIn) return;
+        busy = true;
+        authError.textContent = '';
+        authStatus.textContent = '로그인하는 중입니다.';
+        updateControls();
+        try {
+          const { data, error } = await authClient.auth.signInWithPassword({
+            email: emailInput.value.trim(),
+            password: passwordInput.value,
+          });
+          if (error) throw error;
+          showSession(data.session);
+        } catch (error) {
+          authStatus.textContent = signedIn ? '로그인되었습니다.' : '로그인하지 않은 상태입니다.';
+          authError.textContent = `로그인 실패: ${failureReason(error)}`;
+        } finally {
+          passwordInput.value = '';
+          busy = false;
+          updateControls();
+        }
+      });
+
+      logoutButton.addEventListener('click', async () => {
+        if (busy || !ready || !signedIn) return;
+        busy = true;
+        authError.textContent = '';
+        authStatus.textContent = '로그아웃하는 중입니다.';
+        updateControls();
+        try {
+          const { error } = await authClient.auth.signOut({ scope: 'local' });
+          if (error) throw error;
+          showSession(null);
+          loginForm.reset();
+        } catch (error) {
+          authStatus.textContent = signedIn ? '로그인되었습니다.' : '로그인하지 않은 상태입니다.';
+          authError.textContent = `로그아웃 실패: ${failureReason(error)}`;
+        } finally {
+          busy = false;
+          updateControls();
+        }
+      });
+    } catch {
+      authStatus.textContent = '로그인을 사용할 수 없습니다.';
+      authError.textContent = '로그인 기능을 불러오지 못했습니다. 인터넷 연결을 확인하고 새로고침하세요.';
+      ready = false;
+      updateControls();
     }
   </script>
 </body>

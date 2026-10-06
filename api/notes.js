@@ -98,15 +98,18 @@ export async function handleNotes(request, response, noteId = null) {
       || typeof input.body !== 'string' || input.body.length > 10000) {
       return response.status(400).json({ message: '제목은 1~200자, 본문은 10,000자 이내로 입력하세요.' });
     }
+    const allowedFields = request.method === 'POST' ? ['id', 'title', 'body'] : ['title', 'body'];
+    if (Object.keys(input).some(field => !allowedFields.includes(field))) {
+      return response.status(400).json({ message: '허용되지 않은 메모 항목입니다. 소유자는 변경할 수 없습니다.' });
+    }
     if (request.method === 'POST' && input.id !== undefined
       && (typeof input.id !== 'string' || !uuid.test(input.id))) {
       return response.status(400).json({ message: '메모 ID는 UUID여야 합니다.' });
     }
-    // 브라우저의 owner_id/userId/role은 사용하지 않습니다. PUT은 소유자를 바꾸지 않습니다.
-    payload = { title: input.title, content: input.body };
+    // 추가·수정의 새 행 소유자는 검증된 사용자로 고정합니다.
+    payload = { title: input.title, content: input.body, owner_id: identity.userId };
     if (request.method === 'POST') {
       payload.id = (input.id ?? randomUUID()).toLowerCase();
-      payload.owner_id = identity.userId;
     }
   }
 
@@ -122,10 +125,11 @@ export async function handleNotes(request, response, noteId = null) {
   } catch {
     return unavailable(response, 503, 'PROJECT_URL_INVALID');
   }
-  endpoint.searchParams.set('select', 'id,title,content');
+  endpoint.searchParams.set('select', 'id,title,content,owner_id');
   if (detail) {
-    // 4단계에서 소유자 검사를 붙입니다. 현재는 로그인과 ID만 검사합니다.
+    // ID와 기존 행 소유자를 같은 DB 요청에서 검사해 읽기·수정·삭제를 제한합니다.
     endpoint.searchParams.set('id', `eq.${noteId.toLowerCase()}`);
+    endpoint.searchParams.set('owner_id', `eq.${identity.userId}`);
   } else if (request.method === 'GET') {
     endpoint.searchParams.set('owner_id', `eq.${identity.userId}`);
     endpoint.searchParams.set('order', 'created_at.asc,id.asc');
@@ -162,7 +166,9 @@ export async function handleNotes(request, response, noteId = null) {
     const rows = await upstream.json();
     if (!Array.isArray(rows) || rows.some(row =>
       typeof row?.id !== 'string' || !uuid.test(row.id)
-      || typeof row?.title !== 'string' || typeof row?.content !== 'string')
+      || typeof row?.title !== 'string' || typeof row?.content !== 'string'
+      || row?.owner_id !== identity.userId
+      || (detail && row.id !== noteId.toLowerCase()))
       || ((detail || request.method === 'POST') && rows.length > 1)) {
       throw new Error('Invalid data');
     }

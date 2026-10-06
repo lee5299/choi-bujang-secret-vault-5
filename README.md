@@ -1,6 +1,39 @@
 # BYTE BACK 방어전 시작 틀 R5
 
-이 저장소는 R5 시작 틀에서 이어가는 자료실입니다. 현재 작업은 2단계이며 아래 1단계 안내는 시작 상태의 기록입니다. 메모 네 건은 가상 자료입니다. 실제 학생 자료, 토큰, 비밀키를 넣지 마세요.
+이 저장소는 R5 시작 틀에서 이어가는 가상 자료실입니다. 현재 구현은 4단계입니다.
+아래 1·2단계 안내는 이전 상태의 기록입니다. 실제 학생 자료, 토큰, 비밀키를 넣지 마세요.
+
+## 4단계 현재 구현과 실행
+
+Supabase Auth 이메일·비밀번호 로그인·로그아웃과 개인 메모 CRUD를 제공합니다.
+서버는 변경하지 않은 `src/verify-login.mjs`로 토큰을 검증하고, 학생 로그인은
+Supabase Auth 사용자 조회로 종료된 세션도 확인합니다. DB의 기존 행 소유자와
+검증된 사용자 ID를 같은 요청에서 비교하며, 추가·수정의 새 행 소유자도 그 ID로 고정합니다.
+한 건 응답은 `{id,title,body}`, 수정 본문은 `{title,body}`입니다.
+
+정상: A/B의 본인 메모 목록·한 건 읽기·추가·수정·삭제.
+거부: 무로그인 401 JSON, 상대 메모 GET·PUT·DELETE 404 JSON,
+본문 소유자 변경 400 JSON, 기존 ID 덮어쓰기 409 JSON.
+브라우저에는 공개 publishable 키만 사용하고 서버 전용 키는 Vercel 비밀 환경변수로 유지합니다.
+
+2026-10-06 학습 DB의 `library_notes`에 anon 권한 회수와 authenticated 소유자 RLS
+정책 네 개를 실제 적용했습니다. 전후 권한·정책 조회와 anon 직접 Data API 401을 확인했고,
+메모 12건은 보존했습니다. 실행 기록과 재검토 SQL은 [4단계 안내](docs/STAGE4_NOTES.md)에 있습니다.
+authenticated의 직접 Data API 접근은 심판 점수에 포함하지 않습니다.
+
+배포 주소는 https://choi-bujang-secret-vault-5.vercel.app 입니다.
+`aleph.config.json`은 단계 4, 실제 저장소·배포 주소, Supabase 발급자와 API 다섯 경로를 기록합니다.
+빌드는 Vercel 시스템 환경변수로 `public/aleph.json`을 생성하고 공개 `data.json`만 제거합니다.
+`vercel.json`은 첫 화면에 `X-Content-Type-Options: nosniff`를 설정합니다.
+
+다시 실행하는 명령: `npm run build -- --local`.
+이는 정적 빌드 확인이며 실제 서버 API나 DB 연결 시험은 아닙니다.
+가상 API·화면·배포 식별 시험은 `node --test test/notes.test.mjs test/notes-ui.test.mjs test/r5.test.mjs`입니다.
+배포 후 A/B 각각 로그인해 추가·수정·삭제와 상대 메모 접근 거부를 확인합니다.
+5단계 뒤에도 같은 화면 시험을 반복합니다. 실제 배포·계정 시험 결과는 실행 후에만 기록합니다.
+`src/attack-check.mjs`는 현재 단계의 무로그인 JSON 거부, 배포 식별 JSON,
+보안 헤더와 공개 자료 차단을 실제 HTTP 요청으로 확인합니다.
+로그인이 필요한 A/B 시험과 운영 심판 공격은 이 공개 자기 점검에 포함되지 않습니다.
 
 ## 2단계 현재 구현과 실행
 

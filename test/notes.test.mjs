@@ -7,7 +7,7 @@ import handler from '../api/notes.js';
 import detailHandler from '../api/notes/[id].js';
 
 // 실제 학생 계정·DB·심판 대신 메모리 DB와 일회성 가상 서명만 사용합니다.
-test('authenticated virtual memo CRUD and rejection contracts', async t => {
+test('authenticated owner-scoped virtual memo CRUD and rejection contracts', async t => {
   const savedUrl = process.env.SUPABASE_URL;
   const savedKey = process.env.SUPABASE_SECRET_KEY;
   const originalFetch = globalThis.fetch;
@@ -19,6 +19,7 @@ test('authenticated virtual memo CRUD and rejection contracts', async t => {
   const now = Math.floor(Date.now() / 1000);
   const userA = '00000000-0000-4000-8000-000000000001';
   const userB = '00000000-0000-4000-8000-000000000002';
+  const judgeOwner = randomUUID();
   const sessionA = randomUUID();
   const sessionB = randomUUID();
   const tokenFor = (claims = {}, signingKey = trusted.privateKey) => new SignJWT({
@@ -73,7 +74,7 @@ test('authenticated virtual memo CRUD and rejection contracts', async t => {
         return Response.json({ id: user.id });
       }
       assert.equal(url.pathname, '/rest/v1/library_notes');
-      assert.equal(url.searchParams.get('select'), 'id,title,content');
+      assert.equal(url.searchParams.get('select'), 'id,title,content,owner_id');
       assert.equal(options.headers.apikey, 'test-placeholder');
       assert.equal(options.redirect, 'error');
       lastDbRequest = { url, options };
@@ -81,6 +82,7 @@ test('authenticated virtual memo CRUD and rejection contracts', async t => {
       if (databaseReply) return databaseReply();
       const id = url.searchParams.get('id')?.replace(/^eq\./u, '');
       const owner = url.searchParams.get('owner_id')?.replace(/^eq\./u, '');
+      if (options.method !== 'POST') assert.ok([userA, userB, judgeOwner].includes(owner));
       let matches = [...rows.values()].filter(row => (!id || row.id === id) && (!owner || row.owner_id === owner));
       if (options.method === 'POST') {
         assert.equal(options.headers.Prefer, 'return=representation');
@@ -90,14 +92,13 @@ test('authenticated virtual memo CRUD and rejection contracts', async t => {
         matches = [row];
       } else if (options.method === 'PATCH') {
         assert.ok(id);
-        assert.equal(owner, undefined); // 소유자 제한은 4단계에 구현합니다.
         assert.equal(options.headers.Prefer, 'return=representation');
         const update = JSON.parse(options.body);
-        assert.deepEqual(Object.keys(update).sort(), ['content', 'title']);
+        assert.deepEqual(Object.keys(update).sort(), ['content', 'owner_id', 'title']);
+        assert.equal(update.owner_id, owner);
         matches.forEach(row => Object.assign(row, update));
       } else if (options.method === 'DELETE') {
         assert.ok(id);
-        assert.equal(owner, undefined);
         assert.equal(options.headers.Prefer, 'return=representation');
         matches.forEach(row => rows.delete(row.id));
       }
@@ -154,13 +155,32 @@ test('authenticated virtual memo CRUD and rejection contracts', async t => {
       assert.equal(databaseCalls, 0);
     });
     let noteId;
-    await t.test('POST generates UUID and stamps verified owner despite spoofed fields', async () => {
-      const result = await request(bearerA, 'POST', { body: { title: 'Virtual', body: 'Fixture', owner_id: userB, userId: userB, role: 'admin' } });
+    await t.test('POST generates UUID and stamps verified owner despite spoofed query', async () => {
+      const result = await request(bearerA, 'POST', {
+        body: { title: 'Virtual', body: 'Fixture' }, query: { owner_id: userB, userId: userB, role: 'admin' },
+      });
       assert.equal(result.code, 201);
       assert.deepEqual(Object.keys(result.body), ['id']);
       noteId = result.body.id;
       assert.match(noteId, /^[0-9a-f-]{36}$/u);
       assert.deepEqual(rows.get(noteId), { id: noteId, title: 'Virtual', content: 'Fixture', owner_id: userA });
+    });
+    await t.test('body ownership and extra fields are rejected before DB access', async () => {
+      const before = databaseCalls;
+      for (const spoof of [{ owner_id: userB }, { owner_id: userA }, { owner_id: null },
+        { userId: userB }, { role: 'admin' }, { content: 'Unexpected field' }]) {
+        for (const [method, id] of [['POST'], ['PUT', noteId]]) {
+          const result = await request(bearerA, method, { id, body: { title: 'Denied', body: '', ...spoof } });
+          assert.equal(result.code, 400);
+          assert.deepEqual(Object.keys(result.body), ['message']);
+        }
+      }
+      assert.equal((await request(bearerA, 'PUT', {
+        id: noteId, body: { id: randomUUID(), title: 'Denied', body: '' },
+      })).code, 400);
+      assert.equal(databaseCalls, before);
+      assert.equal(rows.get(noteId).title, 'Virtual');
+      assert.equal(rows.get(noteId).owner_id, userA);
     });
     await t.test('explicit UUID accepted; duplicates return 409', async () => {
       const id = randomUUID();
@@ -180,7 +200,9 @@ test('authenticated virtual memo CRUD and rejection contracts', async t => {
     });
     await t.test('A detail GET and PUT return the exact contract and preserve owner', async () => {
       assert.deepEqual((await request(bearerA, 'GET', { id: noteId })).body, { id: noteId, title: 'Virtual', body: 'Fixture' });
-      const updated = await request(bearerA, 'PUT', { id: noteId, body: { id: randomUUID(), title: 'Edited', body: 'Changed', owner_id: userB } });
+      const updated = await request(bearerA, 'PUT', {
+        id: noteId, body: { title: 'Edited', body: 'Changed' }, query: { owner_id: userB, userId: userB },
+      });
       assert.equal(updated.code, 200);
       assert.deepEqual(updated.body, { id: noteId, title: 'Edited', body: 'Changed' });
       assert.equal(rows.get(noteId).owner_id, userA);
@@ -194,14 +216,57 @@ test('authenticated virtual memo CRUD and rejection contracts', async t => {
       }
       assert.deepEqual((await request(bearerA)).body, []);
     });
-    await t.test('intentional stage 4 gap: B can GET, PUT, DELETE A detail but not list it', async () => {
-      const id = (await request(bearerA, 'POST', { body: { title: 'Virtual A', body: '' } })).body.id;
-      assert.equal((await request(bearerB, 'GET', { id })).code, 200);
-      assert.equal((await request(bearerB, 'PUT', { id, body: { title: 'Changed by B', body: '' } })).code, 200);
-      assert.equal(rows.get(id).owner_id, userA);
-      assert.ok(!(await request(bearerB)).body.some(note => note.id === id));
+    await t.test('A and B cannot read, update, delete or overwrite each other; own CRUD works', async () => {
+      const aId = (await request(bearerA, 'POST', { body: { title: 'Virtual A', body: '' } })).body.id;
+      const bId = (await request(bearerB, 'POST', { body: { title: 'Virtual B', body: '' } })).body.id;
+      for (const [bearer, ownId, otherId, otherOwner] of [
+        [bearerA, aId, bId, userB], [bearerB, bId, aId, userA],
+      ]) {
+        const previous = { ...rows.get(otherId) };
+        for (const method of ['GET', 'PUT', 'DELETE']) {
+          const result = await request(bearer, method, {
+            id: otherId, body: { title: 'Denied change', body: '' }, query: { owner_id: otherOwner, role: 'admin' },
+          });
+          assert.equal(result.code, 404);
+          const missing = await request(bearer, method, { id: randomUUID(), body: { title: 'Missing', body: '' } });
+          assert.deepEqual(result.body, missing.body);
+          assert.deepEqual(rows.get(otherId), previous);
+        }
+        assert.equal((await request(bearer, 'POST', {
+          body: { id: otherId, title: 'Denied replacement', body: '' },
+        })).code, 409);
+        assert.deepEqual(rows.get(otherId), previous);
+        assert.ok(!(await request(bearer)).body.some(note => note.id === otherId));
+        assert.equal((await request(bearer, 'GET', { id: ownId })).code, 200);
+        assert.equal((await request(bearer, 'PUT', { id: ownId, body: { title: 'Own edit', body: '' } })).code, 200);
+      }
+      for (const [bearer, id] of [[bearerA, aId], [bearerB, bId]]) {
+        assert.equal((await request(bearer, 'DELETE', { id })).code, 200);
+        assert.equal((await request(bearer, 'GET', { id })).code, 404);
+      }
+    });
+    await t.test('unowned rows and ownership changes after a read cannot authorize later writes', async () => {
+      const orphanId = randomUUID();
+      rows.set(orphanId, { id: orphanId, title: 'Unowned fixture', content: '', owner_id: null });
+      for (const bearer of [bearerA, bearerB]) {
+        for (const method of ['GET', 'PUT', 'DELETE']) {
+          assert.equal((await request(bearer, method, { id: orphanId, body: { title: 'Denied', body: '' } })).code, 404);
+        }
+        assert.ok(!(await request(bearer)).body.some(note => note.id === orphanId));
+      }
+      assert.equal(rows.get(orphanId).owner_id, null);
+      rows.delete(orphanId);
+      const id = (await request(bearerA, 'POST', { body: { title: 'Ownership fixture', body: '' } })).body.id;
+      assert.equal((await request(bearerA, 'GET', { id })).code, 200);
+      // 관리 작업에 의한 소유자 변경을 가상 DB 안에서만 재현합니다.
+      rows.get(id).owner_id = userB;
+      for (const method of ['PUT', 'DELETE']) {
+        assert.equal((await request(bearerA, method, { id, body: { title: 'Denied', body: '' } })).code, 404);
+      }
+      assert.equal(rows.get(id).title, 'Ownership fixture');
+      assert.equal(rows.get(id).owner_id, userB);
+      assert.equal((await request(bearerB, 'PUT', { id, body: { title: 'New owner edit', body: '' } })).code, 200);
       assert.equal((await request(bearerB, 'DELETE', { id })).code, 200);
-      assert.equal((await request(bearerA, 'GET', { id })).code, 404);
     });
     await t.test('ended session rejects every memo operation with old unexpired tokens; re-login works', async () => {
       const id = (await request(bearerA, 'POST', { body: { title: 'Logout fixture', body: 'Preserve this virtual row' } })).body.id;
@@ -254,8 +319,37 @@ test('authenticated virtual memo CRUD and rejection contracts', async t => {
       assert.equal(created.code, 201);
       assert.equal(rows.get(created.body.id).owner_id, userA);
       assert.equal((await request(authorization, 'GET', { id: created.body.id })).code, 200);
+      const otherId = [...rows.values()].find(row => row.owner_id === userB).id;
+      for (const method of ['GET', 'PUT', 'DELETE']) {
+        assert.equal((await request(authorization, method, { id: otherId, body: { title: 'Denied', body: '' } })).code, 404);
+      }
       assert.equal((await request(authorization, 'DELETE', { id: created.body.id })).code, 200);
       assert.equal(authCalls, before);
+    });
+    await t.test('student A and B cannot read, update or delete a judge-owned virtual memo', async () => {
+      const judgeToken = await new SignJWT({
+        iss: config.judgeIssuer, aud: new URL(config.publicAppUrl).hostname,
+        sub: judgeOwner, iat: now, exp: now + 300,
+        aleph_run: randomUUID(), aleph_role: 'judge', aleph_identity: 'a',
+      }).setProtectedHeader({ alg: 'ES256', kid: publicJwk.kid }).sign(trusted.privateKey);
+      const judgeAuthorization = `Bearer ${judgeToken}`;
+      const created = await request(judgeAuthorization, 'POST', { body: { title: 'Operator fixture', body: '' } });
+      assert.equal(created.code, 201);
+      const id = created.body.id;
+      const previous = { ...rows.get(id) };
+      for (const bearer of [bearerA, bearerB]) {
+        assert.ok(!(await request(bearer)).body.some(note => note.id === id));
+        for (const method of ['GET', 'PUT', 'DELETE']) {
+          const result = await request(bearer, method, {
+            id, body: { title: 'Denied change', body: '' }, query: { owner_id: judgeOwner, role: 'judge' },
+          });
+          assert.equal(result.code, 404);
+          assert.deepEqual(Object.keys(result.body), ['message']);
+          assert.deepEqual(rows.get(id), previous);
+        }
+      }
+      assert.equal((await request(judgeAuthorization, 'GET', { id })).code, 200);
+      assert.equal((await request(judgeAuthorization, 'DELETE', { id })).code, 200);
     });
     await t.test('mismatched DB URL does not contact DB', async () => {
       const before = databaseCalls;
@@ -283,6 +377,20 @@ test('authenticated virtual memo CRUD and rejection contracts', async t => {
         assert.equal((await request(bearerA)).code, 502);
         assert.equal(diagnostics.at(-1)[1].reason, 'DB_RESPONSE_INVALID');
       }
+      const requestedId = randomUUID();
+      for (const row of [
+        { id: requestedId, title: 'Private fixture', content: 'Never expose', owner_id: userB },
+        { id: requestedId, title: 'Private fixture', content: 'Never expose' },
+        { id: randomUUID(), title: 'Wrong row', content: 'Never expose', owner_id: userA },
+      ]) {
+        databaseReply = async () => Response.json([row]);
+        const result = await request(bearerA, 'GET', { id: requestedId });
+        assert.equal(result.code, 502);
+        assert.deepEqual(Object.keys(result.body), ['message']);
+        assert.doesNotMatch(JSON.stringify(result.body), /Private fixture|Wrong row|Never expose/);
+      }
+      databaseReply = async () => Response.json([{ id: requestedId, title: 'Private fixture', content: '', owner_id: userB }]);
+      assert.equal((await request(bearerA)).code, 502);
       const logs = JSON.stringify(diagnostics);
       assert.ok(!logs.includes(validToken));
       assert.doesNotMatch(logs, /test-placeholder|private detail/);

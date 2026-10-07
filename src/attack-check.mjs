@@ -51,7 +51,10 @@ export async function runAttackChecks(config) {
               && data.judgeIssuer === config.judgeIssuer && data.repoUrl === config.repoUrl
               && /^[a-f0-9]{40}$/iu.test(data.commit ?? '');
             observed = `HTTP ${result.status} · 현재 단계 식별 JSON ${valid ? '확인' : '불일치 또는 없음'}`;
-            if (config.step === 5) observed += ` · 허용 경로 ${Array.isArray(data?.allowedRoutes) && data.allowedRoutes.length ? '확인' : '없음'}`;
+            if (config.step === 5) {
+              observed += ` · 허용 경로 ${Array.isArray(data?.allowedRoutes) && data.allowedRoutes.length ? '확인' : '없음'}`;
+              observed += ` · 원본 주소 ${typeof data?.originalApiUrl === 'string' && data.originalApiUrl === config.originalApiUrl ? '일치' : '누락 또는 불일치'}`;
+            }
           } else {
             const notes = Array.isArray(data) ? data : data?.notes;
             const empty = Array.isArray(notes) && notes.length === 0;

@@ -29,7 +29,15 @@ test('build identity uses Vercel Git and deployment metadata', () => {
   assert.throws(() => deploymentIdentity({ ...env, VERCEL_GIT_PROVIDER: undefined }, config));
   assert.throws(() => deploymentIdentity({ ...env, VERCEL_GIT_COMMIT_SHA: 'short' }, config));
   assert.equal(deploymentIdentity(env, { ...config, step: 4 }).step, 4);
-  assert.deepEqual(deploymentIdentity(env, { ...config, step: 5, allowedRoutes: ['GET /api/notes'] }).allowedRoutes, ['GET /api/notes']);
+  const stage5 = { ...config, step: 5, allowedRoutes: ['GET /api/notes'],
+    originalApiUrl: 'https://project.supabase.co/rest/v1/library_notes' };
+  const identity = deploymentIdentity(env, stage5);
+  assert.deepEqual(identity.allowedRoutes, ['GET /api/notes']);
+  assert.equal(identity.originalApiUrl, stage5.originalApiUrl);
+  for (const originalApiUrl of [null, 'http://project.supabase.co/rest/v1/library_notes',
+    'https://project.supabase.co/rest/v1/library_notes?select=*', 'https://project.supabase.co/']) {
+    assert.throws(() => deploymentIdentity(env, { ...stage5, originalApiUrl }));
+  }
   for (const step of [undefined, 0, 13, '4', 4.5]) {
     assert.throws(() => deploymentIdentity(env, { ...config, step }));
   }

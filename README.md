@@ -69,6 +69,7 @@ anon·authenticated 권한은 모두 false, PUBLIC·열 ACL 결과는 없음, �
 설정은 5단계입니다. 기존 배포 주소·Supabase 발급자·메모 API 허용 경로와 `nosniff` 헤더를 유지합니다.
 `originalApiUrl`은 원본 메모 테이블의 쿼리 없는 HTTPS 주소입니다. `judgeIssuer`는 운영 측 설정을 유지합니다.
 배포된 `/aleph.json`의 단계·허용 경로·커밋과 첫 화면 보안 헤더를 실제 HTTP로 확인했습니다.
+심판의 `S05_ORIGINAL_URL_MISSING`에 따라 배포 JSON 생성 코드에 원본 주소 출력을 추가했습니다.
 공개 화면과 정적 import로 연결된 CDN 파일 10개에서 키·시드 표식 미검출을 확인했습니다.
 자동 토큰 갱신과 A에서 B로의 반대 방향 ID 시험은 실제 배포에서 별도 확인하지 않았습니다.
 `npm run bundle`은 실제 HTTP 요청에 대한 학생 자기 점검이며 심판 판정이 아닙니다.

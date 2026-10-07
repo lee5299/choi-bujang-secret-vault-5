@@ -132,3 +132,13 @@ Auth 참고: [Supabase 세션](https://supabase.com/docs/guides/auth/sessions),
   학생 콘솔의 원본 인증 시험 결과는 위 기록과 제출 설명에서 출처를 구분합니다.
 - 자동 토큰 갱신·실제 역방향 ID 시험·B 변경 시험 직전 본문 비교는 미확인으로 남깁니다.
   운영 심판 점수는 학생 자기 점검으로 확정하지 않습니다.
+
+## 심판 설정 오류 수정 (2026-10-07)
+
+- 학생이 운영 심판 결과 50/100, `S05_ORIGINAL_URL_MISSING`을 전달했습니다.
+- 원인은 DB 직접 조회 허용이 아니라 배포 `/aleph.json`의 originalApiUrl 누락입니다.
+  로컬 config에는 주소가 있었으나 배포 JSON 생성 코드가 해당 필드를 내보내지 않았습니다.
+- `scripts/deployment-identity.mjs`: 5단계부터 쿼리 없는 HTTPS 원본 주소를 검증하고 배포 JSON에 포함하도록 수정했습니다.
+- `test/r5.test.mjs`: 원본 주소 출력과 누락·HTTP·쿼리 포함 주소 거부를 확인합니다.
+- `src/attack-check.mjs`: 실제 배포 JSON의 원본 주소 일치 여부도 자기 점검에 기록합니다.
+- DB 권한·메모 API·Auth·judgeIssuer는 변경하지 않았습니다.

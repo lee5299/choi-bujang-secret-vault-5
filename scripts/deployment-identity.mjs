@@ -8,6 +8,14 @@ export function deploymentIdentity(env, config) {
   const repo = env.VERCEL_GIT_REPO_SLUG;
   const commit = env.VERCEL_GIT_COMMIT_SHA;
   const host = env.VERCEL_URL;
+  if (config?.step >= 5) {
+    let original;
+    try { original = new URL(config.originalApiUrl); } catch { throw new Error('5단계 원본 자료 HTTPS 주소를 확인하세요.'); }
+    if (original.protocol !== 'https:' || original.username || original.password
+        || original.search || original.hash || original.pathname === '/') {
+      throw new Error('5단계 원본 자료 주소는 쿼리 없는 HTTPS 경로여야 합니다.');
+    }
+  }
   if (env.VERCEL_GIT_PROVIDER !== 'github' || !OWNER.test(owner || '')
       || !REPO.test(repo || '') || repo === '.' || repo === '..'
       || repo.toLowerCase().endsWith('.git') || !SHA.test(commit || '')
@@ -26,6 +34,6 @@ export function deploymentIdentity(env, config) {
     commit: commit.toLowerCase(),
     publicAppUrl: `https://${host.toLowerCase()}`,
     judgeIssuer: config.judgeIssuer,
-    ...(config.step >= 5 ? { allowedRoutes: [...(config.allowedRoutes ?? [])] } : {}),
+    ...(config.step >= 5 ? { allowedRoutes: [...(config.allowedRoutes ?? [])], originalApiUrl: config.originalApiUrl } : {}),
   };
 }

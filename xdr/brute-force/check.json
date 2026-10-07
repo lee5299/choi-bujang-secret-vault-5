@@ -1,0 +1,11 @@
+{
+  "schema": "aleph.xdr.check.v1",
+  "scope": "fixture",
+  "alertCount": 28,
+  "normalEventCount": 9,
+  "normalBlocked": 0,
+  "normalAddressBlocked": 0,
+  "denyRuleCount": 9,
+  "jevConnected": false,
+  "liveZtnaConnected": false
+}

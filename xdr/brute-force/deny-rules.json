@@ -1,0 +1,88 @@
+{
+  "schema": "aleph.xdr.deny-rules.v1",
+  "mode": "fixture",
+  "rules": [
+    {
+      "ruleId": "xdr.brute_force",
+      "sourceIp": "203.0.113.10",
+      "startsAt": "2026-09-27T00:12:01.000Z",
+      "expiresAt": "2026-09-27T00:27:40.000Z",
+      "evidenceAlertIds": [
+        "bf-01",
+        "bf-02"
+      ]
+    },
+    {
+      "ruleId": "xdr.brute_force",
+      "sourceIp": "198.51.100.20",
+      "startsAt": "2026-09-27T00:14:02.000Z",
+      "expiresAt": "2026-09-27T00:29:02.000Z",
+      "evidenceAlertIds": [
+        "bf-03"
+      ]
+    },
+    {
+      "ruleId": "xdr.brute_force",
+      "sourceIp": "192.0.2.30",
+      "startsAt": "2026-09-27T00:20:11.000Z",
+      "expiresAt": "2026-09-27T00:35:11.000Z",
+      "evidenceAlertIds": [
+        "bf-04"
+      ]
+    },
+    {
+      "ruleId": "xdr.brute_force",
+      "sourceIp": "203.0.113.21",
+      "startsAt": "2026-09-27T00:21:00.000Z",
+      "expiresAt": "2026-09-27T00:36:00.000Z",
+      "evidenceAlertIds": [
+        "bf-05"
+      ]
+    },
+    {
+      "ruleId": "xdr.brute_force",
+      "sourceIp": "198.51.100.44",
+      "startsAt": "2026-09-27T02:02:15.000Z",
+      "expiresAt": "2026-09-27T02:17:15.000Z",
+      "evidenceAlertIds": [
+        "bf-06"
+      ]
+    },
+    {
+      "ruleId": "xdr.brute_force",
+      "sourceIp": "203.0.113.15",
+      "startsAt": "2026-09-27T02:05:40.000Z",
+      "expiresAt": "2026-09-27T02:20:40.000Z",
+      "evidenceAlertIds": [
+        "bf-07"
+      ]
+    },
+    {
+      "ruleId": "xdr.brute_force",
+      "sourceIp": "192.0.2.18",
+      "startsAt": "2026-09-27T04:10:02.000Z",
+      "expiresAt": "2026-09-27T04:25:02.000Z",
+      "evidenceAlertIds": [
+        "bf-08"
+      ]
+    },
+    {
+      "ruleId": "xdr.brute_force",
+      "sourceIp": "198.51.100.8",
+      "startsAt": "2026-09-27T05:22:18.000Z",
+      "expiresAt": "2026-09-27T05:37:18.000Z",
+      "evidenceAlertIds": [
+        "bf-09"
+      ]
+    },
+    {
+      "ruleId": "xdr.brute_force",
+      "sourceIp": "203.0.113.40",
+      "startsAt": "2026-09-27T06:40:01.000Z",
+      "expiresAt": "2026-09-27T06:55:01.000Z",
+      "evidenceAlertIds": [
+        "bf-10"
+      ]
+    }
+  ]
+}

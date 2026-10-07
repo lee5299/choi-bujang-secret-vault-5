@@ -80,7 +80,8 @@ anon·authenticated 권한은 모두 false, PUBLIC·열 ACL 결과는 없음, �
 
 - [4단계 기록과 SQL 안내](4/README.md)
 - [5단계 준비 중 완료한 정리·확인 기록](5/README.md)
-- [보너스 XDR-01 작업 기록](xdr/README.md#xdr-01-제작과-가상-시험-2026-10-07)
+- [XDR 전체 목차](xdr/README.md)
+- [보너스 XDR-01 작업 기록](xdr/brute-force/README.md)
 
 1~3단계의 기존 안내는 4단계 기록의 보존 부분에 있습니다. 별도 완료 기록을 새로 만들지 않습니다.
 6~16단계는 완료한 작업이 생길 때 폴더와 기록 파일을 만들고 이 목차에 추가합니다.
@@ -92,11 +93,17 @@ anon·authenticated 권한은 모두 false, PUBLIC·열 ACL 결과는 없음, �
 무차별 로그인 가상 경보를 읽고 MITRE T1110의 비밀번호 추측·스프레이 패턴으로 판단합니다.
 같은 주소·계정의 단일 실패를 3분 창으로 모으고, 이미 합산된 경보는 다시 더하지 않습니다.
 명확한 공격은 block, 애매한 시도는 alert, 정상 이벤트는 record로 기록합니다.
-기본 Jev 연결은 없으며 애매한 이벤트는 무응답 처리로 alert를 반환합니다.
+`decide(alert)`는 애매한 이벤트만 Jev 공식 API에 묻고 최종 `{ action, confidence, reason }`을 반환합니다.
+API 키 기본값은 비어 있습니다. 키가 없거나 Jev가 실패·무응답이면 alert를 반환합니다.
+실제 키는 실행 환경의 비밀 설정에서 `TYPESAFE_API_KEY`로 받으며 코드·기록에는 넣지 않습니다.
+별도 실행 옵션은 필요하지 않습니다. 연결 계약은 [TypeSafe 공식 API 문서](https://docs.typesafe.ai/api)를 따릅니다.
 
 프로젝트 루트에서 `npm.cmd run xdr:run -- brute-force`를 실행합니다.
-`xdr/brute-force/result.json`의 counts는 block 10·alert 9·record 9이고,
+키를 비운 가상 실행의 `xdr/brute-force/result.json` counts는 block 10·alert 9·record 9이고,
 `check.json`에서 정상 이벤트 9건의 판단·주소 차단 오탐은 각각 0건입니다.
+`check.json`의 `fixtureReplay`는 가상 허용 판정기에 추가 검사를 연결한 재생 결과입니다.
+명확한 공격 10건 거부·애매한 시도 9건 통과·정상 요청 9건 통과·만료 규칙 9개 통과를 확인했습니다.
+이 재생 결과는 기존 starter.deny나 실제 학생 접속의 허용 결과를 의미하지 않습니다.
 `xdr/alerts.log`에는 알림과 차단 후보가 실행할 때마다 추가됩니다.
 `deny-rules.json`은 근거 경보 번호와 경보 시간 기준 15분 만료가 있는 가상 주소 규칙입니다.
 가상 자료의 과거 시각을 현재 실행 시각으로 바꿔 차단을 다시 활성화하지 않습니다.

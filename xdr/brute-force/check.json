@@ -7,5 +7,22 @@
   "normalAddressBlocked": 0,
   "denyRuleCount": 9,
   "jevConnected": false,
-  "liveZtnaConnected": false
+  "jevCalls": 0,
+  "jevReplies": 0,
+  "jevFailures": 0,
+  "liveZtnaConnected": false,
+  "fixtureReplay": {
+    "scope": "fixture",
+    "base": "simulated_allow",
+    "clearAttackCount": 10,
+    "clearAttackDenied": 10,
+    "ambiguousCount": 9,
+    "ambiguousPassed": 9,
+    "normalCount": 9,
+    "normalPassed": 9,
+    "normalDenied": 0,
+    "expiredRuleCount": 9,
+    "expiredRulesPassed": 9,
+    "baseResponsesPreserved": true
+  }
 }

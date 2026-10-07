@@ -1,12 +1,12 @@
 import { evidenceFor, guessing, isNormalEvent } from './evidence.mjs';
+import { createJevClient } from './jev.mjs';
 
-export function actionFor(confidence) {
+function actionFor(confidence) {
   return confidence >= 0.85 ? 'block' : confidence >= 0.5 ? 'alert' : 'record';
 }
 
-// jev는 공식 연결 코드가 제공할 함수입니다. 토큰·비밀번호·원문 경보는 전달하지 않습니다.
-// 계약이 없는 네트워크 API를 만들어 호출하지 않으며, 기본값은 무응답 처리입니다.
-export function createDecider({ jev = null, timeoutMs = 1000 } = {}) {
+// 패턴으로 구분할 수 없는 경보만 Jev에 전달합니다.
+function createDecider({ jev, timeoutMs = 5000 }) {
   const history = new Map();
   return async function decide(alert) {
     const e = evidenceFor(alert);
@@ -63,4 +63,14 @@ export function createDecider({ jev = null, timeoutMs = 1000 } = {}) {
   };
 }
 
-export const decide = createDecider();
+// 키의 기본값은 비어 있습니다. 실제 값은 실행 환경의 비밀 설정에서만 받습니다.
+const apiKey = process.env.TYPESAFE_API_KEY ?? '';
+let jevClient;
+const askJev = (input, options) => {
+  jevClient ??= createJevClient({ apiKey });
+  return jevClient(input, options);
+};
+
+export const decide = createDecider({ jev: askJev });
+// 실행 기록용 수치만 제공합니다. 키·원문 요청·원문 응답은 포함하지 않습니다.
+decide.getJevStats = () => jevClient?.getStats() ?? { attempted: 0, succeeded: 0, failed: 0 };

@@ -73,7 +73,57 @@ export function withXdrCheck(baseDecide, { verifiedSource, loadRules, denyRespon
   };
 }
 
-export async function applyRun({ root, alerts, result }) {
+// 가상 허용 판정기에만 연결하여 추가 검사의 동작을 재생합니다.
+// 이 결과는 기존 starter.deny의 허용이나 실제 학생 접속을 의미하지 않습니다.
+export async function replayFixture(alerts, store) {
+  if (store?.schema !== 'aleph.xdr.deny-rules.v1' || store.mode !== 'fixture') {
+    throw new Error('가상 재생에는 fixture 규칙만 사용합니다.');
+  }
+  const summary = {
+    scope: 'fixture', base: 'simulated_allow',
+    clearAttackCount: 0, clearAttackDenied: 0,
+    ambiguousCount: 0, ambiguousPassed: 0,
+    normalCount: 0, normalPassed: 0, normalDenied: 0,
+    expiredRuleCount: store.rules.length, expiredRulesPassed: 0,
+    baseResponsesPreserved: true,
+  };
+  const check = async (sourceIp, at, requestId) => {
+    const request = { requestId, at };
+    const baseResponse = { schema: 'aleph.decision.v1', requestId,
+      decision: 'allow', reasonCode: 'fixture_allow', ruleIds: [] };
+    const gate = withXdrCheck(async () => baseResponse, {
+      mode: 'fixture', verifiedSource: () => sourceIp, loadRules: () => store,
+      denyResponse: (_request, rule) => ({ schema: 'aleph.decision.v1', requestId,
+        decision: 'deny', reasonCode: 'fixture_denied', ruleIds: [rule.ruleId] }),
+    });
+    const response = await gate(request);
+    if (response.decision === 'allow' && response !== baseResponse) summary.baseResponsesPreserved = false;
+    return response.decision;
+  };
+  for (const alert of alerts) {
+    const e = evidenceFor(alert);
+    const response = await check(e.sourceIp, e.timestamp, alert.id);
+    if (e.valid && isNormalEvent(e)) {
+      summary.normalCount += 1;
+      if (response === 'allow') summary.normalPassed += 1;
+      else summary.normalDenied += 1;
+    } else if (e.clear) {
+      summary.clearAttackCount += 1;
+      if (response === 'deny') summary.clearAttackDenied += 1;
+    } else {
+      summary.ambiguousCount += 1;
+      if (response === 'allow') summary.ambiguousPassed += 1;
+    }
+  }
+  for (const rule of store.rules) {
+    if (await check(rule.sourceIp, rule.expiresAt, rule.evidenceAlertIds[0]) === 'allow') {
+      summary.expiredRulesPassed += 1;
+    }
+  }
+  return summary;
+}
+
+export async function applyRun({ root, alerts, result, jevStats }) {
   const dir = join(root, 'xdr', 'brute-force');
   await mkdir(dir, { recursive: true });
   const store = buildFixtureRules(alerts, result.decisions);
@@ -93,7 +143,10 @@ export async function applyRun({ root, alerts, result }) {
     normalBlocked: normalIndices.filter(({ index }) => result.decisions[index].action === 'block').length,
     normalAddressBlocked: normalIndices.filter(({ e }) =>
       matchDenyRule(store, e.sourceIp, e.timestamp, { mode: 'fixture' })).length,
-    denyRuleCount: store.rules.length, jevConnected: false, liveZtnaConnected: false,
+    denyRuleCount: store.rules.length, jevConnected: (jevStats?.succeeded ?? 0) > 0,
+    jevCalls: jevStats?.attempted ?? 0, jevReplies: jevStats?.succeeded ?? 0,
+    jevFailures: jevStats?.failed ?? 0, liveZtnaConnected: false,
+    fixtureReplay: await replayFixture(alerts, store),
   };
   await writeFile(join(dir, 'check.json'), `${JSON.stringify(check, null, 2)}\n`);
   return check;

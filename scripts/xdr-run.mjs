@@ -63,7 +63,7 @@ export async function runXdr({ root, moduleKey, writeError = (line) => console.e
     }
     if (exists) {
       const { applyRun } = await import(pathToFileURL(connector).href);
-      await applyRun({ root, alerts: fixture.alerts, result });
+      await applyRun({ root, alerts: fixture.alerts, result, jevStats: loaded.decide.getJevStats?.() });
     }
   }
   return result;

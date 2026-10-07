@@ -177,3 +177,6 @@ bundle-notes.json과 artifacts/submission.json은 커밋하지 마.
 
 오류가 나면 첫 오류를 근거로 필요한 한 가지 수정만 하고 다시 실행해 줘.
 실제로 실행하지 않은 명령·시험·배포는 완료했다고 말하지 마.
+
+
+git commit -m "5단계 배포 테스트"

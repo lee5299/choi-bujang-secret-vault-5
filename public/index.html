@@ -34,7 +34,7 @@
 </head>
 <body>
   <main>
-    <div class="eyebrow">BYTE BACK · 4단계</div>
+    <div class="eyebrow">BYTE BACK · 5단계</div>
     <h1>내 자료실</h1>
     <p>아래 기록은 모두 실습을 위해 만든 가상 자료입니다.</p>
     <section class="auth" aria-labelledby="auth-heading">
@@ -313,10 +313,20 @@
 
     try {
       const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/+esm');
-      const authClient = createClient(
-        'https://kwmdcywakbaydceasxpx.supabase.co',
-        'sb_publishable_FHpQGcCi6e0ZVZIfC-59Zg_Foo0b45U',
-      );
+      const authClient = createClient(globalThis.location?.origin ?? 'https://local.invalid', 'server-auth-proxy', {
+        auth: { storageKey: 'vault-server-auth', detectSessionInUrl: false },
+        global: { fetch: async (input, options = {}) => {
+          const endpoint = new URL(typeof input === 'string' ? input : input.url ?? String(input));
+          const route = endpoint.pathname.replace(/^\/auth\/v1\//, '');
+          if (!['token', 'user', 'logout'].includes(route)) throw new TypeError('Unsupported Auth request');
+          const query = new URLSearchParams({ route });
+          if (endpoint.searchParams.has('grant_type')) query.set('grant_type', endpoint.searchParams.get('grant_type'));
+          const headers = new Headers(options.headers);
+          headers.delete('apikey');
+          if (route === 'token') headers.delete('Authorization');
+          return fetch(`/api/auth?${query}`, { ...options, headers, cache: 'no-store', redirect: 'error' });
+        } },
+      });
       // 세션 저장과 갱신은 공식 SDK에 맡기며 토큰을 화면이나 로그에 출력하지 않습니다.
       authClient.auth.onAuthStateChange((event, session) => {
         showSession(session);

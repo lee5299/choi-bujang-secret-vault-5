@@ -29,6 +29,7 @@ test('build identity uses Vercel Git and deployment metadata', () => {
   assert.throws(() => deploymentIdentity({ ...env, VERCEL_GIT_PROVIDER: undefined }, config));
   assert.throws(() => deploymentIdentity({ ...env, VERCEL_GIT_COMMIT_SHA: 'short' }, config));
   assert.equal(deploymentIdentity(env, { ...config, step: 4 }).step, 4);
+  assert.deepEqual(deploymentIdentity(env, { ...config, step: 5, allowedRoutes: ['GET /api/notes'] }).allowedRoutes, ['GET /api/notes']);
   for (const step of [undefined, 0, 13, '4', 4.5]) {
     assert.throws(() => deploymentIdentity(env, { ...config, step }));
   }

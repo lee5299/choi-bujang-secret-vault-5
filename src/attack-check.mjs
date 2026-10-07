@@ -1,7 +1,7 @@
 // The student changes this check as each stage adds an attack to the same app.
 // Never return tokens, private keys, real names, or note bodies.
 export async function runAttackChecks(config) {
-  if (![1, 3, 4].includes(config.step)) throw new Error('이 단계의 공격 점검을 src/attack-check.mjs에 구현해 주세요.');
+  if (![1, 3, 4, 5].includes(config.step)) throw new Error('이 단계의 공격 점검을 src/attack-check.mjs에 구현해 주세요.');
   let app;
   try {
     app = new URL(config.publicAppUrl);
@@ -29,6 +29,13 @@ export async function runAttackChecks(config) {
           const secured = result.headers.get('x-content-type-options')?.toLowerCase() === 'nosniff'
             || Boolean(result.headers.get('content-security-policy'));
           observed = `HTTP ${result.status} · 보안 헤더 ${secured ? '확인' : '없음'}`;
+          if (config.step === 5) {
+            const html = await result.text();
+            const exposed = /sb_publishable_[A-Za-z0-9_-]+|sb_secret_[A-Za-z0-9_-]+|eyJ[A-Za-z0-9_-]{12,}\.eyJ[A-Za-z0-9_-]{12,}\.[A-Za-z0-9_-]{8,}/u.test(html)
+              || (typeof config.sampleMarker === 'string' && html.includes(config.sampleMarker));
+            attempts.push({ attackId: 'public_page_key_marker_scan', expected: '요청한 첫 화면에 Supabase 키·시드 표식 없음',
+              observed: `HTTP ${result.status} · 첫 화면 키·표식 ${exposed ? '검출' : '미검출'} · 외부 묶음 미검사` });
+          }
         } else {
           let data;
           const jsonType = /^application\/json(?:\s*;|$)/iu.test(result.headers.get('content-type') ?? '');
@@ -44,6 +51,7 @@ export async function runAttackChecks(config) {
               && data.judgeIssuer === config.judgeIssuer && data.repoUrl === config.repoUrl
               && /^[a-f0-9]{40}$/iu.test(data.commit ?? '');
             observed = `HTTP ${result.status} · 현재 단계 식별 JSON ${valid ? '확인' : '불일치 또는 없음'}`;
+            if (config.step === 5) observed += ` · 허용 경로 ${Array.isArray(data?.allowedRoutes) && data.allowedRoutes.length ? '확인' : '없음'}`;
           } else {
             const notes = Array.isArray(data) ? data : data?.notes;
             const empty = Array.isArray(notes) && notes.length === 0;

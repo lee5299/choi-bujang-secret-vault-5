@@ -56,14 +56,14 @@ export async function runXdr({ root, moduleKey, writeError = (line) => console.e
   await mkdir(outDir, { recursive: true });
   await writeFile(join(outDir, 'result.json'), `${JSON.stringify(result, null, 2)}\n`, 'utf8');
   if (moduleKey === 'brute-force') {
-    const connector = join(outDir, 'connect.mjs');
+    const connector = join(outDir, 'respond.mjs');
     let exists = true;
     try { await access(connector); } catch (error) {
       if (error.code === 'ENOENT') exists = false; else throw error;
     }
     if (exists) {
       const { applyRun } = await import(pathToFileURL(connector).href);
-      await applyRun({ root, alerts: fixture.alerts, result, jevStats: loaded.decide.getJevStats?.() });
+      await applyRun({ root, alerts: fixture.alerts, result });
     }
   }
   return result;

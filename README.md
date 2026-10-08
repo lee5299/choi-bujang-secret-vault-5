@@ -90,26 +90,27 @@ anon·authenticated 권한은 모두 false, PUBLIC·열 ACL 결과는 없음, �
 
 ## 보너스 XDR-01
 
-무차별 로그인 가상 경보를 읽고 MITRE T1110의 비밀번호 추측·스프레이 패턴으로 판단합니다.
-같은 주소·계정의 단일 실패를 3분 창으로 모으고, 이미 합산된 경보는 다시 더하지 않습니다.
-명확한 공격은 block, 애매한 시도는 alert, 정상 이벤트는 record로 기록합니다.
-`decide(alert)`는 애매한 이벤트만 Jev 공식 API에 묻고 최종 `{ action, confidence, reason }`을 반환합니다.
-API 키 기본값은 비어 있습니다. 키가 없거나 Jev가 실패·무응답이면 alert를 반환합니다.
-실제 키는 실행 환경의 비밀 설정에서 `TYPESAFE_API_KEY`로 받으며 코드·기록에는 넣지 않습니다.
-별도 실행 옵션은 필요하지 않습니다. 연결 계약은 [TypeSafe 공식 API 문서](https://docs.typesafe.ai/api)를 따릅니다.
+2026-10-08 수정 요청에 따라 판단을 오프라인 단일 파일로 바꿨습니다.
+`xdr/brute-force/decide.mjs` 맨 위에 `patterns.json`의 두 패턴을 그대로 적고,
+`decide(alert)` 하나만 내보냅니다. 다른 파일·패키지·인터넷·키·파일 입출력을 사용하지 않습니다.
+확신도는 패턴과의 일치 정도이며 0.85 이상 block, 0.5 이상 alert, 그 아래 record입니다.
+명확한 근거는 0.95, 정상은 0.1, 부족한 근거는 보조 신호에 따라 0.5~0.83으로 계산합니다.
+같은 주소·계정의 단일 실패는 모듈 메모리의 3분 창으로 집계하고 중복 경보·요약 경보는 다시 더하지 않습니다.
 
-프로젝트 루트에서 `npm.cmd run xdr:run -- brute-force`를 실행합니다.
-키를 비운 가상 실행의 `xdr/brute-force/result.json` counts는 block 10·alert 9·record 9이고,
-`check.json`에서 정상 이벤트 9건의 판단·주소 차단 오탐은 각각 0건입니다.
-`check.json`의 `fixtureReplay`는 가상 허용 판정기에 추가 검사를 연결한 재생 결과입니다.
-명확한 공격 10건 거부·애매한 시도 9건 통과·정상 요청 9건 통과·만료 규칙 9개 통과를 확인했습니다.
-이 재생 결과는 기존 starter.deny나 실제 학생 접속의 허용 결과를 의미하지 않습니다.
-`xdr/alerts.log`에는 알림과 차단 후보가 실행할 때마다 추가됩니다.
-`deny-rules.json`은 근거 경보 번호와 경보 시간 기준 15분 만료가 있는 가상 주소 규칙입니다.
-가상 자료의 과거 시각을 현재 실행 시각으로 바꿔 차단을 다시 활성화하지 않습니다.
+`read-alerts.mjs`는 확인용으로 다섯 항목만 출력하며 `decide.mjs`에서 불러오지 않습니다.
+`patterns.json`에는 MITRE T1110.001 비밀번호 추측과 T1110.003 비밀번호 스프레이만 있습니다.
+`respond.mjs`가 차단 후보의 근거를 다시 확인하여 경보 시각 기준 15분 만료와 근거 경보 번호가 있는
+별도 가상 거부 규칙을 만들고 `xdr/alerts.log`에 알림·차단 후보를 한 줄씩 추가합니다.
+`connect.mjs`는 이전 호출을 보존하는 재내보내기 파일입니다. 기존 판정 규칙은 수정하지 않았습니다.
 
-`connect.mjs`의 추가 검사 부품은 기존 판정 함수의 응답을 보존하며,
-운영 엔진의 검증된 주소·규칙 조회·등록된 거부 응답 콜백이 있어야 꽂을 수 있습니다.
-현재 ZTNA 요청 계약에는 출발 IP가 없어 실제 연결은 미완료입니다.
-기본 운영 모드에서는 fixture 규칙을 적용하지 않습니다. `src/decider.mjs`는 기존 starter.deny를 유지합니다.
-실제 Wazuh·Jev·운영 ZTNA 접속 시험·배포는 수행하지 않았습니다. 후속 확인은 [TODO](TODO.md)에 있습니다.
+프로젝트 루트에서 `npm.cmd run xdr:run -- brute-force`를 실행합니다. Jev 키 설정이 필요 없습니다.
+현재 `result.json` counts는 **block 10·alert 9·record 9**, `check.json`의 정상 이벤트·정상 주소 오차단은 각각 0건입니다.
+파일 목록에서 **xdr → brute-force → result.json**의 `counts`와 `check.json`의 `fixtureReplay`를 누릅니다.
+정상 예상: 정상 이벤트 record, 애매한 시도 alert. 거부 예상: 명확한 공격 block 후보.
+가상 허용 판정기에 추가 검사를 연결한 재생은 공격 10건 거부·애매한 9건 통과·정상 9건 통과·만료 규칙 9개 통과입니다.
+실제 학생 접속이나 심판의 판정 결과를 확인한 것은 아닙니다.
+
+기존 `src/decider.mjs`는 starter.deny를 보존합니다. 현재 ZTNA 요청 계약에는 출발 IP가 없어
+운영 연결에는 검증된 주소 조회·등록된 거부 응답 콜백 계약이 필요합니다. 기본 운영 모드에는 가상 규칙을 적용하지 않습니다.
+이전 Jev 웹 시험의 서버·화면·SQL 준비는 로컬의 별도 미커밋 작업으로 보존하며 이번 제출에는 포함하지 않습니다.
+새 요청의 제작 1~5 기록은 [XDR-01 작업 기록](xdr/brute-force/README.md)에 있습니다.

@@ -1,38 +1,24 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import { test } from 'node:test';
+import { pathToFileURL } from 'node:url';
+import { runInNewContext } from 'node:vm';
 import { projectAlert, readAlerts } from '../xdr/brute-force/read-alerts.mjs';
-import { applyRun, buildFixtureRules, matchDenyRule, withXdrCheck } from '../xdr/brute-force/connect.mjs';
+import { applyRun, buildFixtureRules, matchDenyRule, withXdrCheck } from '../xdr/brute-force/respond.mjs';
 import { decide as baseDecide } from '../src/decider.mjs';
 
 const fixture = JSON.parse(await readFile(new URL('../xdr/fixtures/brute-force.json', import.meta.url)));
 const find = id => fixture.alerts.find(alert => alert.id === id);
 const clone = id => structuredClone(find(id));
 let moduleNumber = 0;
-// 시험 중 실제 환경의 키나 네트워크를 사용하지 않습니다.
-async function createDecider({ jev = null, fetchImpl } = {}) {
-  const previousKey = process.env.TYPESAFE_API_KEY;
-  try {
-    process.env.TYPESAFE_API_KEY = jev || fetchImpl ? 'fixture-only-key' : '';
-    const url = new URL('../xdr/brute-force/decide.mjs', import.meta.url);
-    url.searchParams.set('test', String(++moduleNumber));
-    const loaded = await import(url.href);
-    assert.deepEqual(Object.keys(loaded), ['decide']);
-    return async alert => {
-      const previousFetch = globalThis.fetch;
-      globalThis.fetch = fetchImpl ?? (async (_url, options) => {
-        if (!jev) throw new Error('시험 중 실제 네트워크 금지');
-        const reply = await jev(JSON.parse(options.body).state, { signal: options.signal });
-        return { ok: true, json: async () => ({ answers: { brute_force: { type: 'noul', noul: reply?.confidence } } }) };
-      });
-      try { return await loaded.decide(alert); } finally { globalThis.fetch = previousFetch; }
-    };
-  } finally {
-    if (previousKey === undefined) delete process.env.TYPESAFE_API_KEY;
-    else process.env.TYPESAFE_API_KEY = previousKey;
-  }
+async function createDecider() {
+  const url = new URL('../xdr/brute-force/decide.mjs', import.meta.url);
+  url.searchParams.set('test', String(++moduleNumber));
+  const loaded = await import(url.href);
+  assert.deepEqual(Object.keys(loaded), ['decide']);
+  return loaded.decide;
 }
 const decide = await createDecider();
 const decisions = [];
@@ -75,31 +61,84 @@ test('규칙 수준만 높이거나 T1110만 붙여 정상 이벤트를 차단�
   assert.equal((await (await createDecider())(normal)).action, 'record');
 });
 
-test('Jev는 애매한 경우만 호출하고 숫자 신호만 전달, 기준 경계값 적용', async () => {
-  for (const [confidence, action] of [[0, 'record'], [0.499, 'record'], [0.5, 'alert'], [0.849, 'alert'], [0.85, 'block'], [1, 'block']]) {
-    let calls = 0;
-    const judge = await createDecider({ jev: async input => {
-      calls += 1;
-      assert.deepEqual(Object.keys(input), ['pattern', 'level', 'failureCount', 'accountCount', 'windowSeconds', 'samePasswordSignal', 'successAfterFailures']);
-      return { confidence, reason: '모델 설명은 출력하지 않습니다.' };
-    } });
-    assert.equal((await judge(find('bf-01'))).action, 'block');
-    assert.equal((await judge(find('bf-20'))).action, 'record');
-    assert.equal(calls, 0);
-    const out = await judge(find('bf-13'));
-    assert.equal(out.action, action);
-    assert.equal(out.confidence, confidence);
-    assert.equal(calls, 1);
-    assert.equal(out.reason, 'password_guessing');
-    assert.equal(buildFixtureRules([find('bf-13')], [{ alertId: 'bf-13', ...out }]).rules.length, 0);
+test('패턴 원본의 두 항목과 단독 파일 맨 위 상수의 이름·조건·근거가 일치', async () => {
+  const source = await readFile(new URL('../xdr/brute-force/decide.mjs', import.meta.url), 'utf8');
+  const original = JSON.parse(await readFile(new URL('../xdr/brute-force/patterns.json', import.meta.url)));
+  assert.match(source, /^\/\/[^\n]*\nconst PATTERNS =/u);
+  const embedded = runInNewContext(source.replace('export function decide', 'function decide') + '\nPATTERNS;', {}, { timeout: 1000 });
+  assert.deepEqual(JSON.parse(JSON.stringify(embedded)), original.patterns);
+  for (const pattern of original.patterns) assert.ok(pattern.evidence && !/[\r\n]/u.test(pattern.evidence));
+});
+
+test('decide.mjs 한 파일만 복사해 인터넷·키 없이 즉시 판단하고 파일을 만들지 않음', async () => {
+  const source = await readFile(new URL('../xdr/brute-force/decide.mjs', import.meta.url), 'utf8');
+  assert.equal(/\b(?:import|fetch|XMLHttpRequest|WebSocket|process|Deno|Bun)\b|\brequire\s*\(|\b(?:readFile|writeFile|appendFile)\b/u.test(source), false);
+  const root = await mkdtemp(join(tmpdir(), 'xdr-standalone-'));
+  const previousFetch = globalThis.fetch;
+  try {
+    await writeFile(join(root, 'decide.mjs'), source);
+    globalThis.fetch = () => { throw new Error('인터넷 없는 시험'); };
+    const loaded = await import(pathToFileURL(join(root, 'decide.mjs')).href);
+    assert.deepEqual(Object.keys(loaded), ['decide']);
+    assert.equal(loaded.decide.length, 1);
+    const counts = { block: 0, alert: 0, record: 0 };
+    for (const alert of fixture.alerts) {
+      const before = structuredClone(alert);
+      const out = loaded.decide(alert);
+      assert.equal(out instanceof Promise, false);
+      assert.deepEqual(Object.keys(out), ['action', 'confidence', 'reason']);
+      counts[out.action] += 1;
+      assert.deepEqual(alert, before);
+    }
+    assert.deepEqual(counts, { block: 10, alert: 9, record: 9 });
+    assert.deepEqual(await readdir(root), ['decide.mjs']);
+  } finally {
+    globalThis.fetch = previousFetch;
+    assert.equal(dirname(resolve(root)), resolve(tmpdir()));
+    assert.ok(basename(root).startsWith('xdr-standalone-'));
+    await rm(root, { recursive: true, force: true });
   }
 });
 
-test('Jev 미연결·예외·잘못된 응답·시간 초과는 alert', async () => {
-  for (const jev of [null, async () => { throw new Error('raw fixture-only error'); }, async () => ({ confidence: NaN }),
-    async () => ({ confidence: 1.01 }), async () => ({ confidence: '0.95' }), () => new Promise(() => {})]) {
-    const out = await (await createDecider({ jev }))(find('bf-13'));
-    assert.deepEqual(out, { action: 'alert', confidence: 0.5, reason: 'password_guessing' });
+test('대량 실패·시간·수준·다계정 조건의 경계와 성공 후 애매한 시도', async () => {
+  for (const [count, seconds, level, action] of [[19, 180, 10, 'alert'], [20, 180, 10, 'block'],
+    [20, 181, 10, 'alert'], [20, 180, 9, 'alert']]) {
+    const alert = clone('bf-01');
+    alert.data.count = String(count);
+    alert.rule.level = level;
+    alert.rule.description = `같은 주소에서 ${seconds}초 안에 로그인 실패 ${count}건입니다.`;
+    const out = (await createDecider())(alert);
+    assert.equal(out.action, action);
+    assert.equal(out.reason, 'password_guessing');
+    assert.equal(out.action, out.confidence >= 0.85 ? 'block' : out.confidence >= 0.5 ? 'alert' : 'record');
+  }
+  for (const [accounts, action] of [[7, 'alert'], [8, 'block']]) {
+    const alert = clone('bf-02');
+    alert.data.accounts = Array.from({ length: accounts }, (_, i) => `user0${i + 1}`).join(',');
+    const out = (await createDecider())(alert);
+    assert.equal(out.action, action);
+    assert.equal(out.reason, 'password_spraying');
+  }
+  const afterSuccess = clone('bf-01');
+  afterSuccess.rule.description += ' 그 뒤 성공했습니다.';
+  assert.equal((await createDecider())(afterSuccess).action, 'alert');
+  assert.equal((await createDecider())(projectAlert(find('bf-01'))).action, 'block');
+});
+
+test('입력 점수·이유를 믿지 않고 민감값이나 잘못된 입력을 출력하지 않음', async () => {
+  const judge = await createDecider();
+  const normal = clone('bf-20');
+  normal.confidence = 1;
+  normal.action = 'block';
+  normal.reason = 'fixture-only-canary';
+  assert.deepEqual(judge(normal), { action: 'record', confidence: 0.1, reason: '패턴 없음' });
+  const privateAlert = clone('bf-01');
+  privateAlert.rule.description += ' token=fixture-only-canary';
+  const out = judge(privateAlert);
+  assert.equal(out.action, 'alert');
+  assert.equal(JSON.stringify(out).includes('fixture-only-canary'), false);
+  for (const bad of [null, {}, { timestamp: 'invalid' }]) {
+    assert.deepEqual(judge(bad), { action: 'alert', confidence: 0.5, reason: 'password_guessing' });
   }
 });
 
@@ -129,43 +168,6 @@ test('주소·계정별 시간 창 집계, 중복 경보·다른 계정·창 밖
   other.data.srcuser = 'user01';
   other.timestamp = new Date(Date.parse(singles[19].timestamp) + 181000).toISOString();
   assert.equal((await judge(other)).action, 'alert');
-});
-
-test('공식 Jev API에 숫자 신호만 보내고 Noul 공격 확률을 판단에 사용', async () => {
-  let calls = 0;
-  const judge = await createDecider({ fetchImpl: async (url, options) => {
-    calls += 1;
-    assert.equal(url, 'https://api.typesafe.ai/v1/systemone');
-    assert.equal(options.method, 'POST');
-    assert.equal(options.redirect, 'error');
-    assert.equal(options.headers.Authorization, 'Bearer fixture-only-key');
-    assert.ok(options.signal instanceof AbortSignal);
-    const body = JSON.parse(options.body);
-    assert.equal(body.model, 'jev-latest');
-    assert.equal(body.questions.brute_force.type, 'noul');
-    assert.deepEqual(Object.keys(body.state), ['pattern', 'level', 'failureCount', 'accountCount', 'windowSeconds', 'samePasswordSignal', 'successAfterFailures']);
-    assert.equal(options.body.includes('bf-13'), false);
-    assert.equal(options.body.includes('user'), false);
-    assert.equal(options.body.includes('fixture-only-key'), false);
-    // Choice/Score의 certainty가 아니라 공격이라는 명제의 확률만 읽습니다.
-    return { ok: true, json: async () => ({ answers: { brute_force: { type: 'noul', noul: 0.6, confidence: 0.99 } } }) };
-  } });
-  assert.equal((await judge(find('bf-01'))).action, 'block');
-  assert.equal((await judge(find('bf-20'))).action, 'record');
-  assert.equal(calls, 0);
-  assert.deepEqual(await judge(find('bf-13')), { action: 'alert', confidence: 0.6, reason: 'password_guessing' });
-  assert.equal(calls, 1);
-});
-
-test('Jev HTTP 실패·JSON 오류·다른 답변 형식은 원문을 노출하지 않고 alert', async () => {
-  for (const response of [
-    { ok: false, json: async () => { throw new Error('원문을 읽으면 안 됩니다'); } },
-    { ok: true, json: async () => { throw new Error('fixture-only-private-error'); } },
-    { ok: true, json: async () => ({ answers: { brute_force: { type: 'choice', noul: 0.99 } } }) },
-  ]) {
-    const judge = await createDecider({ fetchImpl: async () => response });
-    assert.deepEqual(await judge(find('bf-13')), { action: 'alert', confidence: 0.5, reason: 'password_guessing' });
-  }
 });
 
 test('차단 근거·15분 만료·fixture 격리와 정상 주소 통과', () => {

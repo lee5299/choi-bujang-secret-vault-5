@@ -43,6 +43,10 @@
 
 항목마다 `xdr/<moduleKey>/decide.mjs` 를 만듭니다. `decide(alert)` 를 내보냅니다. 비동기 함수여도 됩니다. 반환은 아래 세 값입니다.
 
+XDR-01의 최신 제작 요청은 **동기 단일 파일 판단**입니다. `brute-force/decide.mjs`는 패턴 상수를
+내장하고 import·파일 입출력·외부 호출 없이 즉시 반환합니다. 확인용 읽기는 `read-alerts.mjs`,
+알림 저장·판정기 연결은 `respond.mjs`에 분리합니다. 이 제출 경로에는 Jev 키가 필요 없습니다.
+
 - `action`: `block`, `alert`, `record` 중 하나
 - `confidence`: 0 이상 1 이하 숫자
 - `reason`: 짧은 이유

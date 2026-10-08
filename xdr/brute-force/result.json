@@ -65,55 +65,55 @@
     {
       "alertId": "bf-11",
       "action": "alert",
-      "confidence": 0.5,
+      "confidence": 0.53,
       "reason": "password_guessing"
     },
     {
       "alertId": "bf-12",
       "action": "alert",
-      "confidence": 0.5,
+      "confidence": 0.61,
       "reason": "password_guessing"
     },
     {
       "alertId": "bf-13",
       "action": "alert",
-      "confidence": 0.5,
+      "confidence": 0.53,
       "reason": "password_guessing"
     },
     {
       "alertId": "bf-14",
       "action": "alert",
-      "confidence": 0.5,
+      "confidence": 0.61,
       "reason": "password_guessing"
     },
     {
       "alertId": "bf-15",
       "action": "alert",
-      "confidence": 0.5,
+      "confidence": 0.53,
       "reason": "password_guessing"
     },
     {
       "alertId": "bf-16",
       "action": "alert",
-      "confidence": 0.5,
+      "confidence": 0.53,
       "reason": "password_guessing"
     },
     {
       "alertId": "bf-17",
       "action": "alert",
-      "confidence": 0.5,
+      "confidence": 0.53,
       "reason": "password_guessing"
     },
     {
       "alertId": "bf-18",
       "action": "alert",
-      "confidence": 0.5,
+      "confidence": 0.61,
       "reason": "password_guessing"
     },
     {
       "alertId": "bf-19",
       "action": "alert",
-      "confidence": 0.5,
+      "confidence": 0.53,
       "reason": "password_guessing"
     },
     {

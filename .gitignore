@@ -6,3 +6,5 @@ node_modules/
 public/aleph.json
 local-only/
 5/cap/
+/data.json
+/public/data.json

@@ -1,0 +1,93 @@
+{
+  "schema": "aleph.xdr.deny-rules.v1",
+  "moduleKey": "web-injection",
+  "mode": "fixture",
+  "rules": [
+    {
+      "ruleId": "xdr.web_injection",
+      "sourceIp": "203.0.113.10",
+      "startsAt": "2026-09-27T00:13:01.000Z",
+      "expiresAt": "2026-09-27T00:28:20.000Z",
+      "evidenceAlertIds": [
+        "wi-01",
+        "wi-02"
+      ],
+      "patterns": [
+        "sql_injection",
+        "script_injection"
+      ]
+    },
+    {
+      "ruleId": "xdr.web_injection",
+      "sourceIp": "198.51.100.15",
+      "startsAt": "2026-09-27T00:16:04.000Z",
+      "expiresAt": "2026-09-27T00:31:04.000Z",
+      "evidenceAlertIds": [
+        "wi-03"
+      ],
+      "patterns": [
+        "path_traversal"
+      ]
+    },
+    {
+      "ruleId": "xdr.web_injection",
+      "sourceIp": "192.0.2.15",
+      "startsAt": "2026-09-27T01:02:11.000Z",
+      "expiresAt": "2026-09-27T01:17:11.000Z",
+      "evidenceAlertIds": [
+        "wi-04"
+      ],
+      "patterns": [
+        "sql_injection"
+      ]
+    },
+    {
+      "ruleId": "xdr.web_injection",
+      "sourceIp": "203.0.113.18",
+      "startsAt": "2026-09-27T01:18:33.000Z",
+      "expiresAt": "2026-09-27T01:33:33.000Z",
+      "evidenceAlertIds": [
+        "wi-05"
+      ],
+      "patterns": [
+        "sql_injection"
+      ]
+    },
+    {
+      "ruleId": "xdr.web_injection",
+      "sourceIp": "198.51.100.18",
+      "startsAt": "2026-09-27T02:07:08.000Z",
+      "expiresAt": "2026-09-27T02:22:08.000Z",
+      "evidenceAlertIds": [
+        "wi-06"
+      ],
+      "patterns": [
+        "command_injection"
+      ]
+    },
+    {
+      "ruleId": "xdr.web_injection",
+      "sourceIp": "192.0.2.21",
+      "startsAt": "2026-09-27T04:04:19.000Z",
+      "expiresAt": "2026-09-27T04:19:19.000Z",
+      "evidenceAlertIds": [
+        "wi-07"
+      ],
+      "patterns": [
+        "path_traversal"
+      ]
+    },
+    {
+      "ruleId": "xdr.web_injection",
+      "sourceIp": "203.0.113.22",
+      "startsAt": "2026-09-27T05:26:02.000Z",
+      "expiresAt": "2026-09-27T05:41:02.000Z",
+      "evidenceAlertIds": [
+        "wi-08"
+      ],
+      "patterns": [
+        "sql_injection"
+      ]
+    }
+  ]
+}

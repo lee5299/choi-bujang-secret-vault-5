@@ -4,13 +4,13 @@
 
 ## 도구별 목차와 작업 기록
 
-전달받은 제작 요청은 XDR-01 (`brute-force`)뿐입니다.
+전달받아 구현한 제작 요청은 XDR-01 (`brute-force`)과 XDR-02 (`web-injection`)입니다.
 나머지 항목은 기존 저장소의 가상 경보 이름이며, 과제 번호·제작 요구사항은 전달받지 않았습니다.
 
 | 도구 | 항목 | 작업 기록·현재 상태 | 원본 가상 경보 |
 | --- | --- | --- | --- |
 | XDR-01 | `brute-force` · 무차별 로그인 | [작업 기록](brute-force/README.md) · 로컬 구현·가상 시험 완료, 실제 연결 미완료 | [경보](fixtures/brute-force.json) |
-| 번호 미확인 | `web-injection` · 웹 주입 | 제작 요청 미전달 · 기존 가상 경보만 보관 | [경보](fixtures/web-injection.json) |
+| XDR-02 | `web-injection` · 웹 주입 | [작업 기록](web-injection/README.md) · 제작 1~5·로컬 가상 시험 완료, 실제 연결 미완료 | [경보](fixtures/web-injection.json) |
 | 번호 미확인 | `known-cve` · 알려진 취약점 | 제작 요청 미전달 · 기존 가상 경보만 보관 | [경보](fixtures/known-cve.json) |
 | 번호 미확인 | `persistence` · 지속성 | 제작 요청 미전달 · 기존 가상 경보만 보관 | [경보](fixtures/persistence.json) |
 | 번호 미확인 | `privilege` · 권한 상승 | 제작 요청 미전달 · 기존 가상 경보만 보관 | [경보](fixtures/privilege.json) |
@@ -63,6 +63,15 @@ node scripts/xdr-run.mjs brute-force
 
 `npm run xdr:run -- brute-force` 도 같은 명령입니다. 실행기는 해당 경보마다 `decide` 를 부르고, 결과를 `xdr/<moduleKey>/result.json` 에 씁니다. 형식은 `aleph.xdr.result.v1` 이고, `decisions` 에는 경보 id·행동·확신도·이유가, `counts` 에는 `block`·`alert`·`record` 건수가 있습니다.
 
-현재 실행 가능한 구현은 `brute-force`입니다. 다른 다섯 도구는 제작 후 해당 키로 실행합니다.
+현재 실행 가능한 구현은 `brute-force`와 `web-injection`입니다. 다른 네 도구는 제작 후 해당 키로 실행합니다.
+
+XDR-02도 동기 단일 파일 `decide.mjs`이며 확인용 읽기와 파일 쓰기·추가 연결은 분리합니다.
+단계 폴더 입구의 [XDR-01 README](../XDR-01/README.md)와 [XDR-02 README](../XDR-02/README.md)에서
+수행한 작업·변경 파일·결과·재실행 안내를 찾을 수 있습니다.
+XDR-02 실행: `npm.cmd run xdr:run -- web-injection`.
+파일 목록에서 **XDR-02 → README.md → result.json → counts**와 **check.json → fixtureReplay**를 누릅니다.
+현재 가상 결과는 block 8·alert 9·record 9, 정상 이벤트·정상 주소 오차단 각각 0건입니다.
+정상 예상: 정상 record·애매한 alert. 거부 예상: 명확한 반복 주입 block 후보·유효한 가상 규칙에서 deny.
+기존 starter.deny는 유지하며 실제 사건 수신·운영 접속 확인은 미완료입니다.
 
 반환 형식이 틀린 경보는 `record` 로 남고, 오류 한 줄이 출력됩니다. 실행기 자체는 네트워크를 쓰지 않습니다. 판정자는 격리된 환경에서 같은 명령을 다시 실행해 결과를 봅니다. 이미 커밋된 `result.json` 만으로 판정이 끝나지 않습니다.

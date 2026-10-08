@@ -22,6 +22,7 @@ anon·authenticated의 테이블·열 직접 권한 회수는 적용 후 조회 
 | `aleph.config.json`, `vercel.json`, `package.json` | 단계·배포·실행 설정 |
 | `4/` | 4단계 작업 기록 파일 하나 |
 | `5/` | 5단계 준비 중 완료한 작업 기록 |
+| `XDR-01/`, `XDR-02/` | 보너스 단계별 작업 기록·시험 결과로 가는 README |
 | `TODO.md` | 아직 구현하거나 확인하지 않은 작업 |
 | `local-only/` | 이전 사본·화면 등 로컬 보관 자료. Git 제외 |
 
@@ -82,6 +83,8 @@ anon·authenticated 권한은 모두 false, PUBLIC·열 ACL 결과는 없음, �
 - [5단계 준비 중 완료한 정리·확인 기록](5/README.md)
 - [XDR 전체 목차](xdr/README.md)
 - [보너스 XDR-01 작업 기록](xdr/brute-force/README.md)
+- [XDR-01 폴더 안내](XDR-01/README.md)
+- [보너스 XDR-02 작업 기록](XDR-02/README.md)
 
 1~3단계의 기존 안내는 4단계 기록의 보존 부분에 있습니다. 별도 완료 기록을 새로 만들지 않습니다.
 6~16단계는 완료한 작업이 생길 때 폴더와 기록 파일을 만들고 이 목차에 추가합니다.
@@ -114,3 +117,18 @@ anon·authenticated 권한은 모두 false, PUBLIC·열 ACL 결과는 없음, �
 운영 연결에는 검증된 주소 조회·등록된 거부 응답 콜백 계약이 필요합니다. 기본 운영 모드에는 가상 규칙을 적용하지 않습니다.
 이전 Jev 웹 시험의 서버·화면·SQL 준비는 로컬의 별도 미커밋 작업으로 보존하며 이번 제출에는 포함하지 않습니다.
 새 요청의 제작 1~5 기록은 [XDR-01 작업 기록](xdr/brute-force/README.md)에 있습니다.
+
+## 보너스 XDR-02
+
+2026-10-08 웹 주입 제작 1~5를 구현하고 [XDR-02 README](XDR-02/README.md)에 작업·결과 링크를 정리했습니다.
+`xdr/web-injection/read-alerts.mjs`는 안전한 다섯 항목, `patterns.json`은 공식 근거가 있는 네 패턴,
+`decide.mjs`는 패턴 상수를 내장한 동기 단일 파일 판단을 제공합니다. 인터넷·키·파일 입출력을 사용하지 않습니다.
+`respond.mjs`는 별도 가상 규칙·경보 시각 기준 15분 만료·근거 ID·알림 누적·추가 검사를 담당합니다.
+기존 판정기·메모 기능·원본 경보·다른 미커밋 작업은 보존했습니다.
+
+실행 명령: `npm.cmd run xdr:run -- web-injection`.
+파일 목록에서 **XDR-02 → README.md → result.json → counts**, 이어 **check.json → fixtureReplay**를 누릅니다.
+현재 가상 결과는 **block 8·alert 9·record 9**, 읽기 26줄, 정상 이벤트·정상 주소 오차단 각각 **0건**입니다.
+가상 재생은 공격 8건 거부·애매한 9건과 정상 9건 통과·만료 규칙 7개 통과이며 전체 가상 시험 61개가 통과했습니다.
+정상 예상: 정상 record·애매한 alert. 거부 예상: 명확한 반복 공격 block 후보·유효한 가상 규칙에서 deny.
+실제 Wazuh·운영 ZTNA 연결·심판 판정·이번 코드 배포는 미실행이며 [TODO](TODO.md)에서 관리합니다.

@@ -1,0 +1,35 @@
+{
+  "schema": "aleph.xdr.patterns.v1",
+  "technique": "T1190",
+  "thresholdNote": "8건·3분·수준 10은 가상 연습용 기준이며 MITRE가 지정한 숫자가 아닙니다. XSS 표식 자체만으로 T1190 초기 접근 성공을 뜻하지 않습니다.",
+  "patterns": [
+    {
+      "name": "sql_injection",
+      "condition": { "signal": "요청 인자의 SQL 결합·조건 우회 구문 또는 이를 명시한 수업 경보", "minAttempts": 8, "windowSeconds": 180, "minLevel": 10, "require": "명확한 SQL 신호와 같은 주소의 반복. select·SQL 단어 하나만으로 차단하지 않음" },
+      "evidence": "MITRE ATT&CK T1190의 공개 웹 앱 악용 사례에는 SQL 주입이 있으며 OWASP는 입력을 통한 SQL 구문 삽입을 설명합니다.",
+      "source": "https://attack.mitre.org/techniques/T1190/",
+      "detailSource": "https://community.owasp.org/attacks/SQL_Injection"
+    },
+    {
+      "name": "script_injection",
+      "condition": { "signal": "요청 인자의 script 태그 또는 스크립트 삽입을 명시한 수업 경보", "minAttempts": 8, "windowSeconds": 180, "minLevel": 10, "require": "명확한 삽입 표식과 같은 주소의 반복. script 수업 단어만으로 차단하지 않음" },
+      "evidence": "OWASP XSS는 웹 앱에 악성 스크립트를 주입하는 형태를 설명하며 이 패턴은 T1190 연습의 웹 요청 주입 신호로 사용합니다.",
+      "source": "https://attack.mitre.org/techniques/T1190/",
+      "detailSource": "https://community.owasp.org/attacks/xss/"
+    },
+    {
+      "name": "path_traversal",
+      "condition": { "signal": "요청 인자의 ../ 또는 ..\\ 두 단계 이상 또는 경로 이탈을 명시한 수업 경보", "minAttempts": 8, "windowSeconds": 180, "minLevel": 10, "require": "명확한 경로 이탈 신호와 같은 주소의 반복. up 단어만으로 차단하지 않음" },
+      "evidence": "MITRE ATT&CK T1190에는 디렉터리 이탈 악용 사례가 있으며 OWASP는 상위 디렉터리 표식으로 허용 경로 밖을 읽는 형태를 설명합니다.",
+      "source": "https://attack.mitre.org/techniques/T1190/",
+      "detailSource": "https://community.owasp.org/attacks/Path_Traversal"
+    },
+    {
+      "name": "command_injection",
+      "condition": { "signal": "요청 인자의 명령 구분자와 명령 결합 또는 명령 구분자를 명시한 수업 경보", "minAttempts": 8, "windowSeconds": 180, "minLevel": 10, "require": "명확한 명령 삽입 신호와 같은 주소의 반복. 구분 문자 하나만으로 차단하지 않음" },
+      "evidence": "MITRE ATT&CK T1190에는 명령 주입 악용 사례가 있으며 OWASP는 입력을 통해 시스템 명령을 실행시키는 형태를 설명합니다.",
+      "source": "https://attack.mitre.org/techniques/T1190/",
+      "detailSource": "https://community.owasp.org/attacks/Command_Injection"
+    }
+  ]
+}

@@ -55,7 +55,7 @@ export async function runXdr({ root, moduleKey, writeError = (line) => console.e
   const outDir = join(root, 'xdr', moduleKey);
   await mkdir(outDir, { recursive: true });
   await writeFile(join(outDir, 'result.json'), `${JSON.stringify(result, null, 2)}\n`, 'utf8');
-  if (moduleKey === 'brute-force') {
+  if (moduleKey === 'brute-force' || moduleKey === 'web-injection') {
     const connector = join(outDir, 'respond.mjs');
     let exists = true;
     try { await access(connector); } catch (error) {

@@ -1,0 +1,31 @@
+sequenceDiagram
+  actor User as 실행자
+  participant R as XDR 실행기
+  participant F as 가상 경보 파일
+  participant D as 단독 decide
+  participant P as respond
+  participant S as 결과·규칙·알림 파일
+  User->>R: npm run xdr:run -- brute-force
+  R->>F: 원본 경보 묶음 읽기
+  F-->>R: alerts 배열
+  Note over R,F: moduleKey·묶음 형식·내보내기 확인<br/>실패하면 실행 오류
+  loop 원본 순서대로 경보마다
+    R->>D: decide(alert)
+    alt 정상 반환
+      D-->>R: action, confidence, reason 즉시 반환
+      R->>R: 반환 형식 확인·건수 증가
+    else 판단 예외 또는 반환 형식 오류
+      R->>R: 형식 오류 표시·해당 건 record와 점수 0
+    end
+  end
+  R->>S: result.json 저장
+  opt respond.mjs 파일 존재
+    R->>P: 원본 경보와 판단 결과 전달
+    P->>P: block 후보의 명확한 근거·정상 공유 주소 검사
+    P->>S: 별도 deny-rules.json 저장
+    P->>S: block·alert 알림 한 줄씩 추가
+    P->>P: 가상 허용 판정기로 공격·정상·만료 규칙 재생
+    P->>S: check.json 저장
+  end
+  R-->>User: block·alert·record 건수
+  Note over R,S: 파일 읽기·저장 실패는 실행 오류<br/>저장 전체를 되돌리는 트랜잭션은 없음

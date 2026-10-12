@@ -1,0 +1,99 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<mxfile host="app.diagrams.net" type="device" version="24.0.0">
+  <diagram id="stage5-service" name="5단계 서비스 구성">
+    <mxGraphModel dx="1160" dy="930" grid="1" gridSize="10" guides="1" connect="1" arrows="1" page="1" pageWidth="1160" pageHeight="930">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="static" value="&lt;b&gt;Vercel 정적 화면&lt;/b&gt;&lt;br&gt;index.html · /aleph.json&lt;br&gt;nosniff · 공개 data.json 제외" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#edf4fb;strokeColor=#93b2ce;fontColor=#203147;fontFamily=Malgun Gothic;fontSize=16;spacing=12;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="30" y="40" width="240" height="105" as="geometry"/>
+        </mxCell>
+        <mxCell id="browser" value="&lt;b&gt;브라우저 · Auth SDK&lt;/b&gt;&lt;br&gt;메모 CRUD 화면&lt;br&gt;세션 토큰은 브라우저에 존재&lt;br&gt;실제 공개 키는 제거&lt;br&gt;HttpOnly 쿠키로 바꾼 작업 아님" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#edf4fb;strokeColor=#93b2ce;fontColor=#203147;fontFamily=Malgun Gothic;fontSize=16;spacing=12;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="30" y="200" width="240" height="190" as="geometry"/>
+        </mxCell>
+        <mxCell id="cdn" value="&lt;b&gt;CDN · 공식 SDK&lt;/b&gt;&lt;br&gt;정적 import로 로드&lt;br&gt;실제 정적 파일 검사 범위" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f3f5f8;strokeColor=#a0acb8;fontColor=#203147;fontFamily=Malgun Gothic;fontSize=16;spacing=12;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="30" y="450" width="240" height="105" as="geometry"/>
+        </mxCell>
+        <mxCell id="auth" value="&lt;b&gt;/api/auth · 신규&lt;/b&gt;&lt;br&gt;token · user · logout만 전달&lt;br&gt;서버에서 키 사용 · 응답 최소화" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#edf4fb;strokeColor=#93b2ce;fontColor=#203147;fontFamily=Malgun Gothic;fontSize=16;spacing=12;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="360" y="200" width="330" height="110" as="geometry"/>
+        </mxCell>
+        <mxCell id="notes" value="&lt;b&gt;/api/notes · /api/notes/:id&lt;/b&gt;&lt;br&gt;기존 메모 CRUD 유지&lt;br&gt;verify-login → 학생 getUser 확인&lt;br&gt;검증 사용자 ID로 소유자 제한" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#edf4fb;strokeColor=#93b2ce;fontColor=#203147;fontFamily=Malgun Gothic;fontSize=16;spacing=12;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="360" y="450" width="330" height="150" as="geometry"/>
+        </mxCell>
+        <mxCell id="authdb" value="&lt;b&gt;Supabase Auth&lt;/b&gt;&lt;br&gt;토큰 발급·갱신·사용자 확인&lt;br&gt;서버 Auth / 학생 인증 경로" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#edf7f1;strokeColor=#8fbaa3;fontColor=#203147;fontFamily=Malgun Gothic;fontSize=16;spacing=12;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="820" y="200" width="280" height="110" as="geometry"/>
+        </mxCell>
+        <mxCell id="db" value="&lt;b&gt;Supabase Data API → DB&lt;/b&gt;&lt;br&gt;/rest/v1/library_notes&lt;br&gt;서버 service_role CRUD 유지&lt;br&gt;기존 RLS · 소유자 정책 유지" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#edf7f1;strokeColor=#8fbaa3;fontColor=#203147;fontFamily=Malgun Gothic;fontSize=16;spacing=12;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="820" y="450" width="280" height="150" as="geometry"/>
+        </mxCell>
+        <mxCell id="judge" value="&lt;b&gt;심판 토큰 검증 · 기존 구현&lt;/b&gt;&lt;br&gt;별도 JWKS·ES256 검증 계약&lt;br&gt;운영 토큰 요청 성공은 미확인" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f3f5f8;strokeColor=#a0acb8;fontColor=#203147;fontFamily=Malgun Gothic;fontSize=16;spacing=12;arcSize=8;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="360" y="675" width="330" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="admin" value="&lt;b&gt;사용자 · SQL Editor&lt;/b&gt;&lt;br&gt;권한 회수 SQL 직접 실행&lt;br&gt;행·다른 테이블·서버 권한 보존" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f3f5f8;strokeColor=#a0acb8;fontColor=#203147;fontFamily=Malgun Gothic;fontSize=16;spacing=12;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="820" y="675" width="280" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="edge0" source="static" target="browser" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#275b91;fontColor=#275b91;fontFamily=Malgun Gothic;fontSize=14;labelBackgroundColor=#ffffff;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge1" source="cdn" target="browser" value="SDK 로드" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#275b91;fontColor=#275b91;fontFamily=Malgun Gothic;fontSize=14;labelBackgroundColor=#ffffff;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge2" source="browser" target="auth" value="인증" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#275b91;fontColor=#275b91;fontFamily=Malgun Gothic;fontSize=14;labelBackgroundColor=#ffffff;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge3" source="auth" target="authdb" value="/auth/v1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#275b91;fontColor=#275b91;fontFamily=Malgun Gothic;fontSize=14;labelBackgroundColor=#ffffff;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge4" source="browser" target="notes" value="메모" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#275b91;fontColor=#275b91;fontFamily=Malgun Gothic;fontSize=14;labelBackgroundColor=#ffffff;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="312" y="340"/>
+              <mxPoint x="312" y="525"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge5" source="notes" target="authdb" value="학생 세션·사용자 검증" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#275b91;fontColor=#275b91;fontFamily=Malgun Gothic;fontSize=14;labelBackgroundColor=#ffffff;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="525" y="362"/>
+              <mxPoint x="960" y="362"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge6" source="notes" target="db" value="서버 키" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#275b91;fontColor=#275b91;fontFamily=Malgun Gothic;fontSize=14;labelBackgroundColor=#ffffff;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge7" source="judge" target="notes" value="기존 별도 경로" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#8492a3;fontColor=#8492a3;fontFamily=Malgun Gothic;fontSize=14;labelBackgroundColor=#ffffff;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge8" source="admin" target="db" value="검토 후 적용" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#8492a3;fontColor=#8492a3;fontFamily=Malgun Gothic;fontSize=14;labelBackgroundColor=#ffffff;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge9" source="browser" target="db" value="공개 키 + 계정 토큰 직접 GET·PATCH → 403 (사용자 제공 결과)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#ab463c;fontColor=#ab463c;fontFamily=Malgun Gothic;fontSize=14;labelBackgroundColor=#ffffff;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="12" y="300"/>
+              <mxPoint x="12" y="823"/>
+              <mxPoint x="1130" y="823"/>
+              <mxPoint x="1130" y="555"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

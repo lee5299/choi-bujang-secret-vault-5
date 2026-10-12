@@ -1,0 +1,14 @@
+%%{init: {"theme":"base","fontFamily":"Malgun Gothic, Segoe UI, sans-serif","themeVariables":{"fontFamily":"Malgun Gothic, Segoe UI, sans-serif","fontSize":"16px","primaryColor":"#F3EEFF","primaryTextColor":"#172B4D","primaryBorderColor":"#A28BD0","secondaryColor":"#EDF5FF","tertiaryColor":"#F1F5F9","lineColor":"#8797AD","textColor":"#172B4D","actorBkg":"#F3EEFF","actorBorder":"#A28BD0","actorTextColor":"#172B4D","actorLineColor":"#C5CFDC","signalColor":"#5D6B82","signalTextColor":"#172B4D","labelBoxBkgColor":"#FFFFFF","labelBoxBorderColor":"#A6B2C3","labelTextColor":"#172B4D","loopTextColor":"#172B4D","noteBkgColor":"#FFF6E7","noteBorderColor":"#DEB267","noteTextColor":"#172B4D","activationBkgColor":"#E6DEF5","activationBorderColor":"#A28BD0","sequenceNumberColor":"#FFFFFF"},"sequence":{"actorMargin":64,"width":180,"height":62,"boxMargin":18,"boxTextMargin":14,"noteMargin":20,"messageMargin":42,"diagramMarginX":35,"diagramMarginY":24,"mirrorActors":false,"wrap":true,"useMaxWidth":true},"flowchart":{"curve":"linear","nodeSpacing":46,"rankSpacing":55,"htmlLabels":false},"themeCSS":".actor { font-weight: 600; } .messageText { font-size: 16px; } .loopLine { stroke: #C5CFDC; stroke-width: 1.2px; }rect.actor[name=\"Browser\"]{fill:#EDF5FF;stroke:#7FA9DE;}rect.actor[name=\"API\"],rect.actor[name=\"Verify\"],rect.actor[name=\"Runner\"],rect.actor[name=\"Decide\"],rect.actor[name=\"Respond\"]{fill:#F3EEFF;stroke:#A28BD0;}rect.actor[name=\"Auth\"],rect.actor[name=\"REST\"],rect.actor[name=\"DB\"]{fill:#ECF8F2;stroke:#78B69A;}rect.actor[name=\"Files\"]{fill:#F1F5F9;stroke:#A6B2C3;}"}}%%
+flowchart TD
+    A[block 후보] --> B[원본 경보로<br/>판단 근거 재확인]
+    B --> C{유효한 근거인가?}
+    C -->|아니오| D[규칙 생성 제외]
+    C -->|예| E{차단 구간에 정상 사건이<br/>같은 주소를 쓰는가?}
+    E -->|예| D
+    E -->|아니오| F[근거 경보와<br/>시작 시각 보관]
+    F --> G[같은 주소의<br/>겹치는 규칙 병합]
+    G --> H[마지막 근거 시각 기준<br/>15분 뒤 만료]
+    classDef reject fill:#FFF0EF,stroke:#D97777,color:#172B4D;
+    classDef rules fill:#ECF8F2,stroke:#78B69A,color:#172B4D;
+    class D reject;
+    class F,G,H rules;

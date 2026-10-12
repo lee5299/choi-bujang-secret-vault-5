@@ -1,0 +1,37 @@
+%%{init: {"theme":"base","fontFamily":"Malgun Gothic, Segoe UI, sans-serif","themeVariables":{"fontFamily":"Malgun Gothic, Segoe UI, sans-serif","fontSize":"16px","primaryColor":"#F3EEFF","primaryTextColor":"#172B4D","primaryBorderColor":"#A28BD0","secondaryColor":"#EDF5FF","tertiaryColor":"#F1F5F9","lineColor":"#8797AD","textColor":"#172B4D","actorBkg":"#F3EEFF","actorBorder":"#A28BD0","actorTextColor":"#172B4D","actorLineColor":"#C5CFDC","signalColor":"#5D6B82","signalTextColor":"#172B4D","labelBoxBkgColor":"#FFFFFF","labelBoxBorderColor":"#A6B2C3","labelTextColor":"#172B4D","loopTextColor":"#172B4D","noteBkgColor":"#FFF6E7","noteBorderColor":"#DEB267","noteTextColor":"#172B4D","activationBkgColor":"#E6DEF5","activationBorderColor":"#A28BD0","sequenceNumberColor":"#FFFFFF"},"sequence":{"actorMargin":64,"width":180,"height":62,"boxMargin":18,"boxTextMargin":14,"noteMargin":20,"messageMargin":42,"diagramMarginX":35,"diagramMarginY":24,"mirrorActors":false,"wrap":true,"useMaxWidth":true},"flowchart":{"curve":"linear","nodeSpacing":46,"rankSpacing":55,"htmlLabels":false},"themeCSS":".actor { font-weight: 600; } .messageText { font-size: 16px; } .loopLine { stroke: #C5CFDC; stroke-width: 1.2px; }rect.actor[name=\"Browser\"]{fill:#EDF5FF;stroke:#7FA9DE;}rect.actor[name=\"API\"],rect.actor[name=\"Verify\"],rect.actor[name=\"Runner\"],rect.actor[name=\"Decide\"],rect.actor[name=\"Respond\"]{fill:#F3EEFF;stroke:#A28BD0;}rect.actor[name=\"Auth\"],rect.actor[name=\"REST\"],rect.actor[name=\"DB\"]{fill:#ECF8F2;stroke:#78B69A;}rect.actor[name=\"Files\"]{fill:#F1F5F9;stroke:#A6B2C3;}"}}%%
+sequenceDiagram
+    autonumber
+    participant Browser as 브라우저
+    participant API as Vercel api/notes
+    participant Verify as 로그인 검증 도우미
+    participant Auth as Supabase Auth
+    participant REST as Supabase REST API
+    participant DB as 메모 DB
+    Browser->>API: GET /api/notes + Authorization
+    API->>API: Authorization 형식 확인
+    alt 무로그인 또는 형식 오류
+        API-->>Browser: 401 거부, DB 호출 없음
+    else 인증 형식 통과
+        API->>API: 서버 설정 확인
+        API->>Verify: 로그인 검증 요청
+        Verify->>Auth: 학생 토큰의 claims 검증
+        Auth-->>Verify: 검증 결과
+        Verify-->>API: 검증된 사용자 또는 실패
+        alt 로그인 검증 실패
+            API-->>Browser: 401 거부, DB 호출 없음
+        else 학생 로그인 검증 성공
+            API->>Auth: getUser로 활성 사용자 확인
+            Auth-->>API: 사용자 확인 결과
+            alt 유효하지 않은 사용자
+                API-->>Browser: 401 거부, DB 호출 없음
+            else 활성 사용자 확인 성공
+                API->>API: 메서드 검사와 소유자 조건 생성
+                API->>REST: GET /rest/v1/library_notes + 서버가 정한 소유자 조건
+                REST->>DB: 조건에 맞는 메모 조회
+                DB-->>REST: 조회 결과
+                REST-->>API: 메모 행 배열
+                API->>API: 반환 행 형식과 소유자 재확인
+                API-->>Browser: 200 메모 목록
+            end
+        end
+    end

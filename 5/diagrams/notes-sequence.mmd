@@ -1,0 +1,52 @@
+%%{init: {"theme":"base","fontFamily":"Malgun Gothic, Segoe UI, sans-serif","themeVariables":{"fontFamily":"Malgun Gothic, Segoe UI, sans-serif","fontSize":"16px","primaryColor":"#edf4fb","primaryTextColor":"#203147","primaryBorderColor":"#93b2ce","actorBkg":"#edf4fb","actorBorder":"#93b2ce","actorTextColor":"#203147","actorLineColor":"#cbd5df","signalColor":"#58758f","signalTextColor":"#203147","noteBkgColor":"#fff6e9","noteBorderColor":"#d1b88c","noteTextColor":"#203147","labelBoxBkgColor":"#f3f6fa","labelBoxBorderColor":"#b6c5d4","loopTextColor":"#203147"},"sequence":{"actorMargin":65,"width":190,"height":62,"messageMargin":46,"noteMargin":24,"diagramMarginX":35,"diagramMarginY":30,"mirrorActors":false,"wrap":true,"useMaxWidth":false}}}%%
+sequenceDiagram
+    autonumber
+    participant Browser as 브라우저
+    participant API as 메모 서버 /api/notes/:id
+    participant Verify as verify-login.mjs
+    participant Auth as Supabase Auth / SDK
+    participant DB as Data API / library_notes
+    Browser->>API: GET · Authorization 헤더
+    API->>API: Bearer 형식·서버 환경·검증기 설정 확인
+    alt 토큰 없음·형식 오류
+        API-->>Browser: 401 · DB 호출 없음
+    else 환경·설정 오류
+        API-->>Browser: 503 · DB 호출 없음
+    else 검증 가능
+        API->>Verify: 로그인 토큰 검증
+        opt 학생 발급자 경로
+            Verify->>Auth: 공식 SDK getClaims 호출<br/>JWKS 또는 Auth로 서명 검증
+            Auth-->>Verify: 검증 결과 · claims 또는 error
+        end
+        Note over Verify,Auth: 학생: SDK getClaims 검증<br/>서명·발급자·대상·역할·만료 대조<br/>비대칭 키: JWKS로 검증<br/>공유 비밀 토큰: Auth에서 검증<br/>심판: 별도 JWKS·ES256 검증<br/>심판 운영 요청 성공은 미확인
+        Verify-->>API: 검증한 사용자 ID 또는 null
+        alt 검증 실패
+            API-->>Browser: 401 · DB 호출 없음
+        else 검증 성공
+            opt 학생 토큰 경로
+                API->>Auth: getUser로 세션·사용자 재확인
+                Auth-->>API: 사용자 일치 / 인증 거부 / 서비스 장애
+                Note over API,Auth: 불일치·무효는 401, Auth 장애는 503<br/>여기서 반환된 경우 이후 DB 호출 없음
+            end
+            API->>API: 유효 세션만 계속<br/>ID·메서드·입력 검사 → DB 주소 구성
+            alt 입력·메서드·설정 오류
+                API-->>Browser: 400·405·415 또는 설정 503
+            else 검사 통과
+                API->>DB: 서버 키 · id AND 검증된 owner_id 필터
+                alt 정상 행
+                    DB-->>API: 필터링된 행
+                    API->>API: 반환 구조·ID·소유자 검사
+                    API-->>Browser: 200 · 본인 메모
+                else 상대 메모 또는 없는 ID
+                    DB-->>API: 빈 배열
+                    API-->>Browser: 404 · 같은 응답
+                else DB 통신·상태·응답 오류
+                    API-->>Browser: 502 · 일반 오류
+                end
+            end
+        end
+    end
+    Note over API,DB: POST는 소유자를 검증 ID로 고정, 정상 201 / ID 충돌 409<br/>PUT은 원본 PATCH로 전달, DELETE와 함께 id·owner_id 제한<br/>정상 수정·삭제는 200 / 대상 행 없음은 404
+    Browser->>DB: 별도 우회 시험: 공개 키 + 계정 토큰<br/>직접 GET·PATCH
+    DB-->>Browser: 사용자 제공 실제 결과: 두 요청 403
+    Note over Browser,DB: 흐름은 코드의 순서이며 실측 시간 표시 없음<br/>서버 API 시험 전후 메모 비교 true는 사용자 제공 결과

@@ -1,0 +1,1072 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>XDR-01 작업 기록</title><style>:root{--ink:#24344b;--muted:#627185;--line:#d8e1eb;--blue:#245c92;--page:#f2f5f9}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--page);color:var(--ink);font-family:"Malgun Gothic","맑은 고딕","Segoe UI",sans-serif;font-size:15.5px;line-height:1.85}a{color:var(--blue);text-decoration-thickness:1px;text-underline-offset:3px;overflow-wrap:anywhere}a:hover{color:#123c66}.layout{display:grid;grid-template-columns:230px minmax(0,1fr);max-width:1620px;margin:auto;gap:24px;padding:28px}aside{position:sticky;top:28px;align-self:start;border:1px solid var(--line);background:white;border-radius:14px;padding:22px 16px;max-height:calc(100vh - 56px);overflow:auto}aside strong{font-size:20px}aside small{display:block;color:var(--muted);margin:5px 0 18px}nav a{display:block;padding:9px 10px;border-radius:7px;text-decoration:none;font-size:14px;line-height:1.6;margin:3px 0}nav a:hover{background:#edf5ff}.doc-links{border-top:1px solid var(--line);padding-top:14px;margin-top:16px;font-size:13px}main{min-width:0;background:white;border:1px solid var(--line);border-radius:14px;padding:40px 38px 50px}h1{font-size:30px;line-height:1.45;letter-spacing:-.5px;margin:0 0 22px}h2{font-size:24px;line-height:1.5;margin:56px 0 20px;padding:16px 0 12px;border-bottom:2px solid #dbe8f5;scroll-margin-top:20px}h3{font-size:18px;line-height:1.6;margin:30px 0 14px}p{margin:14px 0}li{margin:6px 0}ul,ol{padding-left:25px}strong{font-weight:700}.table-wrap{overflow:auto;margin:20px 0;border:1px solid var(--line);border-radius:9px}table{border-collapse:collapse;width:100%;font-size:14px;line-height:1.8;table-layout:fixed;min-width:820px}th{background:#eaf1f8;text-align:left;font-weight:700}td,th{vertical-align:top;padding:13px 14px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);overflow-wrap:anywhere}td:last-child,th:last-child{border-right:0}tbody tr:last-child td{border-bottom:0}tbody tr:nth-child(even){background:#fbfcfe}table.roles th:nth-child(1){width:21%}table.roles th:nth-child(2){width:20%}table.roles th:nth-child(3){width:25%}table.roles th:nth-child(4){width:34%}.badge-new{vertical-align:baseline;line-height:1.6}.badge-new+span{white-space:nowrap}.figure-scroll{overflow:auto}figure{margin:24px 0 12px;padding:14px;border:1px solid var(--line);border-radius:10px;background:#fff}figure img{display:block;width:100%;height:auto;min-width:800px}figure img[src*=sequence]{min-width:1020px}figcaption{font-size:13px;color:var(--muted);margin:10px 4px 0}pre{overflow:auto;border:1px solid var(--line);border-radius:8px;background:#f5f7fa;padding:17px 20px;font-size:13px;line-height:1.7}code{font-family:Consolas,"Malgun Gothic",monospace;overflow-wrap:anywhere}details{border:1px solid var(--line);border-radius:8px;padding:10px 16px;background:#f8fafc;margin:16px 0}summary{cursor:pointer;color:var(--blue);font-size:14px}footer{font-size:13px;color:var(--muted);border-top:1px solid var(--line);margin-top:40px;padding-top:20px}@media(max-width:1000px){.layout{grid-template-columns:1fr;padding:16px;gap:16px}aside{position:static;max-height:none}nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}main{padding:25px 20px}h1{font-size:25px}}@media print{body{background:white}.layout{display:block;padding:0;max-width:none}aside{display:none}main{border:0;padding:10px}.table-wrap,.figure-scroll{overflow:visible}table{min-width:0;font-size:11px}figure img,figure img[src*=sequence]{min-width:0}h2{break-after:avoid}figure,tr{break-inside:avoid}a{color:inherit}}</style></head><body><div class="layout"><aside><strong>XDR-01</strong><small>작업 기록 · 2026-10-12<br>구조 / 구현 이유 / 검증</small><nav aria-label="목차"><a href="#section-1">1. 작업 개요</a><a href="#section-2">2. 전체 서비스 구성</a><a href="#section-3">3. 요청과 실행 순서</a><a href="#section-4">4. 주요 판단 로직</a><a href="#section-5">5. 파일별 역할과 변경 이유</a><a href="#section-6">6. 검증과 결과</a><a href="#section-7">7. 사용자 제안으로 수행한 추가 확인·개선</a><a href="#section-8">8. 문서 보기·수정·재현 방법</a></nav><div class="doc-links"><a href="IMPLEMENTATION.md">수정용 Markdown</a><br><a href="diagrams/README.md">그림 수정 안내</a><br><a href="diagrams/service-overview.drawio">draw.io 원본</a><br><span>본문·그림은 오프라인 열람 가능</span></div></aside><main><h1>XDR-01 작업 설명: 구조·판단 근거·검증 기록</h1>
+<p>작성일: <strong>2026-10-12</strong>. 문서 표시 형식 보완: <strong>2026-10-12</strong> (HTML·draw.io·오프라인 그림 추가). 대상 작업: <strong>2026-10-07~08에 이 대화에서 수행한 XDR-01 제작과 제출 준비</strong>.</p>
+<p>이 문서는 실제 코드, 저장된 결과, 기존 작업 기록과 이 대화의 실행 결과를 대조한 설명입니다.
+이번 문서 작성에서는 프로그램·설정·데이터를 변경하지 않았으며 시험 재실행·파일 이동·커밋·푸시·배포를 하지 않습니다.
+과거 기록은 <a href="file:///D:/defense/choi-bujang-secret-vault-5-main/choi-bujang-secret-vault-5-main/xdr/brute-force/README.md">XDR-01 README</a>에 그대로 보존합니다.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>기록 구분</th>
+<th>이 문서에서 뜻하는 것</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>코드 확인</td>
+<td>2026-10-12 로컬 파일을 읽고 확인한 구현. 운영에서 실행되었다는 뜻은 아님</td>
+</tr>
+<tr>
+<td>가상 시험</td>
+<td>수업용 경보·합성 요청·가짜 HTTP 응답으로 실행한 시험</td>
+</tr>
+<tr>
+<td>실제 서비스 확인</td>
+<td>2026-10-08 공개 배포 주소에 실제 HTTP 요청을 보내 관찰한 결과</td>
+</tr>
+<tr>
+<td>사용자 제공 결과</td>
+<td>사용자 또는 기존 문서가 전달한 확인. 이 문서 작성자가 새로 조회한 결과와 구분</td>
+</tr>
+<tr>
+<td>미확인</td>
+<td>실제 연결·배포·응답·접수를 확인한 증거가 없는 부분</td>
+</tr>
+</tbody></table></div>
+<h2 id="section-1">1. 작업 개요</h2>
+<h3 id="topic-1">목표와 최종 요구사항</h3>
+<p>Wazuh 형태의 로그인 실패 경보를 모아 비밀번호 추측과 여러 계정에 대한 같은 비밀번호 대입을 구분합니다.
+명확한 공격은 차단 후보, 애매한 시도는 알림, 정상 이벤트는 기록으로 남깁니다.
+ZTNA의 기존 판단을 보존하는 추가 검사 부품이며 기존 규칙을 대신하지 않습니다.</p>
+<p>최종 제작 요청은 다음 다섯 부분입니다.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>제작</th>
+<th>요구사항</th>
+<th>실제 수행</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1 · 읽기</td>
+<td>시각·출발 주소·계정·규칙 수준·설명만 추출, 비밀값 출력 제외</td>
+<td>확인용 읽기 모듈 유지·실행, 원본 28건과 추출 28줄 확인</td>
+</tr>
+<tr>
+<td>2 · 패턴</td>
+<td>MITRE T1110 근거의 이름·조건·근거 한 줄</td>
+<td>비밀번호 추측·스프레이 두 패턴 작성·확인. 최종 요청에서 추가 패턴 없음</td>
+</tr>
+<tr>
+<td>3 · 판단</td>
+<td>한 파일, 하나의 동기 내보내기, 외부 의존·파일 입출력·외부 질문 금지</td>
+<td>패턴을 파일 맨 위 상수로 복사, Jev 연결을 제출용 판단에서 제거</td>
+</tr>
+<tr>
+<td>4 · 응답</td>
+<td>별도 respond.mjs에서 알림과 만료·근거가 있는 거부 규칙 처리</td>
+<td>명확한 근거 재확인·정상 주소 제외·기존 응답 보존·가상 재생 구현</td>
+</tr>
+<tr>
+<td>5 · 실행</td>
+<td>결과와 세 행동의 건수, 정상 오차단 확인</td>
+<td>명령 실행, 결과 갱신, block 10·alert 9·record 9·정상 오차단 0</td>
+</tr>
+</tbody></table></div>
+<p>초기에는 애매한 경보를 Jev에 묻는 요구가 있었고 연결 코드와 가상 시험을 만들었습니다.
+이후 사용자가 <strong>인터넷 없이 decide.mjs 하나만 불러오는 요구</strong>로 변경하여 최종 제출 경로를 독립 계산 방식으로 바꿨습니다.
+이전 Jev 코드·화면·SQL 준비는 로컬의 다른 변경으로 보존하고 최종 XDR 저장점에서 제외했습니다.</p>
+<p>23andMe 사고 설명은 사용자가 제공한 참고 맥락입니다.
+그 설명만으로 자격 증명 재사용 탐지나 2단계 인증 요구를 새 규칙으로 구현하지 않았습니다.</p>
+<h3 id="topic-2">수행 범위의 경계</h3>
+<ul>
+<li>실제 제작·확인: XDR-01 읽기, 두 패턴, 독립 판단, 응답 연결 부품, 가상 재생, 결과·알림·거부 규칙, 시험과 작업 기록.</li>
+<li>실제 제출 준비: XDR 변경 11개 파일의 저장점, GitHub main 푸시, 해당 커밋의 Vercel 배포 식별 확인.</li>
+<li>보존: 기존 로그인·메모 API·학습 DB·원본 경보·ZTNA 시작 틀·다른 미커밋 작업.</li>
+<li>미확인: 실제 Wazuh 수집, 운영 엔진의 출발 주소 제공, 운영 ZTNA 차단, 실제 Jev 응답, 심판 접수·점수의 직접 조회.</li>
+<li>후속 XDR-02·Git 이력 정리는 별도 작업입니다. 이번 문서가 그 기능을 새로 제작하거나 배포한 것으로 기록하지 않습니다.</li>
+</ul>
+<h2 id="section-2">2. 전체 서비스 구성</h2>
+<p>실선은 구현 경로입니다. XDR 실선은 <strong>로컬 가상 실행 경로</strong>이며 운영 사건 전달을 뜻하지 않습니다.
+점선은 제출 조건·연결 구상 또는 실제 연결 미확인 부분입니다. 각 노드의 상태도 함께 읽어야 합니다.</p>
+<figure><div class="figure-scroll"><img src="diagrams/service-overview.svg" alt="서비스 구성: 기존 자료실·로컬 XDR·미연결 범위"></div><figcaption>서비스 구성: 기존 자료실·로컬 XDR·미연결 범위</figcaption></figure>
+<p><a href="diagrams/service-overview.drawio">편집 가능한 draw.io 원본</a> · <a href="diagrams/service-overview.svg">SVG 크게 보기</a></p>
+<p><strong>중요한 연결 차이:</strong> 실행기는 원본 경보를 직접 판단 모듈에 넘깁니다.
+확인용 읽기 출력이 실행기의 필수 중간 입력은 아닙니다.
+decide.mjs는 read-alerts.mjs·patterns.json·evidence.mjs·respond.mjs를 불러오지 않습니다.
+patterns.json과 맨 위 상수의 일치는 시험으로 확인합니다.</p>
+<p><a href="file:///D:/defense/choi-bujang-secret-vault-5-main/choi-bujang-secret-vault-5-main/docs/DECIDER_REQUEST.md">실제 ZTNA 계약</a>에는 출발 IP 항목이 없습니다.
+withXdrCheck는 검증된 주소 조회·규칙 조회·거부 응답을 콜백으로 받도록 작성했으나,
+해당 운영 콜백과 실제 접속 경로가 연결된 증거는 없습니다.
+자료실의 /api/notes가 이 XDR 검사 함수를 자동 호출하는 경로도 이번에 구현하지 않았습니다.</p>
+<h2 id="section-3">3. 요청과 실행 순서</h2>
+<p>그림의 순서는 코드 호출 관계입니다. 처리 시간을 측정하지 않았으므로 지연 시간을 넣지 않았습니다.
+<strong>3분 집계 창과 15분 만료는 정책 설정이며 요청 처리 시간 측정값이 아닙니다.</strong></p>
+<h3 id="topic-3">3.1 로컬 경보 실행과 결과 저장</h3>
+<figure><div class="figure-scroll"><img src="diagrams/xdr-sequence.svg" alt="로컬 경보 실행 시퀀스"></div><figcaption>로컬 경보 실행 시퀀스</figcaption></figure>
+<details>
+<summary>Mermaid 수정 원본</summary>
+
+<pre><code class="language-mermaid">sequenceDiagram
+  actor User as 실행자
+  participant R as XDR 실행기
+  participant F as 가상 경보 파일
+  participant D as 단독 decide
+  participant P as respond
+  participant S as 결과·규칙·알림 파일
+  User-&gt;&gt;R: npm run xdr:run -- brute-force
+  R-&gt;&gt;F: 원본 경보 묶음 읽기
+  F--&gt;&gt;R: alerts 배열
+  Note over R,F: moduleKey·묶음 형식·내보내기 확인&lt;br/&gt;실패하면 실행 오류
+  loop 원본 순서대로 경보마다
+    R-&gt;&gt;D: decide(alert)
+    alt 정상 반환
+      D--&gt;&gt;R: action, confidence, reason 즉시 반환
+      R-&gt;&gt;R: 반환 형식 확인·건수 증가
+    else 판단 예외 또는 반환 형식 오류
+      R-&gt;&gt;R: 형식 오류 표시·해당 건 record와 점수 0
+    end
+  end
+  R-&gt;&gt;S: result.json 저장
+  opt respond.mjs 파일 존재
+    R-&gt;&gt;P: 원본 경보와 판단 결과 전달
+    P-&gt;&gt;P: block 후보의 명확한 근거·정상 공유 주소 검사
+    P-&gt;&gt;S: 별도 deny-rules.json 저장
+    P-&gt;&gt;S: block·alert 알림 한 줄씩 추가
+    P-&gt;&gt;P: 가상 허용 판정기로 공격·정상·만료 규칙 재생
+    P-&gt;&gt;S: check.json 저장
+  end
+  R--&gt;&gt;User: block·alert·record 건수
+  Note over R,S: 파일 읽기·저장 실패는 실행 오류&lt;br/&gt;저장 전체를 되돌리는 트랜잭션은 없음
+</code></pre>
+</details>
+
+<p><a href="diagrams/xdr-sequence.svg">SVG 크게 보기</a> · <a href="diagrams/xdr-sequence.mmd">Mermaid 원본</a></p>
+<p>반환 형식 오류를 record로 남기는 동작은 <strong>실행기 오류 처리</strong>입니다.
+유효하지 않은 경보를 alert·0.5로 돌려주는 decide의 입력 검증과는 서로 다릅니다.
+실행기는 결과를 먼저 쓰므로 이후 respond에서 오류가 나면 일부 파일만 갱신되었을 수 있습니다.</p>
+<h3 id="topic-4">3.2 추가 검사 부품의 요청 처리</h3>
+<p>아래 순서는 실제 운영 접속 기록이 아니라 구현된 어댑터와 가상 재생에서 확인한 순서입니다.</p>
+<figure><div class="figure-scroll"><img src="diagrams/gate-sequence.svg" alt="추가 검사 부품 시퀀스"></div><figcaption>추가 검사 부품 시퀀스</figcaption></figure>
+<details>
+<summary>Mermaid 수정 원본</summary>
+
+<pre><code class="language-mermaid">sequenceDiagram
+  participant Caller as 호출자
+  participant G as withXdrCheck
+  participant A as 공식 콜백 또는 가상 어댑터
+  participant B as 기존 판정 함수
+  Caller-&gt;&gt;G: decide(request)
+  G-&gt;&gt;A: verifiedSource(request)
+  A--&gt;&gt;G: 검증된 출발 주소
+  G-&gt;&gt;A: loadRules()
+  A--&gt;&gt;G: 규칙 목록
+  G-&gt;&gt;G: 모드·주소·시각·근거·만료 확인
+  alt 유효한 일치 규칙 없음
+    G-&gt;&gt;B: 기존 decide(request)
+    B--&gt;&gt;G: 기존 판단 응답
+    G--&gt;&gt;Caller: 기존 응답 그대로 반환
+  else 유효한 일치 규칙 있음
+    G-&gt;&gt;A: denyResponse(request, rule)
+    A--&gt;&gt;G: 거부 응답
+    G-&gt;&gt;G: 응답 다섯 항목·요청 ID·deny·규칙 ID 검사
+    alt 계약에 맞음
+      G--&gt;&gt;Caller: deny 응답
+    else 잘못된 거부 응답
+      G--&gt;&gt;Caller: 계약 오류
+    end
+  end
+  Note over Caller,A: 필수 콜백 누락은 부품 생성 시 오류&lt;br/&gt;운영 reasonCode 등록 확인은 운영 계약에서 수행해야 함
+</code></pre>
+</details>
+
+<p><a href="diagrams/gate-sequence.svg">SVG 크게 보기</a> · <a href="diagrams/gate-sequence.mmd">Mermaid 원본</a></p>
+<p>기본 모드는 live이며 fixture 규칙을 적용하지 않습니다.
+규칙이 없는 경우에도 기존 판정이 deny였다면 deny를 그대로 돌려줍니다.
+가상 시험의 정상 통과는 <strong>가상 allow 판정기를 연결한 결과</strong>이며,
+실제 starter.deny가 allow로 바뀌었다는 뜻이 아닙니다.</p>
+<h3 id="topic-5">3.3 기존 자료실 메모 요청</h3>
+<p>자료실은 이번 XDR 작업에서 새로 구현한 기능이 아닙니다.
+아래는 <a href="file:///D:/defense/choi-bujang-secret-vault-5-main/choi-bujang-secret-vault-5-main/api/notes.js">메모 API</a>와 <a href="file:///D:/defense/choi-bujang-secret-vault-5-main/choi-bujang-secret-vault-5-main/src/verify-login.mjs">로그인 검사</a>를 읽어 확인한 기존 흐름입니다.</p>
+<figure><div class="figure-scroll"><img src="diagrams/notes-sequence.svg" alt="기존 자료실 메모 조회 시퀀스"></div><figcaption>기존 자료실 메모 조회 시퀀스</figcaption></figure>
+<details>
+<summary>Mermaid 수정 원본</summary>
+
+<pre><code class="language-mermaid">sequenceDiagram
+  participant B as 로그인한 브라우저
+  participant N as Vercel 메모 API
+  participant V as 로그인 검증
+  participant A as Supabase Auth
+  participant DB as Supabase 메모 API
+  B-&gt;&gt;N: 메모 조회 요청과 세션 인증
+  alt 인증 형식 누락
+    N--&gt;&gt;B: 401
+  else 서버 설정 없음
+    N--&gt;&gt;B: 503
+  else 인증 형식·서버 설정 확인
+    N-&gt;&gt;V: 서명·발급자·대상·만료 검증
+    V--&gt;&gt;N: 검증한 신원 또는 거부
+    alt 신원 검증 실패
+      N--&gt;&gt;B: 401
+    else 검증한 신원 있음
+      opt 학생 세션
+        N-&gt;&gt;A: 활성 사용자 확인
+        A--&gt;&gt;N: 활성 세션 또는 거부·오류
+      end
+      alt 종료 세션 또는 인증 서비스 오류
+        N--&gt;&gt;B: 401 또는 503
+      else 신원·세션 확인 완료
+        Note over N: 메서드·입력 검사 실패도 DB 요청 전에 종료
+        N-&gt;&gt;DB: 검증한 소유자로 제한한 메모 조회
+        alt 본인 자료와 정상 응답
+          DB--&gt;&gt;N: 제한된 결과
+          N--&gt;&gt;B: 200
+        else 타인 자료 또는 없는 상세 자료
+          DB--&gt;&gt;N: 일치 행 없음
+          N--&gt;&gt;B: 404
+        else DB 연결·응답 오류
+          N--&gt;&gt;B: 일반화한 502 오류
+        end
+      end
+    end
+  end
+</code></pre>
+</details>
+
+<p><a href="diagrams/notes-sequence.svg">SVG 크게 보기</a> · <a href="diagrams/notes-sequence.mmd">Mermaid 원본</a></p>
+<p>그림은 메모 조회를 기준으로 합니다. 메서드·입력 검사에는 400·405 오류가 있고,
+추가·수정 요청의 JSON 형식 검사에는 415 오류도 있습니다. 이 순서에 XDR 자동 차단 호출은 없습니다.
+활성 세션·타인 메모 거부는 기존 방어를 확인한 내용이며 XDR에서 새로 추가한 보안 기능으로 표현하지 않습니다.</p>
+<h2 id="section-4">4. 주요 판단 로직</h2>
+<h3 id="topic-6">4.1 분기와 점수</h3>
+<figure><div class="figure-scroll"><img src="diagrams/decision-flow.svg" alt="독립 판단 모듈 조건 분기"></div><figcaption>독립 판단 모듈 조건 분기</figcaption></figure>
+<details>
+<summary>Mermaid 수정 원본</summary>
+
+<pre><code class="language-mermaid">flowchart TD
+  In[&quot;경보 입력&quot;] --&gt; Valid{&quot;필수 입력 유효?&lt;br/&gt;시각·주소·계정·설명&quot;}
+  Valid -- 아니오 --&gt; Invalid[&quot;alert · 0.5&lt;br/&gt;선택한 패턴 이름&quot;]
+  Valid -- 예 --&gt; Signals[&quot;실패·로그인·건수·시간&lt;br/&gt;다계정·성공 신호 추출&quot;]
+  Signals --&gt; Normal{&quot;실패·로그인 근거 없음?&lt;br/&gt;또는 T1110 없이&lt;br/&gt;수준 3 이하·실패 1 이하?&quot;}
+  Normal -- 예 --&gt; Record[&quot;record · 0.1&lt;br/&gt;패턴 없음&quot;]
+  Normal -- 아니오 --&gt; Count[&quot;단일 실패이면&lt;br/&gt;주소·계정별 메모리 집계&quot;]
+  Count --&gt; Clear{&quot;실패 후 성공 신호 없음&lt;br/&gt;추측·스프레이의&lt;br/&gt;필수 조건 충족?&quot;}
+  Clear -- 예 --&gt; Block[&quot;block · 0.95&lt;br/&gt;패턴 이름&quot;]
+  Clear -- 아니오 --&gt; Partial[&quot;0.5에 보조 점수 추가&lt;br/&gt;최대 0.83&quot;]
+  Partial --&gt; Alert[&quot;alert&lt;br/&gt;패턴 이름&quot;]
+</code></pre>
+</details>
+
+<p><a href="diagrams/decision-flow.svg">SVG 크게 보기</a> · <a href="diagrams/decision-flow.mmd">Mermaid 원본</a></p>
+<p>최종 행동 변환은 <strong>0.85 이상 block / 0.5 이상 alert / 그 아래 record</strong>입니다.
+현재 구현에서 명확한 조건은 0.95, 정상은 0.1, 애매한 실패는 0.5~0.83이므로 위 그림으로 분기를 통합했습니다.
+confidence는 <strong>패턴과의 일치 정도</strong>이며 실제 공격 확률이나 모델 정확도 측정치가 아닙니다.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>패턴</th>
+<th>명확한 차단 후보 조건</th>
+<th>근거</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>password_guessing</td>
+<td>로그인 실패 근거, 규칙 수준 10 이상, 실패 후 성공 신호 없음. 동일 주소·계정의 단일 실패 20건 이상을 180초 창에서 집계하거나, 요약 실패 20건 이상과 아래 시간·반복 조건 충족</td>
+<td><a href="https://attack.mitre.org/techniques/T1110/001/">MITRE T1110.001</a></td>
+</tr>
+<tr>
+<td>password_spraying</td>
+<td>실패 근거, 규칙 수준 10 이상, 성공 신호 없음, 같은 비밀번호 대입이라는 설명 신호, 서로 다른 계정 8개 이상</td>
+<td><a href="https://attack.mitre.org/techniques/T1110/003/">MITRE T1110.003</a></td>
+</tr>
+</tbody></table></div>
+<p>추측 요약 경보에 시간이 적혀 있으면 <strong>0초 초과·180초 이하</strong>여야 합니다.
+시간이 없으면 명시적인 반복 대입 또는 성공 없음 신호를 사용합니다.
+시간이 창보다 길다고 적혀 있는데 반복 표현만으로 짧은 시간 조건을 대신하지 않습니다.
+스프레이의 현재 필수 조건에는 별도의 시간 창 검증이 없습니다.
+여러 계정이라는 정보만으로 같은 비밀번호 대입을 추정하지 않으며 비밀번호 값 자체도 읽지 않습니다.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>애매한 실패의 점수 구성</th>
+<th>가산</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>기본 점수</td>
+<td>0.50</td>
+</tr>
+<tr>
+<td>규칙 수준 10 이상</td>
+<td>+0.08</td>
+</tr>
+<tr>
+<td>요약 실패 또는 메모리 집계 5건 이상</td>
+<td>+0.08</td>
+</tr>
+<tr>
+<td>설명에 유효한 180초 이하 창이 있음</td>
+<td>+0.08</td>
+</tr>
+<tr>
+<td>반복 표현 또는 같은 비밀번호 신호</td>
+<td>+0.06</td>
+</tr>
+<tr>
+<td>규칙의 T1110 표식</td>
+<td>+0.03</td>
+</tr>
+</tbody></table></div>
+<p>위 숫자는 수업용 구현 기준이며 MITRE가 지정한 임계값이 아닙니다.
+패턴 이름은 같은 비밀번호 설명 신호가 있으면 password_spraying, 그 외에는 password_guessing입니다.
+정상은 &#39;패턴 없음&#39;을 반환하며, 입력의 action·confidence·reason을 그대로 믿지 않습니다.</p>
+<h3 id="topic-7">4.2 집계·정보 보호·적용 범위</h3>
+<ul>
+<li>단일 실패(count가 1 이하)이고 성공 후 신호가 없을 때만 주소·계정별 메모리에 넣습니다.
+시간 창 밖 기록과 같은 경보 ID를 중복 합산하지 않습니다. ID가 없으면 시각을 중복 구분값으로 사용합니다.</li>
+<li>건수가 이미 요약된 경보를 단일 실패 기록에 다시 더하지 않습니다.
+모듈 인스턴스를 새로 만들면 집계가 초기화되며 프로세스 간 공유 저장소는 없습니다.</li>
+<li>읽기 모듈은 문서용 주소·가상 계정만 출력하고 민감 설명을 제외합니다.
+단독 판단의 IPv4 검증은 그 가상 대역 제한과 다릅니다. 반환에는 주소·계정·설명 원문을 넣지 않습니다.</li>
+<li>확인용 다섯 항목에는 추가 건수·계정 목록·MITRE 표식이 빠질 수 있습니다.
+읽기 출력으로 판단하면 원본의 모든 정보가 복원되지는 않습니다. 실행기는 원본을 전달합니다.</li>
+<li>설명의 한국어 신호를 해석하는 연습 구현입니다. 임의의 실제 Wazuh 필드·언어·환경 전체에 대한 탐지 성능은 검증하지 않았습니다.</li>
+<li>실패 후 성공은 현재 차단 후보를 낮추는 조건입니다. 공격자가 성공한 경우까지 정상이라고 검증한 것은 아닙니다.</li>
+</ul>
+<h3 id="topic-8">4.3 판단 후 차단 규칙의 별도 검사</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>단계</th>
+<th>respond.mjs의 처리</th>
+<th>이유</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>후보 선택</td>
+<td>action=block, confidence 0.85 이상, 허용된 가상 경보 번호</td>
+<td>결과 형식만으로 주소를 막지 않음</td>
+</tr>
+<tr>
+<td>근거 확인</td>
+<td>원본의 명확한 패턴 또는 동일 주소·계정의 20건 집계 근거 재확인</td>
+<td>애매한 결과의 과도한 자동 차단 방지</td>
+</tr>
+<tr>
+<td>정상 공유 주소</td>
+<td>차단 기간에 같은 주소의 record 사건이 있으면 해당 주소 규칙 제외</td>
+<td>주소 전체 차단으로 정상 사용자가 영향받는 경우 방지</td>
+</tr>
+<tr>
+<td>유효 기간</td>
+<td>원래 경보 시각부터 15분, startsAt 이상·expiresAt 미만</td>
+<td>재실행 시 현재 시각으로 차단을 되살리지 않음</td>
+</tr>
+<tr>
+<td>기록</td>
+<td>별도 fixture 거부 규칙, 근거 경보 ID, block·alert 알림</td>
+<td>기존 규칙·원문 보존</td>
+</tr>
+<tr>
+<td>적용</td>
+<td>mode 일치·주소·근거·유효 시각 검사 후 거부 응답</td>
+<td>live 기본 모드에 가상 규칙이 섞이지 않음</td>
+</tr>
+</tbody></table></div>
+<p>알림은 record를 제외한 두 행동을 누적합니다. 반복 실행은 새 알림 줄을 더하므로 중복 제거 기능을 구현했다고 기록하지 않습니다.
+규칙이 같은 주소에서 유효 기간이 겹치면 근거 ID와 만료를 합칩니다.
+현재 저장된 후보 10건이 주소 규칙 9개인 이유도 같은 주소의 후보가 합쳐졌기 때문입니다.</p>
+<h2 id="section-5">5. 파일별 역할과 변경 이유</h2>
+<p>&#39;기존 역할&#39;의 기준은 <strong>2026-10-07 XDR-01 제작 시작 전</strong>입니다. 신규 파일의 이후 수정은 추가·변경 이유에 구분합니다. 기존 파일은 당시 역할을 적고, 중간 Jev 단계와 최종 오프라인 단계의 차이도 표시합니다.
+2026-10-12 문서 작성 중에는 아래 프로그램 파일을 수정하지 않았습니다.</p>
+<h3 id="topic-9">5.1 XDR 제작·제출에 포함한 파일</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>파일명</th>
+<th>기존 역할</th>
+<th>현재 역할</th>
+<th>추가·변경 이유</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><a href="file:///D:/defense/choi-bujang-secret-vault-5-main/choi-bujang-secret-vault-5-main/xdr/brute-force/read-alerts.mjs">read-alerts.mjs</a></td>
+<td><span class="badge-new" style="display:inline-block;background:#edf5ff;border:1px solid #b8d4f2;border-radius:999px;padding:1px 9px;color:#245c92;font-size:0.88em;white-space:nowrap">신규</span></td>
+<td>원본 읽기·다섯 항목 추출·민감값 제외</td>
+<td>안전한 확인용 출력 분리 · 초기 신규, 최종 단계에서는 확인만; 이전 단계: 경보 fixture만 있었음</td>
+</tr>
+<tr>
+<td><a href="file:///D:/defense/choi-bujang-secret-vault-5-main/choi-bujang-secret-vault-5-main/xdr/brute-force/patterns.json">patterns.json</a></td>
+<td><span class="badge-new" style="display:inline-block;background:#edf5ff;border:1px solid #b8d4f2;border-radius:999px;padding:1px 9px;color:#245c92;font-size:0.88em;white-space:nowrap">신규</span></td>
+<td>두 패턴·조건·MITRE 근거</td>
+<td>근거 있는 탐지 기준 기록 · 초기 신규, 최종 단계에서는 확인만; 이전 단계: 이 도구의 패턴 파일 없음</td>
+</tr>
+<tr>
+<td><a href="file:///D:/defense/choi-bujang-secret-vault-5-main/choi-bujang-secret-vault-5-main/xdr/brute-force/decide.mjs">decide.mjs</a></td>
+<td><span class="badge-new" style="display:inline-block;background:#edf5ff;border:1px solid #b8d4f2;border-radius:999px;padding:1px 9px;color:#245c92;font-size:0.88em;white-space:nowrap">신규</span></td>
+<td>패턴 내장·단일 동기 내보내기·메모리 집계</td>
+<td>오프라인 단일 파일 심판 계약 준수 · 초기 신규 후 변경; 이전 단계: 초기에는 패턴 파일·판단 공통 코드·Jev 연결에 의존</td>
+</tr>
+<tr>
+<td><a href="file:///D:/defense/choi-bujang-secret-vault-5-main/choi-bujang-secret-vault-5-main/xdr/brute-force/evidence.mjs">evidence.mjs</a></td>
+<td><span class="badge-new" style="display:inline-block;background:#edf5ff;border:1px solid #b8d4f2;border-radius:999px;padding:1px 9px;color:#245c92;font-size:0.88em;white-space:nowrap">신규</span></td>
+<td>응답 부품의 원본 근거·집계 재확인</td>
+<td>차단 후보를 별도로 검증 · 초기 신규, 최종 단계 확인; 이전 단계: 공통 근거 계산 없음</td>
+</tr>
+<tr>
+<td><a href="file:///D:/defense/choi-bujang-secret-vault-5-main/choi-bujang-secret-vault-5-main/xdr/brute-force/respond.mjs">respond.mjs</a></td>
+<td><span class="badge-new" style="display:inline-block;background:#edf5ff;border:1px solid #b8d4f2;border-radius:999px;padding:1px 9px;color:#245c92;font-size:0.88em;white-space:nowrap">신규</span></td>
+<td>규칙·알림·파일 쓰기·추가 검사·가상 재생 본체</td>
+<td>사용자가 요청한 판단과 응답 책임 분리 · 최종 단계 신규; 이전 단계: 기능이 connect.mjs에 있었음</td>
+</tr>
+<tr>
+<td><a href="file:///D:/defense/choi-bujang-secret-vault-5-main/choi-bujang-secret-vault-5-main/xdr/brute-force/connect.mjs">connect.mjs</a></td>
+<td><span class="badge-new" style="display:inline-block;background:#edf5ff;border:1px solid #b8d4f2;border-radius:999px;padding:1px 9px;color:#245c92;font-size:0.88em;white-space:nowrap">신규</span></td>
+<td>respond.mjs 함수 재내보내기</td>
+<td>이전 호출 경로 보존 · 초기 신규 후 변경; 이전 단계: 연결·저장 본체</td>
+</tr>
+<tr>
+<td><a href="file:///D:/defense/choi-bujang-secret-vault-5-main/choi-bujang-secret-vault-5-main/scripts/xdr-run.mjs">scripts/xdr-run.mjs</a></td>
+<td>기존 경보별 decide 실행과 결과 생성, 이후 connect 호출</td>
+<td>XDR-01 결과 뒤 respond 호출</td>
+<td>새 응답 파일 연결, 판단 파일의 Jev 통계 의존 제거 · 변경</td>
+</tr>
+<tr>
+<td><a href="file:///D:/defense/choi-bujang-secret-vault-5-main/choi-bujang-secret-vault-5-main/test/xdr-brute-force.test.mjs">test/xdr-brute-force.test.mjs</a></td>
+<td><span class="badge-new" style="display:inline-block;background:#edf5ff;border:1px solid #b8d4f2;border-radius:999px;padding:1px 9px;color:#245c92;font-size:0.88em;white-space:nowrap">신규</span></td>
+<td>단독 파일·패턴 상수 일치·경계·정상·만료·보존 시험</td>
+<td>새 제출 계약과 과도한 차단 방지 검증 · 초기 신규 후 변경; 이전 단계: 초기 읽기·패턴·Jev·연결 시험</td>
+</tr>
+<tr>
+<td><a href="file:///D:/defense/choi-bujang-secret-vault-5-main/choi-bujang-secret-vault-5-main/test/xdr-run.test.mjs">test/xdr-run.test.mjs</a></td>
+<td>기존 실행기·fixture 형식 시험</td>
+<td>그대로 유지</td>
+<td>결과 형식·예외 처리 확인 · 확인만</td>
+</tr>
+<tr>
+<td><a href="file:///D:/defense/choi-bujang-secret-vault-5-main/choi-bujang-secret-vault-5-main/xdr/brute-force/result.json">result.json</a></td>
+<td><span class="badge-new" style="display:inline-block;background:#edf5ff;border:1px solid #b8d4f2;border-radius:999px;padding:1px 9px;color:#245c92;font-size:0.88em;white-space:nowrap">신규</span> 실행 산출물</td>
+<td>오프라인 판단 결과와 counts</td>
+<td>실제 재실행 결과 저장 · 실행 산출물 갱신</td>
+</tr>
+<tr>
+<td><a href="file:///D:/defense/choi-bujang-secret-vault-5-main/choi-bujang-secret-vault-5-main/xdr/brute-force/check.json">check.json</a></td>
+<td><span class="badge-new" style="display:inline-block;background:#edf5ff;border:1px solid #b8d4f2;border-radius:999px;padding:1px 9px;color:#245c92;font-size:0.88em;white-space:nowrap">신규</span> 실행 산출물</td>
+<td>정상 오차단·규칙 수·가상 재생·연결 상태</td>
+<td>판단과 규칙 적용을 별도 검증. 최종 재실행 값은 이전과 같음 · 초기 산출물 생성, 최종 결과 확인; 이전 단계: 오차단·재생 기록 없음</td>
+</tr>
+<tr>
+<td><a href="file:///D:/defense/choi-bujang-secret-vault-5-main/choi-bujang-secret-vault-5-main/xdr/brute-force/deny-rules.json">deny-rules.json</a></td>
+<td><span class="badge-new" style="display:inline-block;background:#edf5ff;border:1px solid #b8d4f2;border-radius:999px;padding:1px 9px;color:#245c92;font-size:0.88em;white-space:nowrap">신규</span> 실행 산출물</td>
+<td>만료와 근거 ID가 있는 fixture 규칙 9개</td>
+<td>기존 판정 규칙을 고치지 않는 후보 저장. 최종 값은 이전과 같음 · 초기 산출물 생성, 최종 결과 확인; 이전 단계: XDR 가상 거부 목록 없음</td>
+</tr>
+<tr>
+<td><a href="file:///D:/defense/choi-bujang-secret-vault-5-main/choi-bujang-secret-vault-5-main/xdr/alerts.log">alerts.log</a></td>
+<td><span class="badge-new" style="display:inline-block;background:#edf5ff;border:1px solid #b8d4f2;border-radius:999px;padding:1px 9px;color:#245c92;font-size:0.88em;white-space:nowrap">신규</span> 실행 산출물</td>
+<td>moduleKey·모드·가상 번호·행동·점수·패턴만 추가</td>
+<td>원문 없는 공통 알림 기록, 최종 실행에서 19줄 추가 · 초기 생성 후 누적; 이전 단계: 이 도구의 알림 기록 없음</td>
+</tr>
+</tbody></table></div>
+<p>현재 실행기는 후속 XDR-02 작업으로 web-injection도 처리합니다.
+이는 XDR-01 저장점 이후의 변경이며 이 문서의 XDR-01 제작 범위와 구분합니다.</p>
+<h3 id="topic-10">5.2 이전 Jev 준비와 보존·확인 파일</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>파일명</th>
+<th>기존 역할</th>
+<th>현재 역할</th>
+<th>추가·변경 이유</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><a href="file:///D:/defense/choi-bujang-secret-vault-5-main/choi-bujang-secret-vault-5-main/xdr/brute-force/jev.mjs">jev.mjs</a></td>
+<td><span class="badge-new" style="display:inline-block;background:#edf5ff;border:1px solid #b8d4f2;border-radius:999px;padding:1px 9px;color:#245c92;font-size:0.88em;white-space:nowrap">신규</span></td>
+<td>숫자·불리언 신호만 보내고 Noul 응답 검사</td>
+<td>초기 Jev 요청 구현. 최종 decide에서는 사용하지 않음 · 이전 요구에서 신규; 이전 단계: 외부 판단 연결 없음</td>
+</tr>
+<tr>
+<td><a href="file:///D:/defense/choi-bujang-secret-vault-5-main/choi-bujang-secret-vault-5-main/xdr/brute-force/judgment.mjs">judgment.mjs</a></td>
+<td><span class="badge-new" style="display:inline-block;background:#edf5ff;border:1px solid #b8d4f2;border-radius:999px;padding:1px 9px;color:#245c92;font-size:0.88em;white-space:nowrap">신규</span></td>
+<td>이전 Jev 판단 팩토리</td>
+<td>웹 시험 준비 보존, 최종 제출 제외 · 로컬 신규·미커밋</td>
+</tr>
+<tr>
+<td><a href="file:///D:/defense/choi-bujang-secret-vault-5-main/choi-bujang-secret-vault-5-main/api/ai.js">api/ai.js</a></td>
+<td>501 시작 틀</td>
+<td>로그인·가상 경보 번호·한도 예약·Jev 시험 중계 준비</td>
+<td>사용자의 Vercel Jev 요청. 실제 설정·배포 미확인, 최종 저장점 제외 · 로컬 변경·미커밋</td>
+</tr>
+<tr>
+<td><a href="file:///D:/defense/choi-bujang-secret-vault-5-main/choi-bujang-secret-vault-5-main/public/index.html">public/index.html</a></td>
+<td>로그인·메모 화면</td>
+<td>기존 기능과 별도의 Jev 시험 화면 준비</td>
+<td>웹에서 시험 요청, 최종 저장점 제외 · 로컬 변경·미커밋</td>
+</tr>
+<tr>
+<td><a href="file:///D:/defense/choi-bujang-secret-vault-5-main/choi-bujang-secret-vault-5-main/docs/sql/xdr-jev-usage.sql">일일 한도 SQL</a></td>
+<td><span class="badge-new" style="display:inline-block;background:#edf5ff;border:1px solid #b8d4f2;border-radius:999px;padding:1px 9px;color:#245c92;font-size:0.88em;white-space:nowrap">신규</span></td>
+<td>서버용 일일 한도 표·예약 함수 초안</td>
+<td>반복 외부 호출 제한 준비. 학습 DB 적용 미실행 · 로컬 신규·미커밋</td>
+</tr>
+<tr>
+<td><a href="file:///D:/defense/choi-bujang-secret-vault-5-main/choi-bujang-secret-vault-5-main/scripts/xdr-local.ps1">scripts/xdr-local.ps1</a></td>
+<td><span class="badge-new" style="display:inline-block;background:#edf5ff;border:1px solid #b8d4f2;border-radius:999px;padding:1px 9px;color:#245c92;font-size:0.88em;white-space:nowrap">신규</span></td>
+<td>이전 요구용 숨김 입력·실행 후 정리</td>
+<td>비밀값 파일 저장 방지. 현재 오프라인 실행에는 불필요 · 로컬 신규·미커밋</td>
+</tr>
+<tr>
+<td><a href="file:///D:/defense/choi-bujang-secret-vault-5-main/choi-bujang-secret-vault-5-main/test/xdr-ai.test.mjs">test/xdr-ai.test.mjs</a></td>
+<td><span class="badge-new" style="display:inline-block;background:#edf5ff;border:1px solid #b8d4f2;border-radius:999px;padding:1px 9px;color:#245c92;font-size:0.88em;white-space:nowrap">신규</span></td>
+<td>합성 인증·가짜 RPC·HTTP 시험</td>
+<td>실제 키·DB·모델 없이 서버 분기 확인 · 로컬 신규·미커밋</td>
+</tr>
+<tr>
+<td><a href="file:///D:/defense/choi-bujang-secret-vault-5-main/choi-bujang-secret-vault-5-main/test/notes-ui.test.mjs">notes-ui 시험</a>·<a href="file:///D:/defense/choi-bujang-secret-vault-5-main/choi-bujang-secret-vault-5-main/test/package-starter.test.mjs">패키지 시험</a>·<a href="file:///D:/defense/choi-bujang-secret-vault-5-main/choi-bujang-secret-vault-5-main/package/ARCHITECTURE.md">구성 안내</a></td>
+<td>기존 화면·시작 틀 기준</td>
+<td>이전 웹 준비에 맞춘 시험·안내</td>
+<td>다른 작업으로 보존, 최종 XDR 저장점 제외 · 로컬 변경·미커밋</td>
+</tr>
+<tr>
+<td><a href="file:///D:/defense/choi-bujang-secret-vault-5-main/choi-bujang-secret-vault-5-main/src/decider.mjs">src/decider.mjs</a></td>
+<td>starter.deny</td>
+<td>함수·다섯 응답 항목·규칙 이름 유지</td>
+<td>기존 판정 계약 보존 · 확인만</td>
+</tr>
+<tr>
+<td><a href="file:///D:/defense/choi-bujang-secret-vault-5-main/choi-bujang-secret-vault-5-main/xdr/fixtures/brute-force.json">원본 경보</a></td>
+<td>수업용 경보 28건</td>
+<td>원본 그대로</td>
+<td>시험 입력을 바꿔 결과를 맞추지 않음 · 확인만</td>
+</tr>
+<tr>
+<td><a href="file:///D:/defense/choi-bujang-secret-vault-5-main/choi-bujang-secret-vault-5-main/aleph.config.json">aleph.config.json</a></td>
+<td>5단계·배포·발급자·허용 경로·원본 API 설정</td>
+<td>같은 설정 유지</td>
+<td>구현과 대조, judgeIssuer 보존 · 확인만</td>
+</tr>
+<tr>
+<td><a href="file:///D:/defense/choi-bujang-secret-vault-5-main/choi-bujang-secret-vault-5-main/api/auth.js">api/auth.js</a>·<a href="file:///D:/defense/choi-bujang-secret-vault-5-main/choi-bujang-secret-vault-5-main/api/notes.js">api/notes.js</a>·<a href="file:///D:/defense/choi-bujang-secret-vault-5-main/choi-bujang-secret-vault-5-main/src/verify-login.mjs">verify-login.mjs</a></td>
+<td>기존 인증·소유자 방어</td>
+<td>그대로 유지</td>
+<td>XDR 작업을 기존 방어의 새 구현으로 혼동하지 않음 · 확인만</td>
+</tr>
+<tr>
+<td><a href="file:///D:/defense/choi-bujang-secret-vault-5-main/choi-bujang-secret-vault-5-main/src/attack-check.mjs">src/attack-check.mjs</a>·<a href="file:///D:/defense/choi-bujang-secret-vault-5-main/choi-bujang-secret-vault-5-main/scripts/bundle.mjs">bundle.mjs</a></td>
+<td>5단계 자기 점검과 제출 묶음</td>
+<td>그대로 유지</td>
+<td>XDR 제출 방식과 기존 5단계 묶음을 구분 · 확인만</td>
+</tr>
+</tbody></table></div>
+<h3 id="topic-11">5.3 문서와 로컬 검토 산출물</h3>
+<p>기존 <a href="file:///D:/defense/choi-bujang-secret-vault-5-main/choi-bujang-secret-vault-5-main/README.md">루트 README</a>, <a href="file:///D:/defense/choi-bujang-secret-vault-5-main/choi-bujang-secret-vault-5-main/TODO.md">TODO</a>, <a href="file:///D:/defense/choi-bujang-secret-vault-5-main/choi-bujang-secret-vault-5-main/xdr/README.md">XDR 목차</a>,
+<a href="file:///D:/defense/choi-bujang-secret-vault-5-main/choi-bujang-secret-vault-5-main/xdr/brute-force/README.md">XDR-01 기록</a>은 구현·현재 상태·재실행 방법을 안내하도록 갱신했습니다.
+이 파일들은 최종 11개 파일 저장점에 포함했습니다.</p>
+<p><a href="file:///D:/defense/choi-bujang-secret-vault-5-main/choi-bujang-secret-vault-5-main/artifacts/xdr-01/preflight.json">제출 전 검사 기록</a>과
+<a href="file:///D:/defense/choi-bujang-secret-vault-5-main/choi-bujang-secret-vault-5-main/artifacts/xdr-01/decide.mjs">단독 판단 사본</a>은 Git 제외인 로컬 검토 산출물입니다.
+공식 제출 묶음이나 심판 판정 결과가 아닙니다.
+검토용 전체 사본은 검증 후 정리했고 원래 작업 파일은 보존했습니다.</p>
+<p>이번 문서 작업은 IMPLEMENTATION.md 보완, 작업정리.html 신규 작성, diagrams/의 draw.io·Mermaid 원본과 SVG·수정 안내 작성, 기존 XDR-01 README 안내 추가입니다. 프로그램 파일은 수정하지 않았습니다.
+다른 문서와 코드의 미커밋 상태를 이번 변경으로 취합하지 않습니다.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>파일명</th>
+<th>기존 역할</th>
+<th>현재 역할</th>
+<th>추가·변경 이유</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>IMPLEMENTATION.md</td>
+<td><span class="badge-new" style="display:inline-block;background:#edf5ff;border:1px solid #b8d4f2;border-radius:999px;padding:1px 9px;color:#245c92;font-size:0.88em;white-space:nowrap">신규</span> (2026-10-12 최초 정리)</td>
+<td>수정용 상세 기록</td>
+<td>기존 코드·결과·과거 기록을 설명하고 HTML 표시 형식 보완</td>
+</tr>
+<tr>
+<td>작업정리.html</td>
+<td><span class="badge-new" style="display:inline-block;background:#edf5ff;border:1px solid #b8d4f2;border-radius:999px;padding:1px 9px;color:#245c92;font-size:0.88em;white-space:nowrap">신규</span></td>
+<td>목차·표·로컬 그림을 갖춘 전체 열람본</td>
+<td>PC에서 더블클릭·오프라인 열람</td>
+</tr>
+<tr>
+<td>diagrams/service-overview.drawio</td>
+<td><span class="badge-new" style="display:inline-block;background:#edf5ff;border:1px solid #b8d4f2;border-radius:999px;padding:1px 9px;color:#245c92;font-size:0.88em;white-space:nowrap">신규</span></td>
+<td>편집 가능한 대표 구성도</td>
+<td>구현과 미연결 범위를 구분</td>
+</tr>
+<tr>
+<td>diagrams/*.mmd·mermaid-theme.json</td>
+<td><span class="badge-new" style="display:inline-block;background:#edf5ff;border:1px solid #b8d4f2;border-radius:999px;padding:1px 9px;color:#245c92;font-size:0.88em;white-space:nowrap">신규</span></td>
+<td>시퀀스·조건 분기 원본과 표시 설정</td>
+<td>코드 호출 순서·조건을 수정 가능하게 보관</td>
+</tr>
+<tr>
+<td>diagrams/*.svg</td>
+<td><span class="badge-new" style="display:inline-block;background:#edf5ff;border:1px solid #b8d4f2;border-radius:999px;padding:1px 9px;color:#245c92;font-size:0.88em;white-space:nowrap">신규</span> 실행 산출물</td>
+<td>구성도 1개·시퀀스 3개·분기 1개의 로컬 그림</td>
+<td>외부 렌더러 없이 열람</td>
+</tr>
+<tr>
+<td>diagrams/README.md</td>
+<td><span class="badge-new" style="display:inline-block;background:#edf5ff;border:1px solid #b8d4f2;border-radius:999px;padding:1px 9px;color:#245c92;font-size:0.88em;white-space:nowrap">신규</span></td>
+<td>그림 파일 대응과 수정 안내</td>
+<td>이동·수정·재생성의 조건 안내</td>
+</tr>
+<tr>
+<td>xdr/brute-force/README.md</td>
+<td>기존 XDR-01 작업 기록</td>
+<td>과거 내용 보존·새 문서 링크 추가</td>
+<td>기존 기록에서 HTML과 원본을 찾기 쉽게 안내</td>
+</tr>
+</tbody></table></div>
+<h2 id="section-6">6. 검증과 결과</h2>
+<h3 id="topic-12">6.1 실제 실행한 명령: 당시의 결과</h3>
+<p>아래는 2026-10-07~08 작업에서 실행한 기록입니다. <strong>2026-10-12에 다시 실행한 결과가 아닙니다.</strong>
+동일 명령의 시험 개수는 요구 변경·미커밋 시험 포함 여부에 따라 달라졌습니다.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>당시 실행 명령·작업</th>
+<th>결과</th>
+<th>검증 구분</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>node xdr/brute-force/read-alerts.mjs</td>
+<td>경보 28건·출력 28줄·다섯 항목 이외 출력 0줄</td>
+<td>가상 입력 실제 실행</td>
+</tr>
+<tr>
+<td>node --test test/xdr-brute-force.test.mjs test/xdr-run.test.mjs</td>
+<td>최종 요구 적용 후 15개 통과</td>
+<td>가상 시험</td>
+</tr>
+<tr>
+<td>node --test test/*.test.mjs</td>
+<td>당시 로컬 미커밋 Jev 서버 시험 포함 51개 통과</td>
+<td>가상 시험, 실제 외부 서비스 사용 아님</td>
+</tr>
+<tr>
+<td>제출 사본에서 node --test test/*.test.mjs</td>
+<td>저장점에 포함할 파일만 검증, 47개 통과</td>
+<td>가상 시험, 제외한 Jev 시험 4개와 구분</td>
+</tr>
+<tr>
+<td>npm.cmd run xdr:run -- brute-force</td>
+<td>result·check·규칙 갱신, 알림 19줄 추가</td>
+<td>가상 입력·가상 허용 판정기</td>
+</tr>
+<tr>
+<td>npm.cmd run build -- --local</td>
+<td>이전 Jev 웹 준비 시점 정적 빌드 성공</td>
+<td>정적 빌드, 서버·DB·배포 시험 아님</td>
+</tr>
+<tr>
+<td>node --input-type=module로 검사 스크립트 실행</td>
+<td>단독 사본의 유일 내보내기·동기 반환·형식·점수 경계·민감 패턴 검사 통과</td>
+<td>로컬 제출 전 검사</td>
+</tr>
+<tr>
+<td>실행 전후 SHA-256 비교</td>
+<td>원본 경보·기존 판정기·config 보존 확인</td>
+<td>파일 보존 검사</td>
+</tr>
+<tr>
+<td>git diff --check, git diff --cached --check</td>
+<td>공백 오류 없음</td>
+<td>변경·스테이징 검사</td>
+</tr>
+<tr>
+<td>git commit -m &#39;보너스 xdr-01 저장점&#39;</td>
+<td>최종 XDR 변경 11개 파일 저장</td>
+<td>실제 Git 작업</td>
+</tr>
+<tr>
+<td>git push origin HEAD:main</td>
+<td>승인 후 연결된 저장소 main에 반영</td>
+<td>실제 원격 반영</td>
+</tr>
+</tbody></table></div>
+<p>PowerShell 숨김 입력 보조 도구는 구문 검사와 합성 입력·가짜 npm을 사용하는 시험만 수행했습니다.
+학생의 실제 키 입력이나 실제 Jev 응답을 확인했다고 기록하지 않습니다.</p>
+<p>첫 실패한 시험은 금지 항목 검사식이 패턴의 require 항목까지 함수 호출로 인식한 오류였습니다.
+require(...) 호출 여부만 검사하도록 시험 한 곳을 수정한 후 15개가 통과했습니다.
+Windows 보조 도구 시험의 실행 정책·합성 입력 의존성 문제를 수정한 이력은 기존 README에 보존했습니다.</p>
+<h3 id="topic-13">6.2 저장된 XDR 결과</h3>
+<p>근거는 <a href="file:///D:/defense/choi-bujang-secret-vault-5-main/choi-bujang-secret-vault-5-main/xdr/brute-force/result.json">result.json</a>과
+<a href="file:///D:/defense/choi-bujang-secret-vault-5-main/choi-bujang-secret-vault-5-main/xdr/brute-force/check.json">check.json</a>입니다. 데이터 본문은 이 문서에 복사하지 않습니다.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>확인 항목</th>
+<th>저장된 결과</th>
+<th>의미</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>block / alert / record</td>
+<td>10 / 9 / 9</td>
+<td>28건의 가상 경보 판단</td>
+</tr>
+<tr>
+<td>정상 이벤트 / 정상 block</td>
+<td>9 / 0</td>
+<td>이 가상 정상 집합의 판단 오차단 없음</td>
+</tr>
+<tr>
+<td>정상 주소 차단</td>
+<td>0</td>
+<td>별도 규칙 적용에서 정상 주소 제외</td>
+</tr>
+<tr>
+<td>주소 규칙</td>
+<td>9</td>
+<td>명확한 후보 10건을 주소별로 합침</td>
+</tr>
+<tr>
+<td>명확한 공격 재생</td>
+<td>10/10 거부</td>
+<td>가상 추가 검사 deny</td>
+</tr>
+<tr>
+<td>애매한 시도 재생</td>
+<td>9/9 통과</td>
+<td>차단하지 않고 alert 유지</td>
+</tr>
+<tr>
+<td>정상 요청 재생</td>
+<td>9/9 통과</td>
+<td>가상 기존 allow 응답 유지</td>
+</tr>
+<tr>
+<td>만료 규칙 재생</td>
+<td>9/9 통과</td>
+<td>expiresAt부터 적용하지 않음</td>
+</tr>
+<tr>
+<td>Jev 호출·응답·실패</td>
+<td>모두 0</td>
+<td>최종 실행은 외부 판단 사용 안 함</td>
+</tr>
+<tr>
+<td>liveZtnaConnected</td>
+<td>false</td>
+<td>실제 운영 연결 완료 아님</td>
+</tr>
+</tbody></table></div>
+<p>수준만 높이거나 T1110 표식만 붙인 정상 사건, 입력의 임의 점수, 실패 건수 19/20,
+시간 창 180/181초, 수준 9/10, 계정 수 7/8, 실패 후 성공, 중복·다른 계정·시간 창 밖 실패,
+정상과 공유한 주소, 필수 어댑터 누락 및 기존 응답 보존을 시험했습니다.
+잘못된 거부 응답을 계약 오류로 처리하는 분기는 코드를 읽어 확인했으며,
+이 대화의 최종 시험에서 그 응답 오류를 직접 발생시켰다고 기록하지 않습니다.
+이 작은 가상 집합으로 운영 전체의 탐지율·오차단율을 측정한 것은 아닙니다.</p>
+<h3 id="topic-14">6.3 실제 서비스 확인과 사용자 제공 결과</h3>
+<p>2026-10-08 푸시 후 Node의 fetch로 공개 주소에 GET 요청을 보냈습니다.
+일반 실행 환경에서 요청 실패가 나자 승인된 네트워크 실행으로 확인했습니다.
+본문·토큰·키는 출력하거나 이 문서에 넣지 않았습니다.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>실제 GET 경로</th>
+<th>당시 관찰</th>
+<th>확인의 범위</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>/aleph.json</td>
+<td>HTTP 200, 당시 저장점 63db3cb와 커밋 일치, 단계 5·저장소·원본 주소·경로 수 확인</td>
+<td>새 코드의 배포 식별 확인</td>
+</tr>
+<tr>
+<td>/</td>
+<td>HTTP 200, 보안 헤더 확인, 첫 HTML의 키 표식 미검출</td>
+<td>첫 응답 검사. 모든 동적 자원 검사 아님</td>
+</tr>
+<tr>
+<td>/api/notes</td>
+<td>HTTP 401</td>
+<td>무로그인 거부. 본인 메모 CRUD 새 시험 아님</td>
+</tr>
+<tr>
+<td>/data.json</td>
+<td>HTTP 404</td>
+<td>해당 공개 경로 차단. 당시 과거 Git 본문 제거 여부 검사 아님</td>
+</tr>
+</tbody></table></div>
+<p>배포 URL: <a href="https://choi-bujang-secret-vault-5.vercel.app">자료실</a>.
+저장소 URL: <a href="https://github.com/lee5299/choi-bujang-secret-vault-5">GitHub</a>.</p>
+<p>기존 <a href="file:///D:/defense/choi-bujang-secret-vault-5-main/choi-bujang-secret-vault-5-main/5/README.md">5단계 기록</a>은 DB 권한 회수와 본인 CRUD·타인 자료 거부를 사용자 화면·시험으로 확인했다고 구분합니다.
+이는 기존 방어 결과이며 XDR가 그 기능을 새로 추가한 결과가 아닙니다.
+후속 <a href="file:///D:/defense/choi-bujang-secret-vault-5-main/choi-bujang-secret-vault-5-main/docs/PROJECT_PAGE.md">프로젝트 안내</a>에는 사용자가 과제 100점 통과를 알려준 기록이 있습니다.
+그 사용자 제공 기록만으로 XDR-01의 실제 운영 차단이나 Jev 성능을 입증하지 않으며,
+이 대화에서는 XDR-01 심사 프로그램의 접수·점수를 직접 조회한 결과가 없습니다.</p>
+<h3 id="topic-15">6.4 저장점·배포 시점과 후속 이력</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>시점</th>
+<th>실제 수행·근거</th>
+<th>주의</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>2026-10-07</td>
+<td>초기 제작과 Jev 단계 저장점·가상 시험 기록</td>
+<td>당시 요구이며 최종 오프라인 요구와 구분</td>
+</tr>
+<tr>
+<td>2026-10-08 오프라인 저장점</td>
+<td>당시 커밋 63db3cb151114ccf6466c6a7d9a4d28beba77f37, 변경 11개 파일, 대상 검사 미검출</td>
+<td>당시 대화·로컬 preflight의 ID</td>
+</tr>
+<tr>
+<td>같은 날 원격·배포</td>
+<td>정확한 저장소 main 푸시 승인 후 성공, /aleph.json의 당시 커밋 일치 확인</td>
+<td>실제 심판 실행과 구분</td>
+</tr>
+<tr>
+<td>후속 Git 이력 정리 이후</td>
+<td>현재 이력의 XDR-01 오프라인 저장점 b3c125877a604b1df8b3505cf9ae66b59b409802</td>
+<td>과거 ID를 현재 HEAD라고 안내하지 않음</td>
+</tr>
+<tr>
+<td>2026-10-12 문서 대조</td>
+<td>현재 파일·Git 기록·저장된 결과 읽기</td>
+<td>새 테스트·배포·점수 조회 없음</td>
+</tr>
+</tbody></table></div>
+<p>현재 ID 변화는 별도 <a href="file:///D:/defense/choi-bujang-secret-vault-5-main/choi-bujang-secret-vault-5-main/docs/GIT_HISTORY_CLEANUP.md">Git 이력 정리 기록</a>과 대조했습니다.
+그 작업은 다른 시점의 작업이며 여기에서 재실행하지 않습니다.
+현재 이력에는 후속 XDR-02와 데이터 이력 정리 저장점도 있으므로,
+2026-10-08 XDR-01 배포 확인을 현재 최신 배포 확인으로 바꾸어 표현하지 않습니다.</p>
+<p>최초 main 푸시는 자동 승인 검토에서 정확한 대상의 구체적 승인 부족으로 거절되었습니다.
+사용자가 저장소 주소와 main을 지정해 승인한 뒤 같은 대상에 정상 푸시했습니다.
+다른 브랜치나 우회 경로로 거절된 작업을 실행하지 않았습니다.</p>
+<h3 id="topic-16">6.5 미실행·미확인 항목</h3>
+<ul>
+<li>운영 Wazuh 연결, 실시간 사건 전달, 실제 출발 주소 콜백, 운영 거부 이유 코드 등록.</li>
+<li>실제 운영 접속 차단·회수, 정상 학생 접속의 XDR 추가 검사 통과.</li>
+<li>실제 Jev API 응답, 운영 데이터에서 규칙 방식과 Jev 방식의 성능 비교.</li>
+<li>Jev 일일 한도 SQL의 DB 적용·동시 요청 제어, Jev 웹 준비 코드의 Vercel 배포.</li>
+<li>이번 XDR 제출 과정에서 npm run bundle 실행. 해당 도구는 기존 5단계 제출 형식이며 이번 XDR 제출 파일 검사와 구분함.</li>
+<li>심판 프로그램에 실제 접수하고 점수를 직접 조회하는 작업.</li>
+<li>운영 경보 전체에 대한 탐지율·오차단율, 처리 시간·지연·부하·비용 측정.</li>
+</ul>
+<p>남은 연결은 <a href="file:///D:/defense/choi-bujang-secret-vault-5-main/choi-bujang-secret-vault-5-main/TODO.md">TODO</a>에 유지합니다.</p>
+<h2 id="section-7">7. 사용자 제안으로 수행한 추가 확인·개선</h2>
+<p>핵심 제작 다섯 항목과 구분한 사용자 제안·범위 확인입니다.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>제안·질문</th>
+<th>이유</th>
+<th>수행한 조치</th>
+<th>검증·한계</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>인터넷의 알려진 무차별 로그인 패턴을 찾아 달라는 요청</td>
+<td>임의 패턴 방지</td>
+<td>MITRE T1110.001·T1110.003 근거 확인·두 패턴 등록</td>
+<td>한 줄 근거·상수 사본 일치 확인. 패턴 수가 늘었다고 효과를 주장하지 않음</td>
+</tr>
+<tr>
+<td>Wazuh 공식 규칙 복사 여부 질문과 원래 범위로 복귀 요청</td>
+<td>경보 읽기와 탐지 엔진 규칙 복사를 구분</td>
+<td>한때 추가했던 Wazuh 원본 참조·참고 복사분을 제거하고 MITRE 패턴 방식 유지</td>
+<td>최종 공식 XML 규칙 등록은 없음. 당시 되돌림 뒤 가상 시험·counts 확인</td>
+</tr>
+<tr>
+<td>XDR 여섯 항목을 한곳에 보관하는 질문</td>
+<td>프로그램 위치·기록 찾기 혼란 감소</td>
+<td>xdr 공통 목차와 brute-force 상세 기록 분리</td>
+<td>이 대화에서 나머지 다섯 과제를 추측해 새로 완성했다고 기록하지 않음</td>
+</tr>
+<tr>
+<td>만들어 둔 읽기 모듈이 맞는지 재확인 요청</td>
+<td>원본 보존·출력 계약 확인</td>
+<td>모듈을 재작성하지 않고 28건·28줄·필드·해시 확인</td>
+<td>기존 구현 확인이며 새 읽기 기능 추가가 아님</td>
+</tr>
+<tr>
+<td>Jev 키 발급·로컬 시험·Vercel 호출 요청</td>
+<td>실제 연결 준비</td>
+<td>숨김 입력 도구·인증된 서버 중계·한도 SQL·화면·가짜 응답 시험 준비</td>
+<td>키 발급은 사용자 진술. 실제 키·모델·SQL 적용 미확인, 최종 저장점 제외</td>
+</tr>
+<tr>
+<td>URL·저장소 제출과 운영 엔진 위치의 관계 질문</td>
+<td>제출 요건을 잘못 확대하지 않기 위함</td>
+<td>운영 소스코드 제출 요구를 정정하고 공식 연결 계약 필요성 설명</td>
+<td>출발 IP 계약을 임의로 만들지 않음. 운영 엔진을 새로 구현하지 않음</td>
+</tr>
+<tr>
+<td>다른 홈페이지에 붙일 수 있는지 질문</td>
+<td>재사용 범위 이해</td>
+<td>판단·응답 부품과 사이트별 인증·주소·적용 연결의 차이 설명</td>
+<td>다른 홈페이지로 실제 이식하거나 배포하지 않음</td>
+</tr>
+<tr>
+<td>Vercel 배포·저장소 주소로 심사받자는 요청</td>
+<td>제출 가능한 최신 상태 준비</td>
+<td>XDR만 사본 검사·저장점·승인된 main 푸시·배포 커밋 및 무로그인 거부 확인</td>
+<td>기존 자료실 방어 재확인. 새 심판 점수 직접 조회 없음</td>
+</tr>
+<tr>
+<td>Jev가 실제로 효과가 좋은지 질문</td>
+<td>확신도와 실제 성능을 구분</td>
+<td>공식 설명과 MITRE를 확인하고 동일 경보로 비교 시험이 필요하다고 설명</td>
+<td>성능 개선 실험을 실행하지 않음. 높게 나온 점수를 정확도로 제시하지 않음</td>
+</tr>
+</tbody></table></div>
+<p>Jev 설명의 참고 근거는 <a href="https://docs.typesafe.ai/confidence">공식 확신도 문서</a>입니다.
+현재 confidence는 자체 패턴 점수이므로 Jev의 Noul 공격 확률과 같은 측정값으로 비교하지 않습니다.</p>
+<h2 id="section-8">8. 문서 보기·수정·재현 방법</h2>
+<h3 id="topic-17">문서와 그림 보기</h3>
+<ul>
+<li><strong>작업정리.html을 더블클릭</strong>하면 PC 브라우저에서 전체 기록과 목차를 볼 수 있습니다. 인터넷 연결 없이 본문과 다섯 SVG가 표시됩니다.</li>
+<li>수정용 원본은 <strong>IMPLEMENTATION.md</strong>입니다. HTML은 원본을 읽기 쉽게 만든 정적 문서이며 자동 동기화하지 않습니다.</li>
+<li>다른 PC에서는 <strong>brute-force 폴더의 IMPLEMENTATION.md·작업정리.html·diagrams 폴더를 함께 복사</strong>하세요. 프로그램·데이터를 복사할 필요는 없습니다.</li>
+<li>본문에서 연결한 코드·시험·결과·과거 기록은 원래 자료실의 절대 경로입니다. 자료실이 없거나 위치가 달라지면 열리지 않습니다. 외부 근거 사이트도 인터넷이 필요하지만 본문·그림 열람에는 필요하지 않습니다.</li>
+<li>HTML 목차의 <strong>2. 전체 서비스 구성</strong>, <strong>5. 파일별 역할</strong>, <strong>6. 검증과 결과</strong>를 누르면 해당 위치로 이동합니다. 그림 아래 <strong>SVG 크게 보기</strong>로 확대할 수 있습니다.</li>
+</ul>
+<h3 id="topic-18">다이어그램 원본과 수정 방법</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>내용</th>
+<th>편집 원본</th>
+<th>문서용 그림</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>대표 서비스 구성</td>
+<td><a href="diagrams/service-overview.drawio">service-overview.drawio</a></td>
+<td><a href="diagrams/service-overview.svg">service-overview.svg</a></td>
+</tr>
+<tr>
+<td>로컬 XDR 실행</td>
+<td><a href="diagrams/xdr-sequence.mmd">xdr-sequence.mmd</a></td>
+<td><a href="diagrams/xdr-sequence.svg">xdr-sequence.svg</a></td>
+</tr>
+<tr>
+<td>추가 검사 부품</td>
+<td><a href="diagrams/gate-sequence.mmd">gate-sequence.mmd</a></td>
+<td><a href="diagrams/gate-sequence.svg">gate-sequence.svg</a></td>
+</tr>
+<tr>
+<td>기존 메모 조회</td>
+<td><a href="diagrams/notes-sequence.mmd">notes-sequence.mmd</a></td>
+<td><a href="diagrams/notes-sequence.svg">notes-sequence.svg</a></td>
+</tr>
+<tr>
+<td>판단 조건 분기</td>
+<td><a href="diagrams/decision-flow.mmd">decision-flow.mmd</a></td>
+<td><a href="diagrams/decision-flow.svg">decision-flow.svg</a></td>
+</tr>
+</tbody></table></div>
+<p>구성도는 draw.io에서 <strong>File → Open from → Device</strong>로 원본을 열고 수정한 뒤 SVG로 내보냅니다. SVG에도 같은 편집 데이터가 포함되어 있습니다.
+Mermaid 원본은 .mmd 파일과 본문의 접힌 코드에 보관했습니다. 수정 후 Mermaid 도구로 SVG를 다시 생성해야 합니다. 공통 표시 설정은 <a href="diagrams/mermaid-theme.json">mermaid-theme.json</a>, 자세한 안내는 <a href="diagrams/README.md">그림 README</a>에 있습니다.
+HTML·SVG의 오프라인 열람과 편집 도구 설치 여부는 별개입니다. 다이어그램 수정에는 draw.io와 Mermaid 렌더러가 필요합니다.</p>
+<h3 id="topic-19">프로그램을 다시 실행할 때</h3>
+<p>아래 명령은 <strong>향후 재현 안내</strong>입니다. 이번 문서 작성에서는 실행하지 않았습니다.
+첫 명령은 확인용 출력이고, 두 번째는 결과·규칙·검사 파일과 알림 로그를 변경합니다.</p>
+<pre><code class="language-powershell">node xdr/brute-force/read-alerts.mjs
+npm.cmd run xdr:run -- brute-force
+</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>구분</th>
+<th>정상이어야 하는 결과</th>
+<th>거부·오류이어야 하는 결과</th>
+<th>화면에서 확인할 곳</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>확인용 읽기</td>
+<td>원본 28건과 출력 28줄, 다섯 항목만 출력</td>
+<td>민감값은 출력에서 제외</td>
+<td>터미널 출력과 read-alerts.mjs의 반환 항목</td>
+</tr>
+<tr>
+<td>가상 XDR 실행</td>
+<td>애매한 9건은 alert, 정상 9건은 record, 정상 block 0</td>
+<td>명확한 10건은 block 후보·가상 추가 검사 deny</td>
+<td>result.json의 counts, check.json의 replay·오차단 항목</td>
+</tr>
+<tr>
+<td>규칙 적용</td>
+<td>규칙 없음·만료 시 기존 응답 보존</td>
+<td>유효한 fixture 규칙만 가상 deny</td>
+<td>deny-rules.json과 check.json</td>
+</tr>
+<tr>
+<td>기존 자료실</td>
+<td>유효한 로그인 후 본인 메모 조회</td>
+<td>무로그인 메모 요청 401, 타인·없는 상세 자료 404</td>
+<td>자료실의 로그인 버튼·메모 목록. 이번 문서 작업에서 새로 조작하지 않음</td>
+</tr>
+<tr>
+<td>오프라인 판단</td>
+<td>단일 파일이 즉시 action·confidence·reason 반환</td>
+<td>잘못된 경보 alert, 잘못된 거부 응답은 어댑터 계약 오류</td>
+<td>decide.mjs·respond.mjs, 가상 시험 코드</td>
+</tr>
+</tbody></table></div>
+<p>가상 허용 판정기 시험과 실제 자료실 화면 시험을 혼합하지 않습니다. 기존 starter.deny는 보존되어 있습니다.</p>
+<h3 id="topic-20">이번 문서 검증의 시점</h3>
+<p>**앞선 텍스트 문서 검증(2026-10-12)**은 로컬 링크 47개, Mermaid 텍스트 다섯 개의 구조, 비밀값 표식, 문서 외 89개 파일 해시, README의 과거 내용 보존과 공백 검사를 확인했습니다.
+당시에는 화면 렌더링을 수행하지 않았습니다. 그 뒤의 이번 HTML·그림 확인을 아래에 별도로 기록합니다.</p>
+<p><strong>이번 HTML·그림 검증(2026-10-12)</strong>:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>실제 확인</th>
+<th>결과</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Chrome로 로컬 HTML 렌더링</td>
+<td>1600×1000·1024×768 화면에서 문서 가로 넘침 없음, 목차 8개 연결</td>
+</tr>
+<tr>
+<td>그림 표시</td>
+<td>로컬 SVG 5개 모두 로드. 구성도·세 시퀀스·판단 흐름의 한글·배치·캔버스 잘림을 화면으로 확인</td>
+</tr>
+<tr>
+<td>역할 표·배지</td>
+<td>역할 표 3개, 신규 배지 22개 모두 ‘기존 역할’ 칸. 실행 산출물 표시 5개는 배지 옆에 배치</td>
+</tr>
+<tr>
+<td>수정 중 첫 그림 오류</td>
+<td>판단 흐름 SVG의 XML 닫힘 오류를 발견하여 XML 직렬화로 수정. 이후 다섯 그림 모두 XML 검사·로딩 통과</td>
+</tr>
+<tr>
+<td>파일 이동성</td>
+<td>HTML·Markdown·diagrams를 별도 검증 폴더로 복사해 그림 5개 표시 확인. 외부 HTTP 자원 요청 0건</td>
+</tr>
+<tr>
+<td>원본·링크</td>
+<td>draw.io XML과 SVG 5개 형식 검사, 본문의 로컬 링크 74개 대상 존재</td>
+</tr>
+<tr>
+<td>비밀값·개인정보 표식</td>
+<td>문서·그림에서 키·JWT·개인키·전화·메일 표식 미검출. 경보·메모 본문 복사 없음</td>
+</tr>
+<tr>
+<td>비대상 파일 보존</td>
+<td>렌더링 보완 전후 비대상 108개 SHA-256 일치. 별도 5단계 문서·그림 12개의 동시 변동은 관찰만 했으며 이번 도구의 수정 대상으로 포함하지 않음. 코드·설정·결과 데이터의 변경 없음</td>
+</tr>
+<tr>
+<td>과거 기록·공백</td>
+<td>README의 기존 줄 삭제 0, 대상 문서 git diff --check 통과</td>
+</tr>
+</tbody></table></div>
+<p>그림 생성·확인은 내장 Node로 아래 문서 전용 임시 도구를 실행했습니다. --html-only 실행은 SVG 재생성 없이 HTML을 갱신하고 렌더링·배지·로딩·복사본을 검사합니다.
+프로젝트 밖 검증 도구·화면 캡처는 문서 열람에 필요한 배포 파일이 아닙니다.</p>
+<pre><code class="language-powershell">&amp; &#39;C:/Users/Administrator/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node.exe&#39; &#39;C:/Users/Administrator/.codex/visualizations/2026/10/07/01a1155b-998a-7612-bbc3-dfb689914b81/xdr01-doc-preview/render.cjs&#39;
+&amp; &#39;C:/Users/Administrator/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node.exe&#39; &#39;C:/Users/Administrator/.codex/visualizations/2026/10/07/01a1155b-998a-7612-bbc3-dfb689914b81/xdr01-doc-preview/render.cjs&#39; --html-only
+</code></pre>
+<p>이 검증은 프로그램 시험 15·47·51개나 배포·심판 평가를 새로 실행한 기록이 아닙니다.</p>
+<footer>문서와 diagrams 폴더를 함께 복사하면 본문과 그림을 볼 수 있습니다. 코드 링크는 원래 자료실 경로이며 다른 PC에서는 제한됩니다. 이 문서는 정적 기록입니다.</footer></main></div><script>for(const t of document.querySelectorAll('table')){if(t.querySelector('th')?.textContent==='파일명')t.classList.add('roles')}</script></body></html>

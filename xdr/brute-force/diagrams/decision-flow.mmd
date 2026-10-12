@@ -1,0 +1,11 @@
+flowchart TD
+  In["경보 입력"] --> Valid{"필수 입력 유효?<br/>시각·주소·계정·설명"}
+  Valid -- 아니오 --> Invalid["alert · 0.5<br/>선택한 패턴 이름"]
+  Valid -- 예 --> Signals["실패·로그인·건수·시간<br/>다계정·성공 신호 추출"]
+  Signals --> Normal{"실패·로그인 근거 없음?<br/>또는 T1110 없이<br/>수준 3 이하·실패 1 이하?"}
+  Normal -- 예 --> Record["record · 0.1<br/>패턴 없음"]
+  Normal -- 아니오 --> Count["단일 실패이면<br/>주소·계정별 메모리 집계"]
+  Count --> Clear{"실패 후 성공 신호 없음<br/>추측·스프레이의<br/>필수 조건 충족?"}
+  Clear -- 예 --> Block["block · 0.95<br/>패턴 이름"]
+  Clear -- 아니오 --> Partial["0.5에 보조 점수 추가<br/>최대 0.83"]
+  Partial --> Alert["alert<br/>패턴 이름"]

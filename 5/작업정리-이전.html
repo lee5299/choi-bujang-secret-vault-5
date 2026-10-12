@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>5단계 작업 기록 · 자료 요청을 서버 한곳으로 모읍니다</title>
+<style>
+:root{--bg:#f3f5f7;--paper:#fff;--ink:#203147;--muted:#627083;--line:#dbe3eb;--blue:#275b91;--green:#237455;--red:#ab463c;--amber:#90641e}*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:18px}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.8 "Malgun Gothic","Apple SD Gothic Neo",sans-serif}a{color:var(--blue);text-underline-offset:4px}header{background:#172d46;color:white;padding:48px max(24px,calc((100vw - 1120px)/2)) 38px}.eyebrow{font-size:12px;letter-spacing:.14em;color:#adc6df;font-weight:700}h1{font-size:clamp(28px,4vw,42px);line-height:1.35;margin:14px 0 16px}header p{max-width:850px;color:#d0deeb}h2{font-size:24px;line-height:1.5;margin:0 0 16px}h3{font-size:17px;line-height:1.6;margin:24px 0 10px}p{margin:9px 0 16px}main{max-width:1180px;margin:auto;padding:26px 24px 60px}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:24px}.stats div{padding:16px;border:1px solid #49617a;border-radius:10px}.stats strong{display:block;font-size:17px}.stats span{font-size:13px;color:#b8ccdf}nav{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:26px}nav a{font-size:13px;text-decoration:none;background:white;border:1px solid var(--line);border-radius:7px;padding:8px 12px}section{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:30px;margin:20px 0}.section-no{color:#8295aa;font-size:12px;font-weight:700;letter-spacing:.1em;display:block;margin-bottom:6px}.sub{color:var(--muted);font-size:13px}.cards{display:grid;grid-template-columns:1fr 1fr;gap:16px}.card{border:1px solid var(--line);background:#f8fafc;border-radius:10px;padding:20px}.card h3{margin-top:0}.card p:last-child{margin-bottom:0}.note{padding:15px 18px;background:#eef4fa;border-left:4px solid var(--blue);border-radius:0 8px 8px 0;margin:18px 0}.warn{background:#fff6e9;border-left-color:var(--amber)}.ok{background:#edf7f1;border-left-color:var(--green)}.table-wrap,.diagram{overflow-x:auto;margin:18px 0}table{border-collapse:collapse;width:100%;font-size:13px}th,td{text-align:left;vertical-align:top;padding:13px 12px;border-bottom:1px solid var(--line)}th{background:#f0f4f8;font-size:12px;color:#53687e}td strong{display:block}table.files{min-width:920px}.files td:first-child{width:21%}.files td:nth-child(2){width:10%}.result-table{min-width:790px}.tag{display:inline-block;font-size:11px;line-height:1.7;border-radius:4px;padding:2px 7px;font-weight:700;background:#eaf0f7;color:var(--blue);white-space:nowrap}.tag.new{background:#e7f3ec;color:var(--green)}.tag.report{background:#fff0d6;color:var(--amber)}.tag.mock{background:#efeaf8;color:#735492}.tag.stop{background:#faebe9;color:var(--red)}code{font:0.93em/1.6 Consolas,monospace;background:#edf2f6;padding:2px 5px;border-radius:4px;overflow-wrap:anywhere}pre{background:#172d46;color:#edf5fc;padding:16px 18px;border-radius:8px;font:12px/1.8 Consolas,monospace;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere}pre code{background:none;padding:0;color:inherit}.legend{display:flex;flex-wrap:wrap;gap:15px;font-size:12px;color:var(--muted)}.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;background:var(--blue)}.dot.red{background:var(--red)}.dot.grey{background:#8492a3}.diagram{background:#fbfcfe;border:1px solid var(--line);border-radius:10px;padding:12px}.diagram svg{display:block;width:100%;min-width:830px;height:auto;font-family:"Malgun Gothic","Apple SD Gothic Neo",sans-serif}.diagram .box{fill:#edf4fb;stroke:#93b2ce;stroke-width:1.3}.diagram .db{fill:#edf7f1;stroke:#8fbaa3}.diagram .unverified{fill:#f4f5f8;stroke:#a0acb8;stroke-dasharray:6 4}.diagram .line{stroke:var(--blue);stroke-width:1.6;fill:none}.diagram .return{stroke:#58758f;stroke-width:1.4;stroke-dasharray:5 4;fill:none}.diagram .denied{stroke:var(--red);stroke-width:1.7;stroke-dasharray:6 4;fill:none}.diagram text{fill:var(--ink);font-size:13px}.diagram .small{font-size:11px;fill:var(--muted)}.diagram .redtext{fill:var(--red)}.diagram .lane{stroke:#cbd5df;stroke-dasharray:4 5}.diagram .band{fill:#f1f5f9;stroke:#dbe3eb}.diagram .failure{fill:#fff3f1;stroke:#ecd2ce}.actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}button{background:white;border:1px solid var(--line);border-radius:7px;padding:9px 14px;font:inherit;font-size:13px;color:var(--ink);cursor:pointer}ul{padding-left:22px}li{margin:7px 0}.refs{columns:2;column-gap:32px}.refs li{break-inside:avoid}footer{font-size:12px;color:var(--muted);padding:10px 0}.timeline td:first-child{white-space:nowrap;width:130px}details{border:1px solid var(--line);padding:14px 18px;border-radius:8px;margin:14px 0}summary{cursor:pointer;color:var(--blue);font-weight:700}@media(max-width:760px){header{padding:32px 22px}.stats,.cards{grid-template-columns:1fr}.stats{gap:8px}.stats div{padding:12px}main{padding:18px 12px}section{padding:22px 16px}h2{font-size:21px}.refs{columns:1}th,td{padding:11px 9px}}@media print{body{background:white;font-size:11px}header{background:white;color:var(--ink);padding:0 0 18px}header p,.eyebrow,.stats span{color:var(--muted)}h1{font-size:27px}h2{font-size:19px}.stats div{border-color:var(--line)}main{padding:0;max-width:none}nav,.actions{display:none}section{padding:22px 0;border-radius:0;border:0;border-top:1px solid var(--line);break-before:auto}.card,.note,figure{break-inside:avoid}.diagram{overflow:visible;padding:5px}.diagram svg{min-width:0}table.files,.result-table{min-width:0}table{font-size:9px}th,td{padding:7px 5px}pre{background:#f2f5f8;color:var(--ink)}a{color:inherit}thead{display:table-header-group}tr{break-inside:avoid}.refs{columns:1}footer{border-top:1px solid var(--line)}}
+</style>
+</head>
+<body>
+<header>
+<div class="eyebrow">DEFENSE ARCHIVE · STAGE 05</div>
+<h1>자료 요청을<br>서버 한곳으로 모읍니다</h1>
+<p>프로그램 구조, 변경 이유, 실제 확인 결과를 다시 이해하기 위한 5단계 기록입니다. 새로 구현한 방어와 기존 방어를 확인한 작업을 구분했습니다.</p>
+<div class="stats"><div><strong>기준: 5단계 완료 당시</strong><span>2026-10-07 작업 · 2026-10-12 문서 정리</span></div><div><strong>직접 DB 접근 권한 회수</strong><span>기존 메모 서버 API·소유자 검사 유지</span></div><div><strong>증거의 출처 구분</strong><span>가상 시험 / 실제 HTTP / 사용자 제공 결과</span></div></div>
+</header>
+<main>
+<nav aria-label="문서 목차"><a href="#overview">1 작업 개요</a><a href="#architecture">2 서비스 구성</a><a href="#sequence">3 요청 순서</a><a href="#logic">4 판단 로직</a><a href="#files">5 파일별 역할</a><a href="#verification">6 검증·저장점</a><a href="#extras">7 사용자 제안</a><a href="#sources">근거와 읽는 방법</a></nav>
+
+<section id="overview">
+<span class="section-no">01 · SCOPE</span><h2>작업 목표와 실제 수행 범위</h2>
+<p>4단계 화면은 이미 메모를 <code>/api/notes</code>로 처리했습니다. 그러나 로그인 토큰과 공개 키로 Supabase 원본 자료 API를 직접 호출할 수 있는 권한이 남아 있었습니다. 5단계에서는 이 우회 경로를 닫고 정상적인 본인 메모 처리를 유지했습니다.</p>
+<div class="cards"><article class="card"><h3>실제로 변경한 부분</h3><ul><li><code>public.library_notes</code>의 PUBLIC·anon·authenticated 테이블·열 권한 회수 SQL을 작성했습니다. 사용자가 학습 DB에서 적용했습니다.</li><li>화면의 실제 Supabase 공개 키를 제거하고 기존 Auth SDK의 요청을 신규 <code>/api/auth</code>로 연결했습니다.</li><li>단계 설정·배포 식별 JSON·학생 자기 점검·시험 기준표를 갱신했습니다.</li><li>심판에서 발견한 배포 JSON의 <code>originalApiUrl</code> 누락을 수정했습니다.</li></ul></article><article class="card"><h3>확인하고 유지한 부분</h3><ul><li>브라우저의 직접 메모 DB 호출: <strong>없음</strong>. 메모 CRUD 서버 호출로 새로 전환한 작업은 없습니다.</li><li>기존 서버의 로그인 검증·세션 확인·소유자 필터·입력 검사를 유지했습니다.</li><li>기존 RLS와 소유자 정책 네 개, 서버 역할의 CRUD 권한을 유지했습니다.</li><li><code>vercel.json</code>의 기존 nosniff 헤더와 메모 상세 경로 연결을 확인했습니다.</li></ul></article></div>
+<h3>과제의 기본 조건과 추가 점수</h3>
+<div class="table-wrap"><table><thead><tr><th>구분</th><th>요구사항</th><th>대응</th></tr></thead><tbody>
+<tr><td>기본 70점 조건</td><td>공개 키·시험 계정 토큰으로 원본 API 직접 조회·수정 방어, 공개 정적 파일·묶음에서 서버 키·시드 표식 미노출</td><td>권한 회수, 실제 직접 GET·PATCH 거부 확인, 공개 파일 검사. 실제 심판 점수와는 별도입니다.</td></tr>
+<tr><td>추가 10점</td><td><code>/aleph.json</code>의 <code>allowedRoutes</code>에 허용 경로 존재</td><td>기존 메모 API 다섯 경로 유지·배포 JSON 출력 및 확인</td></tr>
+<tr><td>추가 10점</td><td>첫 화면 보안 헤더 nosniff 또는 CSP</td><td>기존 nosniff 유지·실제 응답 확인</td></tr>
+<tr><td>추가 10점</td><td>화면 코드에 실제 Supabase 공개 키 없음</td><td>Auth 서버 연결과 공개 화면·정적 import 파일 검사</td></tr>
+</tbody></table></div>
+<div class="note">Auth 서버 연결은 <strong>공개 키 제거라는 추가 점수 조건의 구현 방법</strong>입니다. 원래 요청의 제작 1·2 외에 독립된 “제작 3”이 있었다고 기록하지 않습니다.</div>
+<p class="sub">이번 문서 작성에서는 코드·설정·DB를 변경하지 않았습니다. XDR 기능과 후속 Git 이력 정리는 별도 기록으로 연결하며, 5단계의 새 기능으로 합산하지 않습니다.</p>
+</section>
+
+<section id="architecture">
+<span class="section-no">02 · ARCHITECTURE</span><h2>전체 서비스 구성</h2>
+<p>메모와 인증 요청은 Vercel 서버 함수를 거칩니다. 화면 파일과 SDK는 정적 파일로 내려받습니다. “서버 함수만 호출한다”는 조건은 메모 자료 요청에 적용되며, SDK를 받는 CDN 요청까지 없다는 뜻은 아닙니다.</p>
+<div class="legend"><span><i class="dot"></i>실제 서비스 경로</span><span><i class="dot red"></i>직접 요청 거부 확인</span><span><i class="dot grey"></i>구현은 있으나 운영 요청 확인 범위 밖</span></div>
+<figure class="diagram">
+<svg viewBox="0 0 1040 535" role="img" aria-labelledby="arch-title arch-desc">
+<title id="arch-title">5단계 서비스 구성도</title><desc id="arch-desc">브라우저는 Vercel 정적 화면과 CDN SDK를 받습니다. 인증은 api/auth에서 Supabase Auth로, 메모는 api/notes에서 로그인 및 소유자 검사 후 Supabase Data API로 전달합니다. 브라우저의 DB 직접 요청은 권한 회수로 거부됩니다. 심판 토큰 검증은 기존 구현이나 운영 요청은 별도 확인하지 않았습니다.</desc>
+<defs><marker id="arch-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10" fill="#275b91"/></marker><marker id="arch-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10" fill="#ab463c"/></marker></defs>
+<rect x="32" y="38" width="220" height="92" rx="9" class="box"/><text x="142" y="68" text-anchor="middle">Vercel 정적 화면</text><text x="142" y="91" text-anchor="middle" class="small">public/index.html · /aleph.json</text><text x="142" y="111" text-anchor="middle" class="small">nosniff · 공개 data.json 제외</text>
+<rect x="32" y="215" width="220" height="108" rx="9" class="box"/><text x="142" y="244" text-anchor="middle">브라우저 · 공식 Auth SDK</text><text x="142" y="267" text-anchor="middle" class="small">로그인 세션 관리 · 메모 화면</text><text x="142" y="290" text-anchor="middle" class="small">세션 토큰은 브라우저에 존재</text><text x="142" y="309" text-anchor="middle" class="small">실제 공개 키는 화면에서 제거</text>
+<path d="M142 130 V215" class="line" marker-end="url(#arch-arrow)"/><text x="155" y="180" class="small">화면 응답</text>
+<rect x="310" y="38" width="250" height="92" rx="9" class="box"/><text x="435" y="69" text-anchor="middle">/api/auth · 신규</text><text x="435" y="93" text-anchor="middle" class="small">로그인 · 갱신 · user · logout</text><text x="435" y="112" text-anchor="middle" class="small">허용 경로 제한 · 서버에서 키 사용</text>
+<rect x="738" y="38" width="264" height="92" rx="9" class="db"/><text x="870" y="71" text-anchor="middle">Supabase Auth</text><text x="870" y="98" text-anchor="middle" class="small">토큰 발급 · 사용자·세션 확인</text>
+<path d="M252 242 H282 V83 H310" class="line" marker-end="url(#arch-arrow)"/><path d="M560 83 H738" class="line" marker-end="url(#arch-arrow)"/><text x="647" y="70" text-anchor="middle" class="small">/auth/v1</text>
+<rect x="310" y="215" width="250" height="108" rx="9" class="box"/><text x="435" y="244" text-anchor="middle">/api/notes · /api/notes/:id</text><text x="435" y="267" text-anchor="middle" class="small">기존 CRUD · Bearer 검사</text><text x="435" y="290" text-anchor="middle" class="small">로그인 검증 → 학생 세션 확인</text><text x="435" y="310" text-anchor="middle" class="small">검증한 사용자 ID로 소유자 제한</text>
+<path d="M252 277 H310" class="line" marker-end="url(#arch-arrow)"/><path d="M560 243 H650 V117 H738" class="line" marker-end="url(#arch-arrow)"/><text x="658" y="184" class="small">학생 인증</text>
+<rect x="738" y="215" width="264" height="108" rx="9" class="db"/><text x="870" y="244" text-anchor="middle">Supabase Data API → DB</text><text x="870" y="267" text-anchor="middle" class="small">/rest/v1/library_notes</text><text x="870" y="289" text-anchor="middle" class="small">서버 service_role CRUD 유지</text><text x="870" y="310" text-anchor="middle" class="small">기존 RLS · 소유자 정책 유지</text>
+<path d="M560 287 H738" class="line" marker-end="url(#arch-arrow)"/><text x="649" y="276" text-anchor="middle" class="small">서버 전용 키</text>
+<rect x="310" y="378" width="250" height="76" rx="9" class="unverified"/><text x="435" y="407" text-anchor="middle">심판 토큰 검증 · 기존 구현</text><text x="435" y="432" text-anchor="middle" class="small">운영 토큰 요청 확인은 별도 미확인</text><path d="M435 378 V323" class="return" marker-end="url(#arch-arrow)"/>
+<path d="M142 323 V489 H870 V323" class="denied" marker-end="url(#arch-red)"/><text x="630" y="511" text-anchor="middle" class="redtext">공개 키 + 계정 토큰 직접 GET·PATCH → 403 (사용자 제공 결과)</text>
+<text x="32" y="370" class="small">CDN SDK 로드: 실제 정적 연결</text><text x="32" y="390" class="small">SQL 적용: 사용자 → SQL Editor → DB</text><text x="32" y="410" class="small">XDR·decider·detect: 별도 범위</text>
+</svg>
+<figcaption class="sub">실선은 구현과 실제 확인 기록을 함께 확인한 경로입니다. 토큰 자동 갱신은 코드·가상 시험이 있으나 배포에서 만료까지 기다린 시험은 하지 않았습니다. 점선 심판 경로를 실제 심판의 모든 검사가 성공했다는 근거로 사용하지 않습니다.</figcaption>
+</figure>
+<div class="note warn"><strong>권한 회수와 RLS는 역할이 다릅니다.</strong> RLS가 true이고 소유자 정책이 있어도 authenticated에 테이블 권한이 있으면 본인 자료를 원본 API로 직접 조회할 수 있습니다. 이 단계는 직접 역할의 권한을 회수했습니다. 서버는 권한이 큰 service_role을 사용하므로 기존 서버의 로그인·소유자 검사가 계속 필요합니다.</div>
+<p>정적 배포·서버 함수 실행 설정은 <a href="../vercel.json">vercel.json</a>, 인증 검증은 <a href="../src/verify-login.mjs">verify-login.mjs</a>, SQL 적용은 <a href="../docs/sql/stage5-library-notes-apply.sql">권한 회수 SQL</a>에서 확인할 수 있습니다. 현재 파일에는 후속 작업이 있을 수 있으므로 5단계 상태는 아래 저장점과 함께 읽습니다.</p>
+</section>
+
+<section id="sequence">
+<span class="section-no">03 · SEQUENCE</span><h2>요청과 응답 순서</h2>
+<h3>로그인: SDK의 요청 주소를 서버 함수로 연결</h3>
+<figure class="diagram"><svg viewBox="0 0 1040 345" role="img" aria-labelledby="auth-title auth-desc"><title id="auth-title">로그인 요청 시퀀스</title><desc id="auth-desc">브라우저 SDK가 api/auth에 로그인 요청을 보냅니다. 서버가 경로, 메서드, 본문, 설정을 검사하고 Supabase Auth에 서버 키로 요청합니다. 정상 응답에서 필요한 세션 항목만 반환하고 SDK가 세션을 관리합니다. 잘못된 요청과 상위 서비스 오류는 일반 오류로 응답합니다.</desc>
+<defs><marker id="auth-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10" fill="#275b91"/></marker></defs>
+<rect x="40" y="15" width="240" height="42" rx="7" class="box"/><text x="160" y="42" text-anchor="middle">브라우저 · Auth SDK</text><rect x="397" y="15" width="245" height="42" rx="7" class="box"/><text x="520" y="42" text-anchor="middle">Vercel /api/auth</text><rect x="767" y="15" width="240" height="42" rx="7" class="db"/><text x="887" y="42" text-anchor="middle">Supabase Auth</text>
+<path d="M160 57 V319 M520 57 V319 M887 57 V319" class="lane"/>
+<path d="M160 91 H520" class="line" marker-end="url(#auth-arrow)"/><text x="336" y="79" text-anchor="middle" class="small">1. POST route=token · grant=password</text>
+<rect x="408" y="111" width="226" height="37" rx="5" class="band"/><text x="521" y="135" text-anchor="middle" class="small">2. Origin·경로·입력·설정 검사</text>
+<path d="M520 179 H887" class="line" marker-end="url(#auth-arrow)"/><text x="707" y="167" text-anchor="middle" class="small">3. /auth/v1/token · 서버 키 사용</text>
+<path d="M887 216 H520" class="return" marker-end="url(#auth-arrow)"/><text x="707" y="204" text-anchor="middle" class="small">4. 성공 또는 인증 오류</text>
+<path d="M520 255 H160" class="return" marker-end="url(#auth-arrow)"/><text x="336" y="243" text-anchor="middle" class="small">5. 정상 200 · 필요한 세션 필드만 반환</text>
+<rect x="183" y="273" width="641" height="46" rx="5" class="failure"/><text x="502" y="292" text-anchor="middle" class="small redtext">잘못된 요청: 400 / 403 / 404 / 405 / 415</text><text x="502" y="310" text-anchor="middle" class="small redtext">user·logout 토큰 누락: 401 · 잘못된 상위 응답: 502 · 서비스 불가: 503</text>
+</svg><figcaption class="sub">응답에 access/refresh 토큰이 포함되는 것은 정상 로그인에 필요한 동작입니다. 키를 브라우저에서 제거한 조치를 “브라우저에 토큰도 없다”거나 “HttpOnly 쿠키 인증으로 변경했다”고 해석하지 않습니다. 갱신은 refresh_token, 사용자 조회는 GET user, 로그아웃은 POST logout·scope=local 경로를 사용합니다.</figcaption></figure>
+<h3>메모: 인증 후 사용자 ID와 메모 ID를 함께 제한</h3>
+<figure class="diagram"><svg viewBox="0 0 1040 540" role="img" aria-labelledby="notes-title notes-desc"><title id="notes-title">메모 읽기 및 직접 요청 거부 시퀀스</title><desc id="notes-desc">브라우저가 Bearer 토큰으로 메모 서버를 호출합니다. 서버는 로그인 검증과 학생 세션 확인을 한 후 데이터 API에 메모 ID와 검증한 소유자 ID를 함께 필터링해 요청합니다. 본인 자료는 200, 상대 자료와 없는 자료는 404입니다. 토큰이 없으면 DB 전 단계에서 401, 직접 데이터 API 요청은 403이었습니다.</desc>
+<defs><marker id="notes-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10" fill="#275b91"/></marker><marker id="notes-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10" fill="#ab463c"/></marker></defs>
+<rect x="25" y="18" width="200" height="44" rx="7" class="box"/><text x="125" y="46" text-anchor="middle">브라우저</text><rect x="296" y="18" width="210" height="44" rx="7" class="box"/><text x="401" y="46" text-anchor="middle">/api/notes/:id</text><rect x="556" y="18" width="196" height="44" rx="7" class="box"/><text x="654" y="46" text-anchor="middle">로그인 검증 / Auth</text><rect x="792" y="18" width="220" height="44" rx="7" class="db"/><text x="902" y="46" text-anchor="middle">Data API / library_notes</text>
+<path d="M125 62 V513 M401 62 V405 M654 62 V405 M902 62 V513" class="lane"/>
+<path d="M125 97 H401" class="line" marker-end="url(#notes-arrow)"/><text x="260" y="84" text-anchor="middle" class="small">1. GET /api/notes/:id · Bearer</text>
+<rect x="278" y="114" width="478" height="37" rx="5" class="failure"/><text x="517" y="137" text-anchor="middle" class="small redtext">토큰 없음·무효 → 401 · DB 요청하지 않음</text>
+<path d="M401 183 H654" class="line" marker-end="url(#notes-arrow)"/><text x="527" y="171" text-anchor="middle" class="small">2. 서명·발급자·만료 검증</text>
+<path d="M654 217 H401" class="return" marker-end="url(#notes-arrow)"/><text x="528" y="205" text-anchor="middle" class="small">3. 검증한 사용자 ID · 학생 세션 확인</text>
+<path d="M401 255 H902" class="line" marker-end="url(#notes-arrow)"/><text x="652" y="244" text-anchor="middle" class="small">4. 서버 키 · id=요청 ID AND owner_id=검증 ID</text>
+<path d="M902 290 H401" class="return" marker-end="url(#notes-arrow)"/><text x="652" y="279" text-anchor="middle" class="small">5. 필터에 맞는 행 또는 빈 배열</text>
+<path d="M401 327 H125" class="return" marker-end="url(#notes-arrow)"/><text x="261" y="315" text-anchor="middle" class="small">6. 본인 200 / 상대·없음 404</text>
+<rect x="279" y="348" width="664" height="48" rx="5" class="failure"/><text x="610" y="367" text-anchor="middle" class="small redtext">설정·학생 Auth 장애 503 / 입력·방식 오류 400·405·415</text><text x="610" y="385" text-anchor="middle" class="small redtext">DB 통신·응답 오류 502 / 추가 ID 충돌 409</text>
+<path d="M125 446 H902" class="denied" marker-end="url(#notes-red)"/><text x="514" y="433" text-anchor="middle" class="small redtext">직접 요청: 공개 키 + 계정 토큰으로 GET·PATCH (서버 우회)</text>
+<path d="M902 485 H125" class="denied" marker-end="url(#notes-red)"/><text x="514" y="473" text-anchor="middle" class="small redtext">권한 회수 후 두 요청 모두 403 · 사용자 콘솔 화면에서 확인</text>
+<text x="519" y="518" text-anchor="middle" class="small">시퀀스는 논리적 순서입니다. 처리 시간은 측정하지 않았으며 추정치를 넣지 않았습니다.</text>
+</svg><figcaption class="sub">상대 메모 GET 404는 없는 메모와 같은 응답을 사용합니다. 주소창으로 여는 요청은 화면 SDK의 Authorization 헤더가 자동으로 붙지 않아, A가 화면에 로그인해 있어도 401이 나올 수 있습니다. 이는 A의 인증된 요청이 실패했다는 증거가 아닙니다.</figcaption></figure>
+<div class="table-wrap"><table><thead><tr><th>화면에서 보낸 요청</th><th>서버의 원본 요청</th><th>정상 응답</th></tr></thead><tbody><tr><td>GET /api/notes</td><td>GET · 검증한 owner_id로 목록 필터</td><td>200 · 본인 메모 목록</td></tr><tr><td>POST /api/notes</td><td>POST · owner_id를 검증 ID로 고정</td><td>201 · 생성된 ID</td></tr><tr><td>GET /api/notes/:id</td><td>GET · id + owner_id 필터</td><td>200 · 본인 메모 한 건</td></tr><tr><td>PUT /api/notes/:id</td><td>PATCH · id + owner_id 필터</td><td>200 · 변경된 본인 메모</td></tr><tr><td>DELETE /api/notes/:id</td><td>DELETE · id + owner_id 필터</td><td>200 · 삭제된 ID</td></tr></tbody></table></div>
+</section>
+
+<section id="logic">
+<span class="section-no">04 · DECISIONS</span><h2>주요 판단 로직</h2>
+<p>호출 관계는 앞의 그림으로 설명하고, 조건과 분기는 이 표로 정리했습니다. 상태 숫자는 코드의 동작이며 실제 시험 여부는 검증 표에서 별도로 표시합니다.</p>
+<div class="table-wrap"><table><thead><tr><th>판단 위치</th><th>조건</th><th>처리와 의미</th><th>5단계 작업 성격</th></tr></thead><tbody>
+<tr><td>메모 서버 입구</td><td>Bearer 형식·로그인 검증 불통과</td><td>401. 무인증 요청은 DB 전 단계에서 중단합니다.</td><td>기존 방어 유지</td></tr>
+<tr><td>학생 세션 검증</td><td>서명은 맞지만 Auth 사용자·세션이 유효하지 않음</td><td>401. Auth 서비스 장애는 503. 심판 토큰은 기존 별도 검증 경로입니다.</td><td>기존 방어 유지</td></tr>
+<tr><td>입력 검사</td><td>잘못된 UUID·JSON·필드 / 지원하지 않는 방식·형식</td><td>400 / 405 / 415. 본문에 소유자를 넣어 바꾸려는 시도도 거부합니다.</td><td>기존 방어 확인</td></tr>
+<tr><td>메모 소유권</td><td>요청한 ID와 검증된 사용자 ID가 함께 맞는 행 없음</td><td>상세 읽기·수정·삭제 404. 상대 행의 존재를 구별해 알려주지 않습니다.</td><td>기존 방어 유지·실제 확인</td></tr>
+<tr><td>DB 결과 검사</td><td>반환 행의 소유자·ID·구조가 기대와 다름</td><td>502·일반 오류. DB 응답을 그대로 믿고 화면에 내리지 않습니다.</td><td>기존 방어 확인</td></tr>
+<tr><td>Auth 서버</td><td>허용 경로·메서드·Origin·grant·본문 검사</td><td>token/user/logout만 전달. password/refresh_token만 허용. Origin 헤더가 있을 때 정해진 출처와 대조합니다.</td><td>신규 Auth 경계 제한</td></tr>
+<tr><td>Auth 응답</td><td>상위 오류 또는 정상 응답의 필요 필드 누락</td><td>일반 오류와 허용 코드로 제한. 상위 429→429, 5xx→503, 그 외 실패→400. 잘못된 정상 응답→502.</td><td>신규 오류·응답 최소화</td></tr>
+<tr><td>권한 회수 SQL</td><td>회수 후 테이블·열·상속 권한 남음 / 서버 ACL 변동·CRUD 누락</td><td>예외로 트랜잭션 중단. 정상 조건에서 COMMIT. 오류 시 ROLLBACK 안내.</td><td>신규 적용 보호</td></tr>
+<tr><td>배포 JSON 생성</td><td>5단계 이상에서 원본 주소 누락·HTTP·쿼리·인증정보·fragment 포함</td><td>빌드 오류로 중단. 올바른 HTTPS 경로는 originalApiUrl로 출력합니다.</td><td>심판 오류 후 누락 수정</td></tr>
+</tbody></table></div>
+<p class="sub"><code>originalApiUrl</code>은 심판이 직접 접근 검사를 보낼 주소입니다. 이 필드가 없으면 직접 접근 차단이 되어 있어도 검사 대상이 전달되지 않습니다. 주소를 적는 것 자체가 DB 접근 권한을 부여하거나 회수하지는 않습니다. 실제 값은 <a href="../aleph.config.json">설정 파일</a>에서 확인하고, 이 문서에는 키·토큰·계정 ID를 복제하지 않습니다.</p>
+</section>
+
+<section id="files">
+<span class="section-no">05 · FILE MAP</span><h2>파일별 역할과 변경 이유</h2>
+<p class="sub">“작업 전”은 4단계 인수 기준, “작업 후”는 5단계 완료와 원본 주소 누락 수정까지입니다. 현재 파일의 후속 XDR 변경을 5단계 변경으로 포함하지 않았습니다.</p>
+<div class="table-wrap"><table class="files"><thead><tr><th>파일 / 자료</th><th>구분</th><th>작업 전 역할</th><th>작업 후 역할</th><th>추가·변경 이유</th></tr></thead><tbody>
+<tr><td><a href="../api/auth.js">api/auth.js</a></td><td><span class="tag new">신규</span></td><td>없음</td><td>허용한 Auth 요청을 서버에서 전달·응답 최소화</td><td>화면 공개 키 제거·기존 SDK 인증 동작 유지</td></tr>
+<tr><td><a href="../public/index.html">public/index.html</a></td><td><span class="tag">변경</span></td><td>서버 메모 CRUD + 공개 키를 사용한 직접 Auth</td><td>메모 서버 호출 유지, Auth를 /api/auth로 전달</td><td>실제 공개 키 제거·SDK 유지·세션 저장 키 변경으로 새 배포 재로그인</td></tr>
+<tr><td><a href="../docs/sql/stage5-library-notes-apply.sql">stage5-library-notes-apply.sql</a></td><td><span class="tag new">신규</span></td><td>없음</td><td>해당 테이블·열 권한 회수와 트랜잭션 검증</td><td>서버를 우회하는 직접 접근 차단·서버 역할 보호</td></tr>
+<tr><td><a href="../docs/sql/stage5-library-notes-audit.sql">stage5-library-notes-audit.sql</a></td><td><span class="tag new">신규</span></td><td>없음</td><td>명시 권한·실효 권한·열 ACL·RLS·정책·서버 CRUD 조회</td><td>적용 전후 같은 기준으로 비교, PUBLIC·상속·열 권한 누락 방지</td></tr>
+<tr><td><a href="../aleph.config.json">aleph.config.json</a></td><td><span class="tag">변경</span></td><td>4단계·배포와 발급자·허용 경로 설정</td><td>5단계 및 쿼리 없는 originalApiUrl 추가</td><td>단계·검사 대상 명시. 기존 judgeIssuer·발급자·경로 유지</td></tr>
+<tr><td><a href="../scripts/deployment-identity.mjs">deployment-identity.mjs</a></td><td><span class="tag">변경·수정</span></td><td>배포 /aleph.json 식별 항목 생성</td><td>5단계 allowedRoutes 출력, 후속 수정으로 originalApiUrl 검증·출력</td><td>로컬 설정을 심판이 읽는 실제 배포 JSON으로 전달</td></tr>
+<tr><td><a href="../src/attack-check.mjs">src/attack-check.mjs</a></td><td><span class="tag">변경</span></td><td>이전 단계 공개 HTTP 자기 점검</td><td>5단계 공개 HTTP·첫 화면 검사 및 원본 주소 일치 확인</td><td>실제로 보낸 요청만 결과에 기록. 계정·원본 인증 시험을 자동 완료로 쓰지 않음</td></tr>
+<tr><td><a href="../test/auth.test.mjs">test/auth.test.mjs</a></td><td><span class="tag new">신규</span></td><td>없음</td><td>Auth 프록시와 실제 SDK의 가상 로그인·갱신·user·logout 시험</td><td>키 미전달·제한된 응답·SDK 호환 확인</td></tr>
+<tr><td><a href="../test/r5.test.mjs">test/r5.test.mjs</a></td><td><span class="tag">변경</span></td><td>정적 빌드·배포 식별 시험</td><td>허용 경로·원본 주소 출력 및 잘못된 주소 거부 시험</td><td>originalApiUrl 누락 재발 방지</td></tr>
+<tr><td><a href="../package/baseline-functions.json">baseline-functions.json</a><br><a href="../test/package-starter.test.mjs">package-starter.test.mjs</a></td><td><span class="tag">변경</span></td><td>실제 메모·Auth API가 빠진 기준표·검사</td><td>존재하는 서버 함수와 동적 메모 경로를 반영</td><td>전체 시험 첫 실패의 기준표 불일치 수정</td></tr>
+<tr><td><a href="../api/notes.js">api/notes.js</a><br><a href="../api/notes/[id].js">api/notes/[id].js</a><br><a href="../src/verify-login.mjs">verify-login.mjs</a></td><td><span class="tag">확인만</span></td><td>로그인·세션·소유자 검사와 메모 CRUD</td><td>기존 구현 유지</td><td>정상 A 처리와 B·무로그인 거부가 권한 회수 후에도 유지되는지 확인</td></tr>
+<tr><td><a href="../vercel.json">vercel.json</a></td><td><span class="tag">확인만</span></td><td>nosniff·정적 배포·메모 상세 rewrite</td><td>기존 설정 유지</td><td>보안 헤더 조건은 이미 충족, 실제 HTTP로 확인</td></tr>
+<tr><td><a href="../scripts/build-public.mjs">build-public.mjs</a><br><a href="../scripts/bundle.mjs">bundle.mjs</a></td><td><span class="tag">확인·실행</span></td><td>정적 자료 제외·배포 JSON 생성 / 제출 JSON 생성</td><td>기존 실행 경로 유지. 수정된 식별 생성 함수를 사용</td><td>로컬 빌드·배포·제출 각각의 범위를 구분</td></tr>
+<tr><td><a href="../src/decider.mjs">src/decider.mjs</a></td><td><span class="tag">확인만</span></td><td>기본 거부 규칙 starter.deny</td><td>5단계에서 기존 규칙 유지</td><td>실제 구현된 규칙만 제출. 메모 요청의 운영 판단 경로로 연결했다고 주장하지 않음</td></tr>
+<tr><td><a href="../README.md">README.md</a> · <a href="../TODO.md">TODO.md</a><br><a href="README.md">5/README.md</a></td><td><span class="tag">변경·신규</span></td><td>실행 안내와 단계 기록이 섞임. TODO·5 기록 신규</td><td>현재 상태·미완료·단계 완료 기록을 분리</td><td>사용자가 요청한 16단계 기록 관리</td></tr>
+<tr><td><a href="../4/README.md">4/README.md</a><br><a href="../docs/requests/stage5.txt">docs/requests/stage5.txt</a></td><td><span class="tag">이동·정리</span></td><td>4단계 문서·요청이 여러 위치에 존재</td><td>기존 4단계 원문 보존·5단계 요청 원문 분리</td><td>단계 기록과 실행용 SQL 구분, 과거 기록 보존</td></tr>
+<tr><td><a href="../.gitignore">.gitignore</a></td><td><span class="tag">변경</span></td><td>기존 비밀·제출 산출물 제외</td><td>5단계 캡처 등 로컬 보관 범위를 제외</td><td>캡처와 산출물을 Git에 포함하지 않음. 후속 data.json 이력 제거와 구분</td></tr>
+<tr><td>학습 DB public.library_notes</td><td><span class="tag report">사용자 적용</span></td><td>authenticated SELECT·INSERT·UPDATE·DELETE 허용</td><td>직접 역할 테이블·열 실효 권한 false</td><td>행·다른 테이블·기존 RLS 정책·서버 CRUD 보존</td></tr>
+</tbody></table></div>
+<p class="sub">“확인만”인 파일을 신규 보안 구현으로 세지 않습니다. 표에 있는 코드 파일은 이번 문서 정리에서 수정하지 않았습니다.</p>
+</section>
+
+<section id="verification">
+<span class="section-no">06 · EVIDENCE</span><h2>검증 결과와 저장점</h2>
+<p>아래 실행·검증은 5단계 당시 기록입니다. 2026-10-12 이번 문서 작성에서는 문서와 코드·Git 기록을 읽어 대조했으며, 빌드·계정 시험·DB SQL·배포·bundle을 새로 실행하지 않았습니다.</p>
+<h3>실행한 명령과 결과</h3>
+<div class="table-wrap"><table class="result-table"><thead><tr><th>실행 / 방법</th><th>구분</th><th>기록된 결과</th><th>확인의 한계</th></tr></thead><tbody>
+<tr><td><code>npm run build -- --local</code><br>Windows에서는 <code>npm.cmd run build -- --local</code></td><td><span class="tag">실제 로컬 실행</span></td><td>성공. 공개 data.json 제외·이전 빌드 파일 제거</td><td>PowerShell의 npm.ps1 정책 오류는 npm.cmd 사용으로 해결. --local은 실제 배포 JSON·DB 시험이 아닙니다.</td></tr>
+<tr><td><code>node --test test/notes.test.mjs test/notes-ui.test.mjs test/r5.test.mjs</code></td><td><span class="tag mock">가상 시험</span></td><td>폴더 정리 후 기존 시험 27개 통과</td><td>폴더 정리로 기능이 깨지지 않는지 확인한 시점</td></tr>
+<tr><td><code>node --test test/auth.test.mjs test/notes.test.mjs test/notes-ui.test.mjs test/r5.test.mjs test/package-starter.test.mjs test/xdr-run.test.mjs</code></td><td><span class="tag mock">가상 시험</span></td><td>코드·SQL 준비 후 35개 통과</td><td>실제 SDK + 가상 Auth 응답 포함. xdr-run 시험 통과는 운영 XDR 연결 증거가 아닙니다.</td></tr>
+<tr><td><code>node --test test/r5.test.mjs</code></td><td><span class="tag mock">가상 시험</span></td><td>원본 주소 누락 수정 후 3개 통과</td><td>배포 JSON 출력·잘못된 주소 거부 확인. 실제 DB 직접 요청과는 별도</td></tr>
+<tr><td>Supabase SQL Editor: 조회 → 회수 SQL → 같은 조회</td><td><span class="tag report">사용자 실행·화면</span></td><td>회수 성공, 적용 후 일곱 조회 결과 확인</td><td>도구가 학습 DB SQL을 대신 실행한 작업으로 기록하지 않음</td></tr>
+<tr><td>실제 HTTPS 요청·브라우저 콘솔·정적 import 추적</td><td><span class="tag">실제 서비스 확인</span></td><td>다음 결과표 참고</td><td>첫 시도 네 요청 실패 및 /aleph.json 브라우저 차단 후, 후속 읽기 점검에서 확인 완료. 실패 기록도 보존</td></tr>
+<tr><td><code>git commit -m "5단계 저장점"</code><br><code>git push origin main</code><br><code>npm.cmd run bundle</code></td><td><span class="tag">당시 실행 기록</span></td><td>저장점·푸시·제출 JSON 생성 완료. 원본 주소 수정 후 다시 생성</td><td>이번 문서 작성에서는 실행하지 않음. 현재 작업 폴더의 후속 미커밋 변경과 혼합하지 않음</td></tr>
+</tbody></table></div>
+<h3>정상과 거부: 실제 확인 근거</h3>
+<div class="table-wrap"><table class="result-table"><thead><tr><th>확인 대상</th><th>정상 / 거부 기준</th><th>관측된 결과</th><th>출처</th></tr></thead><tbody>
+<tr><td>A·B 본인 메모 CRUD</td><td>본인 읽기·추가·수정·삭제 정상</td><td>사용자가 정상 처리 확인을 보고</td><td><span class="tag report">사용자 보고</span></td></tr>
+<tr><td>같은 A 메모의 상세 GET</td><td>A 정상, B 거부</td><td>A 200 보고 · B 404 콘솔 화면</td><td><span class="tag report">사용자 실제 요청</span></td></tr>
+<tr><td>B의 A 메모 수정·삭제</td><td>거부, 코드의 예상 상태 404</td><td>“둘 다 거부” 보고. 두 상태 숫자 별도 캡처 미확인</td><td><span class="tag report">사용자 보고</span></td></tr>
+<tr><td>무로그인 메모 목록</td><td>401 JSON, 메모 없음</td><td>HTTP 401·로그인 필요 JSON</td><td><span class="tag">직접 HTTP 확인</span></td></tr>
+<tr><td>원본 API · 공개 키만 사용</td><td>메모 미반환</td><td>HTTP 401 · 메모 반환 없음</td><td><a href="../artifacts/stage5-original-check.json">직접 HTTP 결과</a></td></tr>
+<tr><td>원본 API · 공개 키 + 계정 토큰</td><td>직접 조회·수정 거부</td><td>GET 403 · PATCH 403 · 서버 API로 비교한 시험 전후 제목·본문 보존 true</td><td><span class="tag report">사용자 콘솔 화면</span><br>원본 키·토큰·본문은 기록하지 않음</td></tr>
+<tr><td>DB 실효 권한</td><td>anon·authenticated 모두 false</td><td>테이블·열 접근·GRANT OPTION 모두 false. 회수 전 authenticated CRUD true와 비교</td><td><a href="cap/sql_d2.png">사용자 적용 후 화면 2</a></td></tr>
+<tr><td>명시 테이블·열 ACL</td><td>PUBLIC·anon·authenticated 조회 결과 없음</td><td>명시 테이블·열 ACL 0건</td><td><a href="cap/sql_d1.png">화면 1</a> · <a href="cap/sql_d5.png">5</a> · <a href="cap/sql_d6.png">6</a></td></tr>
+<tr><td>RLS·기존 정책·서버 역할</td><td>RLS true·정책 네 개·service_role CRUD 모두 true</td><td>세 조건 유지 확인</td><td><a href="cap/sql_d3.png">화면 3</a> · <a href="cap/sql_d4.png">4</a> · <a href="cap/sql_d7.png">7</a></td></tr>
+<tr><td>배포 설정·첫 화면·정적 자료</td><td>aleph 200·허용 경로·원본 주소, 첫 화면 200·nosniff, data 404</td><td>실제 HTTP에서 확인. 원본 주소는 누락 수정 후 재확인</td><td><a href="../artifacts/stage5-public-checks.json">공개 점검 결과</a> · 당시 배포 확인 기록</td></tr>
+<tr><td>공개 화면·정적 import CDN</td><td>키·시드 표식 패턴 미검출</td><td>10개 파일 요청, 실패 0·남은 참조 0·검출 없음</td><td><a href="../artifacts/stage5-asset-scan.json">정적 파일 검사 결과</a></td></tr>
+<tr><td>운영 심판 점수</td><td>과제의 기본·추가 조건에 따른 실제 판정</td><td>originalApiUrl 누락 당시 50/100 · S05_ORIGINAL_URL_MISSING. 수정 후 최종 점수 자료 없음</td><td><span class="tag report">사용자 제공 판정</span></td></tr>
+</tbody></table></div>
+<div class="note"><strong>시점에 따른 결과 변경을 읽는 방법</strong><br><code>stage5-original-check.json</code>의 authenticatedRead/Update “not_run”은 공개 키만 시험했던 이른 시점입니다. 이후 사용자의 인증 GET·PATCH 403 결과와 모순되는 기록이 아닙니다. 기존 JSON을 덮어쓰지 않고 후속 결과를 구분했습니다. 공개 점검 JSON의 “외부 묶음 미검사”는 자기 점검 함수의 범위이며, 별도 정적 파일 검사에서 10개 파일을 확인했습니다.</div>
+<h3>원본 주소 누락: 발견 → 수정 → 다시 확인</h3>
+<div class="table-wrap"><table class="timeline"><thead><tr><th>시점</th><th>사실</th><th>후속 처리</th></tr></thead><tbody><tr><td>초기 5단계 배포</td><td>config에는 originalApiUrl이 있었으나 /aleph.json 생성에서 누락</td><td>공개 DB 요청 차단과 별개로 심판의 검사 설정이 부족했음</td></tr><tr><td>사용자 판정 전달</td><td>S05_ORIGINAL_URL_MISSING · 50/100</td><td>첫 오류를 생성 코드의 누락으로 특정</td></tr><tr><td>2026-10-07 수정</td><td>deployment-identity의 HTTPS 주소 검증·출력, r5 시험, 자기 점검 주소 대조 보강</td><td>수정 저장점·배포 원본 주소 일치 확인·bundle 재생성. DB 권한 변경 없음</td></tr><tr><td>2026-10-12 정리</td><td>과거 기록·현 코드·Git 이력·후속 기록을 대조</td><td>문서만 작성. 현재 배포를 새로 시험한 결과는 아님</td></tr></tbody></table></div>
+<h3>실제 저장점과 이후 Git 이력 변경</h3>
+<div class="table-wrap"><table><thead><tr><th>2026-10-07 당시 작업</th><th>당시 기록의 커밋</th><th>현재 로컬 이력의 같은 저장점</th></tr></thead><tbody><tr><td>5단계 배포 테스트 · Ready 화면 제공</td><td><code>4f4d313</code></td><td><code>9d7cc4e</code></td></tr><tr><td>5단계 저장점 · 푸시·bundle</td><td><code>771e8a9</code></td><td><code>d103efe</code></td></tr><tr><td>5단계 배포 JSON 원본 주소 누락 수정</td><td><code>5f247b2</code></td><td><code>fc25fc9</code></td></tr></tbody></table></div>
+<p>이후 <a href="../docs/GIT_HISTORY_CLEANUP.md">2026-10-08 Git 기록 정리 문서</a>에는 data.json 두 경로를 전체 이력에서 제거하면서 기존 커밋 ID가 바뀌었다고 적혀 있습니다. 당시 배포에서 확인한 ID는 과거 증거로 유지하고, 현재 코드의 5단계 상태를 찾을 때는 새 ID를 사용합니다. 이 문서 정리에서는 Git 이력을 바꾸지 않았습니다.</p>
+<pre><code>git show --stat fc25fc9
+git show fc25fc9:public/index.html</code></pre>
+<p class="sub">위 두 줄은 현재 이력에서 5단계 상태를 다시 읽는 참고 명령입니다. 이번 문서 작성에서 변경 파일 목록은 git show로 대조했고, 현재 공개 키 값이나 과거 메모 본문을 출력하지 않았습니다.</p>
+<h3>bundle이 기록하는 것</h3>
+<p><code>npm.cmd run bundle</code>은 커밋·설정·변경 파일명·규칙 이름·설명과 그 실행의 실제 공개 HTTP 자기 점검을 제출 JSON으로 묶습니다. 소스 전체 ZIP이나 DB 백업을 만드는 명령이 아닙니다. 당시 원본 주소 수정 후 묶음은 schema v2·단계 5·변경 파일 5개·규칙 1개·자기 점검 5개로 생성했습니다.</p>
+<p class="sub">bundle-notes.json과 artifacts/submission.json은 Git 제외 자료입니다. submission.json은 후속 제출로 바뀔 수 있어 고정된 5단계 증거 파일로 취급하지 않습니다. 5개의 자기 점검을 A/B 계정 시험이나 운영 심판 판정으로 해석하지 않습니다.</p>
+<h3>확인하지 못한 범위</h3><ul><li>실제 배포에서 토큰 만료 이후 자동 갱신을 기다려 확인하는 시험</li><li>A가 B의 메모 ID로 접근하는 반대 방향의 실제 계정 시험</li><li>B 수정·삭제 시험 직전과 직후의 원래 본문 비교 및 두 요청의 실제 상태 숫자 캡처</li><li>모든 동적 import·동적 네트워크 경로·과거 배포 전체의 키·표식 검색</li><li>원본 주소 수정 이후 운영 심판 최종 점수, 심판 토큰을 사용한 전체 운영 요청 성공</li><li>이번 문서 작성 시점의 새 배포·현재 계정·DB 재시험</li></ul>
+<p class="sub">후속 할 일은 <a href="../TODO.md">루트 TODO</a>와 각 후속 단계에서 관리합니다. 가상 시험이 통과했다는 이유로 이 항목들을 완료 처리하지 않았습니다.</p>
+</section>
+
+<section id="extras">
+<span class="section-no">07 · USER-SUGGESTED WORK</span><h2>사용자 제안으로 진행한 추가 개선</h2>
+<p>요구사항을 구현하는 과정의 기술 보완과, 사용자가 별도로 제안한 개선을 나눕니다. Auth 프록시나 originalApiUrl 수정은 원래 조건을 충족하기 위한 작업이며 별도 과제 밖 성과로 세지 않습니다.</p>
+<div class="table-wrap"><table class="result-table"><thead><tr><th>사용자 제안</th><th>이유</th><th>수행한 조치</th><th>검증·범위</th></tr></thead><tbody>
+<tr><td>프로그램과 단계 작업 내역 분리, 중첩 connected-repo 정리</td><td>16단계까지 기록이 쌓여도 실행 위치·현재 상태·과거 작업을 찾기 쉽게 유지</td><td>최신 4단계 저장소를 루트로 옮김. 이전 사본은 Git 제외 local-only에 보존. README 목차·TODO·단계 기록·실행 SQL 분리</td><td>정리 당시 프로그램·설정 Git 차이 없음, Git 이력 유지·중첩 폴더 없음·로컬 빌드 및 27개 가상 시험 통과</td></tr>
+<tr><td>직접 확인 세 항목에 하위 점검을 함께 두기</td><td>정상 동작·상대 거부·원본 우회 차단의 의미를 혼동하지 않기</td><td>A/B 본인 CRUD, 동일 A ID의 A/B 요청, B 변경 거부, 원본 GET·PATCH 및 전후 비교, 공개 파일 검사를 구분해 안내·기록</td><td>위 검증 표의 출처·상태·미확인 범위로 기록. 기존 소유자 방어를 새로 구현한 작업으로 표현하지 않음</td></tr>
+<tr><td>누락된 ‘만들 방어 도구’와 ‘점수 기준’ 보완</td><td>제작 요청·필수 방어·추가 점수 범위를 정확히 유지</td><td>요청 문서에서 제작 1·2와 추가 점수 세 조건, 직접 확인 세 항목을 구분</td><td><a href="../docs/requests/stage5.txt">요청 문서</a> 보존. 독립된 제작 3을 새로 요구받았다고 기록하지 않음</td></tr>
+<tr><td>클릭해서 읽기 쉬운 파일, 구조·이유·결과를 그림으로 정리</td><td>나중에 프로그램 구조와 판단 이유를 다시 이해</td><td>기존 <a href="추가조치.html">추가조치.html</a>을 보존하고 이번 종합 HTML·구성도·시퀀스·판단 표 작성. 기존 README 끝에 링크만 추가</td><td>오프라인 읽기·목차·인쇄 가능. 프로그램 수정·전체 파일 취합·커밋·배포는 수행하지 않음</td></tr>
+</tbody></table></div>
+<h3>구현·검증 과정에서 보완한 기술 항목</h3>
+<ul><li>테이블 GRANT만 보지 않고 PUBLIC·역할 상속·열 ACL까지 확인했습니다.</li><li>직접 권한이 남거나 서버 역할 권한이 변하면 SQL 트랜잭션을 중단하도록 했습니다.</li><li>Auth 전달 경로·메서드·grant 제한, 일반 오류·필요 응답 필드·no-store를 적용했습니다.</li><li>기존 SDK를 실제로 사용하면서 가상 응답으로 로그인·갱신·사용자 조회·로그아웃을 검증했습니다.</li><li>메모·Auth 서버 함수가 빠져 있던 패키지 기준표와 시험을 실제 API 목록에 맞췄습니다.</li></ul>
+<p class="sub">자세한 항목 설명은 <a href="추가조치.html">기존 추가 조치 정리</a>에서 확인할 수 있습니다. 위 항목을 모두 사용자가 개별적으로 지시했다고 단정하지 않고, 구현 과정의 보완으로 기록했습니다.</p>
+<h3>‘.git 노출’·‘simple.json’·‘x-original-uri’의 작업 귀속</h3>
+<div class="note warn"><strong>확인된 사실과 미확인 사항을 분리합니다.</strong><br>후속 기록에는 <code>data.json</code>과 <code>public/data.json</code>의 Git 이력 정리 및 재추적 방지 근거가 있습니다. 이는 <a href="../docs/GIT_HISTORY_CLEANUP.md">별도 Git 기록 정리</a>로 연결합니다. <code>simple.json</code> 노출 차단 또는 <code>x-original-uri</code> 헤더 차단의 구현·시험 근거는 확인하지 못했습니다. 이름이 다른 자료를 같은 조치로 바꾸어 적거나, XDR에서 처리됐다고 완료 표시하지 않습니다.</div>
+<p class="sub">현재 공개 /data.json 404 확인, 과거 Git 이력에서 파일 제거, 배포 서버의 /.git 경로 차단은 서로 다른 검사입니다. 한 결과만으로 나머지까지 방어 완료라고 쓰지 않습니다. 나중의 방어전 전체 문서 취합과 XDR 작업 정리는 이번 범위에서 진행하지 않았습니다.</p>
+</section>
+
+<section id="sources">
+<h2>원본 근거와 다시 읽는 방법</h2>
+<p>이 HTML은 5단계 전체를 읽기 위한 정리본입니다. 이전 시간순 기록과 결과 파일은 삭제하거나 옮기지 않았습니다. 코드 링크는 현재 파일이며, 당시 상태는 위의 5단계 저장점으로 대조할 수 있습니다.</p>
+<ul class="refs"><li><a href="README.md">5단계 시간순 작업 기록</a></li><li><a href="../docs/requests/stage5.txt">5단계 요청 문서</a></li><li><a href="../4/README.md">이전 4단계 기록</a></li><li><a href="추가조치.html">기존 요구사항·추가 조치 정리</a></li><li><a href="../docs/sql/stage5-library-notes-apply.sql">권한 회수 SQL</a></li><li><a href="../docs/sql/stage5-library-notes-audit.sql">권한 조회 SQL</a></li><li><a href="../artifacts/stage5-public-checks.json">당시 공개 HTTP 점검 결과</a></li><li><a href="../artifacts/stage5-asset-scan.json">당시 정적 파일 검사 결과</a></li><li><a href="../artifacts/stage5-original-check.json">이른 시점의 공개 키 조회 결과</a></li><li><a href="../docs/GIT_HISTORY_CLEANUP.md">후속 Git 이력 정리 기록</a></li><li><a href="../README.md">현재 프로젝트 안내</a> · <a href="../TODO.md">미완료 작업</a></li><li><a href="../xdr/README.md">XDR 별도 목차</a></li></ul>
+<p class="sub">artifacts/와 5/cap/는 Git 제외 로컬 근거입니다. GitHub에서 읽을 때 해당 링크가 없을 수 있습니다. 주요 결과는 이 문서에도 요약했고, 증거를 공개하려고 캡처·키·토큰·메모 본문을 복제하지 않았습니다.</p>
+<div class="actions"><button type="button" onclick="window.print()">인쇄 / PDF로 저장</button><span class="sub">파일을 브라우저로 열면 바로 읽을 수 있습니다. 외부 라이브러리·폰트·인터넷 연결 없이 동작합니다.</span></div>
+<details><summary>Windows에서 문서 열기</summary><pre><code>Start-Process -FilePath '.\5\작업정리.html'</code></pre><p>파일 탐색기에서 <strong>5 → 작업정리.html</strong>을 두 번 클릭해도 됩니다. 정상 결과는 목차·구성도·시퀀스와 표가 표시되는 것입니다. 문서를 읽을 때 로그인·키 입력·DB 변경·배포를 요구하지 않습니다. 서비스 재시험의 정상·거부 기준은 검증 표에서 확인합니다.</p></details>
+</section>
+<footer>정리일: 2026-10-12 · 작업 기준: 2026-10-07 5단계 및 누락 수정 · 후속 기록은 시점·귀속 구분 · 계정 ID·비밀값·실제 메모 본문 제외</footer>
+</main>
+</body>
+</html>

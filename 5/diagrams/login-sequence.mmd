@@ -1,0 +1,29 @@
+%%{init: {"theme":"base","fontFamily":"Malgun Gothic, Segoe UI, sans-serif","themeVariables":{"fontFamily":"Malgun Gothic, Segoe UI, sans-serif","fontSize":"16px","primaryColor":"#edf4fb","primaryTextColor":"#203147","primaryBorderColor":"#93b2ce","actorBkg":"#edf4fb","actorBorder":"#93b2ce","actorTextColor":"#203147","actorLineColor":"#cbd5df","signalColor":"#58758f","signalTextColor":"#203147","noteBkgColor":"#fff6e9","noteBorderColor":"#d1b88c","noteTextColor":"#203147","labelBoxBkgColor":"#f3f6fa","labelBoxBorderColor":"#b6c5d4","loopTextColor":"#203147"},"sequence":{"actorMargin":65,"width":190,"height":62,"messageMargin":46,"noteMargin":24,"diagramMarginX":35,"diagramMarginY":30,"mirrorActors":false,"wrap":true,"useMaxWidth":false}}}%%
+sequenceDiagram
+    autonumber
+    participant Browser as 브라우저 Auth SDK
+    participant API as Vercel /api/auth
+    participant Auth as Supabase Auth
+    Browser->>API: POST token / password<br/>또는 refresh_token
+    API->>API: Origin → route → method → grant<br/>JSON·본문 → 서버 설정 검사
+    alt 요청 검사 실패
+        API-->>Browser: 400·403·404·405·415<br/>상위 Auth 호출 없음
+    else 설정 오류
+        API-->>Browser: 503 · 상위 호출 없음
+    else 검사 통과
+        API->>Auth: /auth/v1/token<br/>서버 키로 중계
+        alt 정상 응답과 필요 필드 존재
+            Auth-->>API: 인증 응답
+            API-->>Browser: 200 · 필요한 세션 필드<br/>키·이메일·메타데이터 제외
+            Browser->>Browser: 공식 SDK로 세션 저장·관리
+        else 상위 인증 실패
+            Auth-->>API: 오류 상태
+            API-->>Browser: 429→429 / 5xx→503 / 그 외→400<br/>일반 메시지·허용 오류 코드
+        else 정상 응답 필드 누락
+            Auth-->>API: 잘못된 응답
+            API-->>Browser: 502
+        else 통신·JSON 해석 실패
+            API-->>Browser: 503
+        end
+    end
+    Note over Browser,Auth: user는 GET, logout은 POST·scope=local<br/>두 경로는 Bearer 형식 검사 후 중계, 정상 logout은 204<br/>자동 갱신: 구현·가상 시험 확인 / 실제 만료 후 시험 미확인

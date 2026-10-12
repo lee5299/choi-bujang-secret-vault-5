@@ -6,6 +6,8 @@
 
 | 확인할 내용 | 위치 |
 | --- | --- |
+| PC에서 문서와 그림 보기 | [작업정리.html](D:/defense/choi-bujang-secret-vault-5-main/choi-bujang-secret-vault-5-main/XDR-02/작업정리.html) · [그림 미리보기](D:/defense/choi-bujang-secret-vault-5-main/choi-bujang-secret-vault-5-main/XDR-02/diagrams/preview.html) |
+| 전체 작업·구조와 로직 그림·이후 배포 기록·사용자 제안 항목 | [전체 작업 정리](D:/defense/choi-bujang-secret-vault-5-main/choi-bujang-secret-vault-5-main/XDR-02/작업정리.md) |
 | 목표·변경 파일과 이유·제작 1~5 결과·검증 범위 | [XDR-02 상세 작업 기록](../xdr/web-injection/README.md) |
 | 전체 XDR 목차·입출력 계약 | [XDR 목차](../xdr/README.md) |
 | 경보별 판단·행동 건수 | [result.json](../xdr/web-injection/result.json) |
@@ -19,6 +21,9 @@
 
 확인 결과: **block 8·alert 9·record 9**, 원본 26건·읽기 26줄, 정상 이벤트·정상 주소 오차단 **각각 0건**.
 전체 로컬 가상 시험 **61개 통과**. 실제 Wazuh 수신·운영 ZTNA 차단·심판 판정·새 배포는 수행하지 않았습니다.
+
+위 내용은 2026-10-08 구현 기록 당시의 확인 범위입니다. 이후 GitHub 반영·배포 확인·사용자 제공 시험 결과와
+사용자 제안으로 진행한 추가 확인·개선은 2026-10-12 작성한 **전체 작업 정리**에 구분해 기록했습니다.
 
 재실행 명령: `npm.cmd run xdr:run -- web-injection`.
 파일 목록에서 **XDR-02 → README.md → result.json → counts**, 이어 **check.json → fixtureReplay**를 누릅니다.

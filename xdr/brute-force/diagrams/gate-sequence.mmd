@@ -1,0 +1,26 @@
+sequenceDiagram
+  participant Caller as 호출자
+  participant G as withXdrCheck
+  participant A as 공식 콜백 또는 가상 어댑터
+  participant B as 기존 판정 함수
+  Caller->>G: decide(request)
+  G->>A: verifiedSource(request)
+  A-->>G: 검증된 출발 주소
+  G->>A: loadRules()
+  A-->>G: 규칙 목록
+  G->>G: 모드·주소·시각·근거·만료 확인
+  alt 유효한 일치 규칙 없음
+    G->>B: 기존 decide(request)
+    B-->>G: 기존 판단 응답
+    G-->>Caller: 기존 응답 그대로 반환
+  else 유효한 일치 규칙 있음
+    G->>A: denyResponse(request, rule)
+    A-->>G: 거부 응답
+    G->>G: 응답 다섯 항목·요청 ID·deny·규칙 ID 검사
+    alt 계약에 맞음
+      G-->>Caller: deny 응답
+    else 잘못된 거부 응답
+      G-->>Caller: 계약 오류
+    end
+  end
+  Note over Caller,A: 필수 콜백 누락은 부품 생성 시 오류<br/>운영 reasonCode 등록 확인은 운영 계약에서 수행해야 함

@@ -1,0 +1,164 @@
+{
+  "date": "2026-10-12",
+  "method": "Local headless Chrome HTML and SVG rendering; copied HTML/SVG viewed offline",
+  "viewport": [
+    1600,
+    1000
+  ],
+  "assets": [
+    {
+      "src": "diagrams/service-overview.svg",
+      "loaded": true,
+      "width": 1160,
+      "height": 930
+    },
+    {
+      "src": "diagrams/login-sequence.svg",
+      "loaded": true,
+      "width": 901,
+      "height": 1447
+    },
+    {
+      "src": "diagrams/notes-sequence.svg",
+      "loaded": true,
+      "width": 1354,
+      "height": 2557
+    }
+  ],
+  "badges": [
+    {
+      "column": 1,
+      "text": "신규",
+      "background": "rgb(237, 245, 255)",
+      "border": "rgb(183, 208, 236)",
+      "radius": "999px"
+    },
+    {
+      "column": 1,
+      "text": "신규",
+      "background": "rgb(237, 245, 255)",
+      "border": "rgb(183, 208, 236)",
+      "radius": "999px"
+    },
+    {
+      "column": 1,
+      "text": "신규",
+      "background": "rgb(237, 245, 255)",
+      "border": "rgb(183, 208, 236)",
+      "radius": "999px"
+    },
+    {
+      "column": 1,
+      "text": "신규",
+      "background": "rgb(237, 245, 255)",
+      "border": "rgb(183, 208, 236)",
+      "radius": "999px"
+    },
+    {
+      "column": 1,
+      "text": "신규",
+      "background": "rgb(237, 245, 255)",
+      "border": "rgb(183, 208, 236)",
+      "radius": "999px"
+    },
+    {
+      "column": 1,
+      "text": "신규",
+      "background": "rgb(237, 245, 255)",
+      "border": "rgb(183, 208, 236)",
+      "radius": "999px"
+    },
+    {
+      "column": 1,
+      "text": "신규",
+      "background": "rgb(237, 245, 255)",
+      "border": "rgb(183, 208, 236)",
+      "radius": "999px"
+    },
+    {
+      "column": 1,
+      "text": "신규",
+      "background": "rgb(237, 245, 255)",
+      "border": "rgb(183, 208, 236)",
+      "radius": "999px"
+    },
+    {
+      "column": 1,
+      "text": "신규",
+      "background": "rgb(237, 245, 255)",
+      "border": "rgb(183, 208, 236)",
+      "radius": "999px"
+    },
+    {
+      "column": 1,
+      "text": "신규",
+      "background": "rgb(237, 245, 255)",
+      "border": "rgb(183, 208, 236)",
+      "radius": "999px"
+    },
+    {
+      "column": 1,
+      "text": "신규",
+      "background": "rgb(237, 245, 255)",
+      "border": "rgb(183, 208, 236)",
+      "radius": "999px"
+    },
+    {
+      "column": 1,
+      "text": "신규",
+      "background": "rgb(237, 245, 255)",
+      "border": "rgb(183, 208, 236)",
+      "radius": "999px"
+    },
+    {
+      "column": 1,
+      "text": "신규",
+      "background": "rgb(237, 245, 255)",
+      "border": "rgb(183, 208, 236)",
+      "radius": "999px"
+    },
+    {
+      "column": 1,
+      "text": "신규",
+      "background": "rgb(237, 245, 255)",
+      "border": "rgb(183, 208, 236)",
+      "radius": "999px"
+    },
+    {
+      "column": 1,
+      "text": "신규",
+      "background": "rgb(237, 245, 255)",
+      "border": "rgb(183, 208, 236)",
+      "radius": "999px"
+    },
+    {
+      "column": 1,
+      "text": "신규",
+      "background": "rgb(237, 245, 255)",
+      "border": "rgb(183, 208, 236)",
+      "radius": "999px"
+    },
+    {
+      "column": 1,
+      "text": "신규",
+      "background": "rgb(237, 245, 255)",
+      "border": "rgb(183, 208, 236)",
+      "radius": "999px"
+    }
+  ],
+  "overflow": {
+    "document": false,
+    "sidebarVisible": true
+  },
+  "small": {
+    "documentOverflow": false,
+    "images": true,
+    "fileTableClipped": false
+  },
+  "portableCheck": {
+    "bodyVisible": true,
+    "svgLoaded": true,
+    "externalScripts": 0
+  },
+  "errors": []
+}

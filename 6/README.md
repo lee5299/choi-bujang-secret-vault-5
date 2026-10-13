@@ -195,3 +195,12 @@ README의 현재 단계 5와 XDR-01·02 기록은 마지막 커밋의 문서 정
 제출 묶음에는 실행 당시 실제 전송한 공개 HTTP 요청 결과만 자동으로 기록합니다.
 실제 mTLS·기기 등록·사용자와 기기 연결·등록 기기의 인증된 화면 접속과 심판 판정은 미확인 상태로 명시합니다.
 제출 파일은 artifacts/submission.json이며 bundle-notes.json과 함께 커밋하지 않습니다.
+
+깨끗한 체크아웃에서 `npm.cmd run bundle`을 실제 실행해 JSON 생성에 성공했습니다.
+공개 HTTP 네 요청의 자기 점검 결과는 무로그인 메모 API 401·배포 식별 200·첫 화면 키와 표식 미검출·보안 헤더 확인·공개 자료 404입니다.
+최초 성공 실행의 커밋 4936dbc는 당시 Vercel 배포와 일치했습니다.
+실행 결과를 원래 프로젝트의 artifacts/submission.json에 복사하고 단계 6·device_registered·커밋 일치와 비밀값·연락처 패턴 검출 0건을 확인했습니다.
+기존 제출 JSON은 local-only/submission-records/에 보존했습니다. 이 기록 반영 후에는 최신 커밋으로 같은 명령을 다시 실행해 제출 JSON을 갱신합니다.
+파일 목록 **artifacts → submission.json**에서 현재 commit과 실제 관측 결과를 확인합니다.
+JSON을 보는 명령은 `Get-Content 'artifacts/submission.json' -Raw`입니다.
+운영 심판 서버에 접수하거나 점수를 확인한 것은 아닙니다. 실제 접수 방법은 학생이 사용하는 과제 제출 화면의 안내를 따릅니다.

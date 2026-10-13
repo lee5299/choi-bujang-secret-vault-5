@@ -12,7 +12,7 @@ test('패키징 함수 기준표는 현재 실제 API와 일치한다', async ()
   assert.equal(baseline.version, 1);
   assert.equal(baseline.starter, 'ChoiTimo/aleph-defense-starter');
   assert.deepEqual(baseline.functions, []);
-  assert.deepEqual(baseline.allowedNew, ['api/ai.js', 'api/auth.js', 'api/notes.js', 'api/notes/[id].js', 'api/threat-intel.js']);
+  assert.deepEqual(baseline.allowedNew, ['api/ai.js', 'api/announcements.js', 'api/announcements/[id].js', 'api/auth.js', 'api/notes.js', 'api/notes/[id].js', 'api/threat-intel.js']);
   assert.deepEqual(actual, [...baseline.functions, ...baseline.allowedNew].sort());
 });
 

@@ -1,0 +1,17 @@
+{
+  "schema": "aleph.resource-policy.v1",
+  "classId": "<ENGINE_VERIFIED_CLASS_ID>",
+  "projectId": "<ENGINE_VERIFIED_PROJECT_ID>",
+  "service": "<ENGINE_VERIFIED_SERVICE>",
+  "policyRevision": 1,
+  "expiresAt": "<UTC_EXPIRY_ISO_DATE>",
+  "denyReasonCode": "<OPERATOR_REGISTERED_DENY_CODE>",
+  "grants": [
+    {
+      "subjectId": "<ENGINE_VERIFIED_SUBJECT_ID>",
+      "deviceId": "<ENGINE_VERIFIED_DEVICE_ID>",
+      "method": "GET",
+      "path": "/api/notes/<OWN_NOTE_UUID>"
+    }
+  ]
+}

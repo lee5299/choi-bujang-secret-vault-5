@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { fixtureRequests } from './fixture-7.mjs';
+import { installFixturePolicy } from '../test/fixtures/resource-policy.mjs';
 
 const RESPONSE_KEYS = 'decision,reasonCode,requestId,ruleIds,schema';
 
@@ -96,6 +97,7 @@ export async function checkDecider({ decide, ruleIds }) {
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  const restore = installFixturePolicy();
   try {
     const { decide, RULE_IDS } = await import('../src/decider.mjs');
     const results = await checkDecider({ decide, ruleIds: RULE_IDS });
@@ -110,5 +112,5 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   } catch (error) {
     process.stderr.write(`판정기 연습 첫 오류: ${error.message}\n`);
     process.exitCode = 1;
-  }
+  } finally { restore(); }
 }

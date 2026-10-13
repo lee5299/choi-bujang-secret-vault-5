@@ -12,6 +12,7 @@
     }
   ],
   "rewrites": [
-    { "source": "/api/notes/:id", "destination": "/api/notes/[id]" }
+    { "source": "/api/notes/:id", "destination": "/api/notes/[id]" },
+    { "source": "/api/announcements/:id", "destination": "/api/announcements/[id]" }
   ]
 }

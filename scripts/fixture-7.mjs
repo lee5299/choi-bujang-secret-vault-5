@@ -1,12 +1,13 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { fixtureNoteId, installFixturePolicy } from '../test/fixtures/resource-policy.mjs';
 
 // Local practice requests use the engine's public input shape. The judge sends and times its own events.
 const request = (signals, recentEvents) => ({
   schema: 'aleph.decision.v1', requestId: randomUUID(), classId: 'class_fixture',
   projectId: 'project_fixture', subjectId: 'learner_fixture', deviceId: 'a'.repeat(16),
-  service: 'notes', method: 'GET', path: '/notes/demo', route: 'GET /notes/:id',
+  service: 'notes', method: 'GET', path: `/notes/${fixtureNoteId}`, route: 'GET /notes/:id',
   queryLength: 0, querySha256: createHash('sha256').update('').digest('hex'),
   at: new Date().toISOString(), policyRevision: 1, deviceRegistered: true,
   stepUp: { verified: false, authAgeSeconds: null }, recentEvents, signals,
@@ -25,6 +26,7 @@ const check = (input, output) => output && typeof output === 'object'
   && typeof output.reasonCode === 'string' && Array.isArray(output.ruleIds);
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  const restore = installFixturePolicy();
   try {
     const { normal, suspicious } = fixtureRequests();
     const { decide } = await import('../src/decider.mjs');
@@ -44,5 +46,5 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   } catch (error) {
     process.stderr.write(`가상 사건 첫 오류: ${error.message}\n`);
     process.exitCode = 1;
-  }
+  } finally { restore(); }
 }

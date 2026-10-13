@@ -1,7 +1,7 @@
 // The student changes this check as each stage adds an attack to the same app.
 // Never return tokens, private keys, real names, or note bodies.
 export async function runAttackChecks(config) {
-  if (![1, 3, 4, 5, 6, 7].includes(config.step)) throw new Error('이 단계의 공격 점검을 src/attack-check.mjs에 구현해 주세요.');
+  if (![1, 3, 4, 5, 6, 7, 8].includes(config.step)) throw new Error('이 단계의 공격 점검을 src/attack-check.mjs에 구현해 주세요.');
   let app;
   try {
     app = new URL(config.publicAppUrl);
@@ -14,12 +14,17 @@ export async function runAttackChecks(config) {
   }
   if (config.step >= 3) {
     const attempts = [];
-    for (const [path, attackId, expected] of [
+    const targets = [
       ['/api/notes', 'anonymous_note_list', '무로그인 메모 목록은 401 또는 403 JSON 오류'],
       ['/aleph.json', 'deployment_identity', '현재 단계의 배포 식별 JSON은 HTTP 200'],
       ['/', 'security_header', '첫 화면은 HTTP 200과 nosniff 또는 CSP 헤더'],
       ['/data.json', 'public_data_removed', '공개 자료 파일은 404 또는 메모 0건'],
-    ]) {
+      ...(config.step >= 8 ? [
+        ['/api/announcements', 'anonymous_announcement_list', '무로그인 공지 목록은 401 또는 403 JSON 오류'],
+        ['/api/announcements/00000000-0000-4000-8000-000000000008', 'anonymous_announcement_detail', '무로그인 공지 직접 요청은 401 또는 403 JSON 오류'],
+      ] : []),
+    ];
+    for (const [path, attackId, expected] of targets) {
       let observed;
       try {
         const result = await fetch(new URL(path, app), {
@@ -42,7 +47,7 @@ export async function runAttackChecks(config) {
           if (jsonType) {
             try { data = await result.json(); } catch { /* 본문이나 원본 오류를 기록하지 않습니다. */ }
           }
-          if (path === '/api/notes') {
+          if (path === '/api/notes' || path.startsWith('/api/announcements')) {
             const jsonError = data && !Array.isArray(data)
               && [data.message, data.error].some(value => typeof value === 'string' && value.trim());
             observed = `HTTP ${result.status} · JSON 오류 ${jsonError ? '확인' : '없음'}`;

@@ -1,7 +1,9 @@
 // ALEPH SDP 엔진이 신원과 경로를 확인한 요청만 받는 학생 판정기입니다.
 // 6단계 기기 규칙 유지. 7단계 복합 이상은 추가 확인을 요청합니다.
 // 요청 본문의 userId, role, 기기 키, 토큰을 별도로 믿거나 저장하지 마세요.
-export const RULE_IDS = Object.freeze(['device_registered', 'step_up_required']);
+import { inspectResourcePolicy } from './resource-policy.mjs';
+
+export const RULE_IDS = Object.freeze(['device_registered', 'step_up_required', 'resource_scope']);
 
 const isObject = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const hasKeys = (value, keys) => isObject(value)
@@ -39,6 +41,12 @@ export async function decide(request) {
   let reasonCode = registered ? 'approved' : 'device_not_registered';
   const ruleIds = [RULE_IDS[0]];
   if (registered) {
+    const access = inspectResourcePolicy(request);
+    ruleIds.push('resource_scope');
+    if (!access.allowed) {
+      return { schema: 'aleph.decision.v1', requestId: request.requestId,
+        decision: 'deny', reasonCode: access.reasonCode, ruleIds };
+    }
     const source = inspectSignals(request);
     // 가상 사건의 risk_signal은 제공 fixture의 대량 접근 표시입니다.
     // 읽기와 수정 모두 동일한 복합 이상 조건을 적용합니다.

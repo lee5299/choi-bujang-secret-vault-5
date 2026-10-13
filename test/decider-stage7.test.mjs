@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict';
-import { test } from 'node:test';
+import { test, before, after } from 'node:test';
 import { decide, RULE_IDS } from '../src/decider.mjs';
 import { fixtureRequests } from '../scripts/fixture-7.mjs';
+import { installFixturePolicy } from './fixtures/resource-policy.mjs';
+
+let restorePolicy;
+before(() => { restorePolicy = installFixturePolicy(); });
+after(() => { restorePolicy(); });
 
 // 엔진/DB/토큰을 사용하지 않는 가상 요청 경계 시험입니다.
 async function expectDecision(request, decision, reasonCode) {
@@ -14,12 +19,13 @@ async function expectDecision(request, decision, reasonCode) {
   assert.equal(response.decision, decision);
   assert.equal(response.reasonCode, reasonCode);
   assert.deepEqual(response.ruleIds, decision === 'step_up'
-    ? ['device_registered', 'step_up_required'] : ['device_registered']);
+    ? ['device_registered', 'resource_scope', 'step_up_required']
+    : decision === 'deny' ? ['device_registered'] : ['device_registered', 'resource_scope']);
   assert.deepEqual(request, before, '누락 입력을 보정하거나 요청을 변경하면 안 됩니다');
 }
 
 test('정상 허용·복합 이상 추가 확인·기존 기기 거부와 응답 계약', async () => {
-  assert.deepEqual(RULE_IDS, ['device_registered', 'step_up_required']);
+  assert.deepEqual(RULE_IDS, ['device_registered', 'step_up_required', 'resource_scope']);
   const { normal, suspicious } = fixtureRequests();
   await expectDecision(normal, 'allow', 'approved');
   await expectDecision(suspicious, 'step_up', 'step_up_required');

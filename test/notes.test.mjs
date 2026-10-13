@@ -5,6 +5,7 @@ import { exportJWK, generateKeyPair, SignJWT } from 'jose';
 import config from '../aleph.config.json' with { type: 'json' };
 import handler from '../api/notes.js';
 import detailHandler from '../api/notes/[id].js';
+import { resourceId } from '../src/resource-id.mjs';
 
 // 실제 학생 계정·DB·심판 대신 메모리 DB와 일회성 가상 서명만 사용합니다.
 test('authenticated owner-scoped virtual memo CRUD and rejection contracts', async t => {
@@ -41,13 +42,14 @@ test('authenticated owner-scoped virtual memo CRUD and rejection contracts', asy
   let lastDbRequest;
   let databaseReply;
   const rows = new Map();
-  const request = async (authorization, method = 'GET', { id, body, headers = {}, query = {} } = {}) => {
+  const request = async (authorization, method = 'GET', { id, body, path, headers = {}, query = {} } = {}) => {
     const result = {
       headers: {}, setHeader(name, value) { this.headers[name] = value; },
       status(code) { this.code = code; return this; },
       json(value) { this.body = value; return this; },
     };
-    const req = { method, body, query: { ...query, ...(id !== undefined ? { id } : {}) },
+    const req = { method, body, url: path ?? `/api/notes${id === undefined ? '' : `/${id}`}`,
+      query: { ...(id !== undefined ? { id } : {}), ...query },
       headers: { ...(authorization !== undefined ? { authorization } : {}),
         ...(body !== undefined ? { 'content-type': 'application/json' } : {}), ...headers } };
     await (id === undefined ? handler : detailHandler)(req, result);
@@ -160,7 +162,9 @@ test('authenticated owner-scoped virtual memo CRUD and rejection contracts', asy
         body: { title: 'Virtual', body: 'Fixture' }, query: { owner_id: userB, userId: userB, role: 'admin' },
       });
       assert.equal(result.code, 201);
-      assert.deepEqual(Object.keys(result.body), ['id']);
+      assert.deepEqual(Object.keys(result.body), ['id', 'resourceId']);
+      assert.equal(result.body.resourceId, resourceId('notes', result.body.id));
+      assert.equal(result.headers['X-Resource-Id'], result.body.resourceId);
       noteId = result.body.id;
       assert.match(noteId, /^[0-9a-f-]{36}$/u);
       assert.deepEqual(rows.get(noteId), { id: noteId, title: 'Virtual', content: 'Fixture', owner_id: userA });
@@ -185,13 +189,14 @@ test('authenticated owner-scoped virtual memo CRUD and rejection contracts', asy
     await t.test('explicit UUID accepted; duplicates return 409', async () => {
       const id = randomUUID();
       const body = { id, title: 'Virtual B', body: 'Fixture B' };
-      assert.deepEqual((await request(bearerB, 'POST', { body: JSON.stringify(body) })).body, { id });
+      assert.deepEqual((await request(bearerB, 'POST', { body: JSON.stringify(body) })).body,
+        { id, resourceId: resourceId('notes', id) });
       assert.equal((await request(bearerB, 'POST', { body })).code, 409);
     });
     await t.test('list is an array filtered by verified owner, ignoring spoofed query', async () => {
       const a = await request(bearerA, 'GET', { query: { userId: userB, owner_id: userB, id: noteId } });
       assert.equal(a.code, 200);
-      assert.deepEqual(a.body, [{ id: noteId, title: 'Virtual', body: 'Fixture' }]);
+      assert.deepEqual(a.body, [{ id: noteId, title: 'Virtual', body: 'Fixture', resourceId: resourceId('notes', noteId) }]);
       assert.equal(lastDbRequest.url.searchParams.get('owner_id'), `eq.${userA}`);
       assert.equal(lastDbRequest.url.searchParams.get('id'), null);
       const b = await request(bearerB);
@@ -199,13 +204,26 @@ test('authenticated owner-scoped virtual memo CRUD and rejection contracts', asy
       assert.notEqual(b.body[0].id, noteId);
     });
     await t.test('A detail GET and PUT return the exact contract and preserve owner', async () => {
-      assert.deepEqual((await request(bearerA, 'GET', { id: noteId })).body, { id: noteId, title: 'Virtual', body: 'Fixture' });
+      assert.deepEqual((await request(bearerA, 'GET', { id: noteId })).body,
+        { id: noteId, title: 'Virtual', body: 'Fixture', resourceId: resourceId('notes', noteId) });
       const updated = await request(bearerA, 'PUT', {
         id: noteId, body: { title: 'Edited', body: 'Changed' }, query: { owner_id: userB, userId: userB },
       });
       assert.equal(updated.code, 200);
-      assert.deepEqual(updated.body, { id: noteId, title: 'Edited', body: 'Changed' });
+      assert.deepEqual(updated.body, { id: noteId, title: 'Edited', body: 'Changed', resourceId: resourceId('notes', noteId) });
       assert.equal(rows.get(noteId).owner_id, userA);
+    });
+    await t.test('server identifies the raw path, ignoring spoofed resource and function query', async () => {
+      const result = await request(bearerA, 'GET', { id: noteId,
+        query: { id: randomUUID(), action: 'delete', resourceId: 'library:announcements' } });
+      assert.equal(result.code, 200);
+      assert.equal(result.body.id, noteId);
+      assert.equal(result.body.resourceId, resourceId('notes', noteId));
+      assert.equal(lastDbRequest.options.method, 'GET');
+      assert.equal(lastDbRequest.url.searchParams.get('id'), `eq.${noteId}`);
+      const before = databaseCalls;
+      assert.equal((await request(bearerA, 'GET', { id: noteId, path: `/api/announcements/${noteId}` })).code, 400);
+      assert.equal(databaseCalls, before);
     });
     await t.test('A deletion removes memo and subsequent detail requests return JSON 404', async () => {
       assert.equal((await request(bearerA, 'DELETE', { id: noteId })).code, 200);
@@ -394,7 +412,8 @@ test('authenticated owner-scoped virtual memo CRUD and rejection contracts', asy
       const logs = JSON.stringify(diagnostics);
       assert.ok(!logs.includes(validToken));
       assert.doesNotMatch(logs, /test-placeholder|private detail/);
-      assert.ok(diagnostics.every(([label, record]) => label === 'notes_api_failure' && Object.keys(record).every(key => ['reason', 'upstreamStatus'].includes(key))));
+      assert.ok(diagnostics.every(([label, record]) => ['notes_api_failure', 'notes_api_denied'].includes(label)
+        && Object.keys(record).every(key => ['reason', 'upstreamStatus'].includes(key))));
     });
   } finally {
     globalThis.fetch = originalFetch;

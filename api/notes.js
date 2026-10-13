@@ -1,14 +1,6 @@
-import config from '../aleph.config.json' with { type: 'json' };
-import { createLoginVerifier } from '../src/verify-login.mjs';
 import { randomUUID } from 'node:crypto';
-import { createClient } from '@supabase/supabase-js';
-
-let loginVerifier;
-let verifierSecretKey;
-
-function unauthorized(response) {
-  return response.status(401).json({ message: '로그인이 필요하거나 로그인 정보가 유효하지 않습니다.' });
-}
+import { authenticateResource, databaseEndpoint } from '../src/resource-auth.mjs';
+import { resourceId, requestPath, resolveResource } from '../src/resource-id.mjs';
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
 function unavailable(response, status, reason, upstreamStatus) {
@@ -25,62 +17,26 @@ export default function handler(request, response) {
 
 export async function handleNotes(request, response, noteId = null) {
   response.setHeader('Cache-Control', 'no-store');
-  const authorization = request.headers?.authorization;
-  // 설정이 빠진 환경에서도 무인증 요청은 DB 조회 전에 일관된 JSON 오류로 거부합니다.
-  if (typeof authorization !== 'string' || authorization.length > 8192
-      || !/^Bearer [A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/u.test(authorization)) {
-    return unauthorized(response);
-  }
-
-  const databaseUrl = process.env.SUPABASE_URL?.trim();
-  const secretKey = process.env.SUPABASE_SECRET_KEY?.trim();
-  if (!databaseUrl || !secretKey) {
-    return unavailable(response, 503, 'ENV_MISSING');
-  }
-
-  try {
-    if (!loginVerifier || verifierSecretKey !== secretKey) {
-      loginVerifier = createLoginVerifier({ config, supabaseSecretKey: secretKey });
-      verifierSecretKey = secretKey;
-    }
-  } catch {
-    return unavailable(response, 503, 'LOGIN_CONFIG_INVALID');
-  }
-  const identity = await loginVerifier(authorization);
-  if (!identity?.userId) return unauthorized(response);
-
-  // 서명과 만료 검사를 통과해도 Supabase에서 종료된 세션일 수 있습니다.
-  // 심판 토큰은 Supabase 세션이 아니므로 기존 도우미의 별도 검증을 유지합니다.
-  if (identity.kind === 'student') {
-    try {
-      const authClient = createClient(new URL(config.identityProvider.issuer).origin, secretKey, {
-        auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
-        global: {
-          fetch: (input, options) => fetch(input, {
-            ...options, redirect: 'error', cache: 'no-store', signal: AbortSignal.timeout(5000),
-          }),
-        },
-      });
-      // 명시적으로 전달한 이 요청의 토큰만 사용하며 사용자/세션 응답을 캐시하지 않습니다.
-      const { data, error } = await authClient.auth.getUser(authorization.slice('Bearer '.length));
-      if (error?.name === 'AuthRetryableFetchError' || error?.status >= 500) {
-        return unavailable(response, 503, 'AUTH_SERVICE_UNAVAILABLE');
-      }
-      if (error || data?.user?.id !== identity.userId) return unauthorized(response);
-    } catch {
-      return unavailable(response, 503, 'AUTH_SERVICE_UNAVAILABLE');
-    }
-  }
+  const authenticated = await authenticateResource(request, response, unavailable);
+  if (!authenticated) return response;
+  const { identity, databaseUrl, secretKey } = authenticated;
   // 사용자 ID와 역할은 요청 본문/쿼리가 아니라 위 도우미의 검증 결과만 사용합니다.
   const detail = noteId !== null;
   if (detail && (typeof noteId !== 'string' || !uuid.test(noteId))) {
     return response.status(400).json({ message: '메모 ID는 UUID여야 합니다.' });
+  }
+  const path = requestPath(request.url);
+  const resource = resolveResource(path, request.method);
+  if (path !== (detail ? `/api/notes/${noteId}` : '/api/notes')) {
+    return response.status(404).json({ message: '허용되지 않은 자료 경로입니다.' });
   }
   const methods = detail ? ['GET', 'PUT', 'DELETE'] : ['GET', 'POST'];
   if (!methods.includes(request.method)) {
     response.setHeader('Allow', methods.join(', '));
     return response.status(405).json({ message: '지원하지 않는 요청 방식입니다.' });
   }
+  if (!resource) return response.status(404).json({ message: '허용되지 않은 자료 경로입니다.' });
+  response.setHeader('X-Resource-Id', resource.resourceId);
 
   let payload;
   if (request.method === 'POST' || request.method === 'PUT') {
@@ -115,13 +71,7 @@ export async function handleNotes(request, response, noteId = null) {
 
   let endpoint;
   try {
-    const projectUrl = new URL(databaseUrl);
-    if (projectUrl.protocol !== 'https:' || projectUrl.username || projectUrl.password
-      || projectUrl.pathname !== '/' || projectUrl.search || projectUrl.hash
-      || projectUrl.origin !== new URL(config.identityProvider.issuer).origin) {
-      return unavailable(response, 503, 'PROJECT_URL_INVALID');
-    }
-    endpoint = new URL('/rest/v1/library_notes', projectUrl);
+    endpoint = databaseEndpoint(databaseUrl, '/rest/v1/library_notes');
   } catch {
     return unavailable(response, 503, 'PROJECT_URL_INVALID');
   }
@@ -172,13 +122,19 @@ export async function handleNotes(request, response, noteId = null) {
       || ((detail || request.method === 'POST') && rows.length > 1)) {
       throw new Error('Invalid data');
     }
-    if (detail && !rows.length) return response.status(404).json({ message: '메모를 찾을 수 없습니다.' });
+    if (detail && !rows.length) {
+      console.error('notes_api_denied', { reason: 'RESOURCE_NOT_OWNED_OR_MISSING' });
+      return response.status(404).json({ message: '메모를 찾을 수 없습니다.' });
+    }
     if (request.method === 'POST') {
       if (rows.length !== 1 || rows[0].id !== payload.id) throw new Error('Invalid insert');
-      return response.status(201).json({ id: rows[0].id });
+      response.setHeader('X-Resource-Id', resourceId('notes', rows[0].id));
+      return response.status(201).json({ id: rows[0].id, resourceId: resourceId('notes', rows[0].id) });
     }
-    if (request.method === 'DELETE') return response.status(200).json({ id: rows[0].id });
-    const notes = rows.map(({ id, title, content }) => ({ id, title, body: content }));
+    if (request.method === 'DELETE') return response.status(200).json({ id: rows[0].id,
+      resourceId: resourceId('notes', rows[0].id) });
+    const notes = rows.map(({ id, title, content }) => ({ id, title, body: content,
+      resourceId: resourceId('notes', id) }));
     return response.status(200).json(detail ? notes[0] : notes);
   } catch {
     return unavailable(response, 502, 'DB_RESPONSE_INVALID');

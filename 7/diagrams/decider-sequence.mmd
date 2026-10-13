@@ -1,0 +1,17 @@
+sequenceDiagram
+    autonumber
+    actor User as 연습 실행자
+    participant Fixture as fixture-7.mjs
+    participant Decider as src/decider.mjs
+    User->>Fixture: npm.cmd run fixture:7
+    Fixture->>Fixture: 정상·복합 이상 가상 요청 생성
+    Fixture->>Decider: decide(normal)
+    Decider-->>Fixture: allow / approved
+    Fixture->>Decider: decide(suspicious)
+    Decider-->>Fixture: step_up / step_up_required
+    Fixture->>Fixture: 복합 이상 복사 + 새 요청 ID<br/>가상 verified true·인증 나이 60초
+    Fixture->>Decider: decide(rechecked)
+    Decider-->>Fixture: allow / approved
+    Fixture->>Fixture: 세 응답 형식·기대 판정 확인
+    Fixture-->>User: 정상·재확인 전·재확인 뒤 판정 출력
+    Note over Fixture,Decider: 가상 연습이며 실제 로그인 요청·민감 자료 조회 없음

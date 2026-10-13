@@ -101,6 +101,7 @@ anon·authenticated 권한은 모두 false, PUBLIC·열 ACL 결과는 없음, �
 - [5단계 준비 중 완료한 정리·확인 기록](5/README.md)
 - [6단계 인수·제작·가상 시험 기록](6/README.md)
 - [7단계 인수·제작·가상 시험 기록](7/README.md)
+- [7단계 전체 문서 HTML](7/작업정리.html) · [수정용 Markdown·GitHub 본문](7/작업정리.md)
 - [8단계 인수·제작·가상 시험 기록](8/README.md) · [권한 설정 안내](8/권한설정.md)
 - [9단계 준비 기록](9/README.md) · [요구사항 표](9/요구사항.md) · [클로드 검토 요청](9/CLAUDE_REVIEW.md)
 - [XDR 전체 목차](xdr/README.md)

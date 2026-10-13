@@ -187,3 +187,44 @@ bundle-notes.json과 artifacts/submission.json은 커밋하지 않습니다.
 기존 별도 미커밋 작업 때문에 깨끗한 별도 체크아웃에서 빌드·bundle을 실행하고 최종 JSON을 원래 폴더로 복사합니다.
 생성 후 JSON의 step 7·policyRules 두 개·현재 배포와 commit 일치 및 비밀값 검사를 확인합니다.
 실제 실행 결과·저장점 커밋은 아래 후속 기록으로 추가합니다.
+
+## 저장점 업로드·배포·제출 묶음 생성 결과
+
+7단계 저장점 `b346b2cacba4f80a8b06f5e7a1f3cc15ddeab942`를 만들고 GitHub main에 일반 push했습니다.
+위 열 파일만 커밋했으며 기존 별도 미커밋 작업과 6단계 후속 문서·그림은 포함하지 않았습니다.
+커밋 전 대상 열 파일과 제출 설명의 비밀값·연락처 패턴 검출은 0건입니다. 실제 개인정보·메모 본문은 포함하지 않았습니다.
+judgeIssuer와 다른 기존 설정은 보존했으며 step만 7로 변경했습니다.
+
+깨끗한 별도 체크아웃 local-only/stage7-submit-20261013/에서 다음을 실제 실행했습니다.
+
+- `npm.cmd run build -- --local`: 성공. 원래 폴더의 메모 파일은 건드리지 않았습니다.
+- `npm.cmd run decider:test`: 가상 연습 14건 통과.
+- `npm.cmd run fixture:7`: 정상 allow·복합 이상 step_up.
+- `npm.cmd run bundle`: 단계 7·저장점 커밋·변경 파일 10개·규칙 2개·직접 점검 5개인 제출 JSON 생성 성공.
+
+배포 주소에 공개 HTTP 요청 네 건을 실제 전송했고 다음 결과를 확인했습니다.
+
+| 요청 | 실제 결과 |
+| --- | --- |
+| `/aleph.json` | HTTP 200, 단계 7·저장점 커밋·저장소·judgeIssuer·허용 경로·원본 API 주소 일치 |
+| `/` | HTTP 200, 로그인 문구·nosniff 확인, 검사한 키·표식 미검출 |
+| `/api/notes` (무로그인) | HTTP 401·JSON 오류 확인 |
+| `/data.json` | HTTP 404 |
+
+bundle의 attackAttempts는 별도 실제 HTTP 실행 결과 다섯 항목이며 모두 위 공개 경로에서 얻은 근거입니다.
+가상 판정기 시험·실제 인증된 메모 시험·심판 판정을 혼합하지 않았습니다.
+JSON의 단계·규칙·설정·배포 커밋 일치와 비밀값·연락처 패턴 검출 0건을 확인했습니다.
+최초 생성 JSON은 local-only/submission-records/stage7-b346b2c-submission.json에 보존합니다.
+검증 중 다른 작업의 6단계 문서 커밋 `4d1151a`가 추가된 것을 확인했습니다.
+해당 커밋은 그대로 보존하며 결과 기록과 최종 제출 JSON은 그 뒤 최신 커밋을 기준으로 맞춥니다.
+
+이 결과 기록을 커밋한 뒤에는 깨끗한 체크아웃을 최신 커밋으로 갱신하고 실제 배포 커밋을 다시 확인합니다.
+그 후 같은 `npm.cmd run bundle`을 실행해 최종 JSON을 원래 폴더 artifacts/submission.json으로 복사합니다.
+기존 제출 JSON·설명과 로컬 체크아웃은 Git 제외 경로에 보존하며 제출 JSON과 bundle-notes.json은 커밋하지 않습니다.
+
+제출할 때 파일 목록의 **artifacts → submission.json**을 열어 내용을 공식 과제 제출 화면의 JSON 입력란에 넣습니다.
+파일 내용을 보는 명령은 `Get-Content 'artifacts/submission.json' -Raw`입니다.
+정상 확인 기준은 단계 7·규칙 두 개·현재 배포와 commit 일치입니다.
+거부 확인 기준은 무로그인 메모 API 401, 가상 미등록 기기 deny·device_not_registered,
+가상 복합 이상 읽기·수정 step_up·step_up_required입니다.
+운영 이유 코드 등록·실제 자료 차단·재로그인 후 허용·심판 접수 및 점수는 미확인으로 남깁니다.

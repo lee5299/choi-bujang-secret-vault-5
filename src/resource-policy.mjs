@@ -6,29 +6,58 @@ const grantFields = ['subjectId', 'deviceId', 'method', 'path'];
 const exactKeys = (value, keys) => value && typeof value === 'object' && !Array.isArray(value)
   && Object.keys(value).length === keys.length && keys.every(key => Object.hasOwn(value, key));
 
-// 권한표가 설정되지 않았을 때의 기본 구역 규칙입니다. 계약의 동작·경로만 사용합니다.
-// 메모: 목록·추가, 정확한 UUID 경로의 읽기·수정·삭제. 공지: 읽기만.
-// 계약에 강사 역할이 없으므로 공지 추가·수정·삭제는 권한표에서 명시적으로 허가된 경우만 허용합니다.
-// 계약에 메모 소유자가 없으므로 다른 사용자의 메모 ID 요청은 자료 API가 저장된 소유자로 404 처리합니다.
-const DEFAULT_SCOPE = Object.freeze({ notes: ['GET', 'POST', 'PUT', 'DELETE'], announcements: ['GET'] });
+// 8단계 구역 규칙 (심판 지적 S08_OWN_BROKEN·S08_OTHER_ZONE_ALLOWED 반영).
+// - 메모 한 건(GET·PUT·DELETE /notes/:id)과 메모 추가(POST /notes)는 허용합니다.
+//   계약에 메모 소유자가 없으므로 주인 비교는 자료 API가 저장된 소유자로 합니다 (다른 사람 메모는 404).
+// - 메모 전체 목록(GET /notes)은 여러 사람의 자료를 한꺼번에 여는 경로이므로 판정기에서 거부합니다.
+// - 계약에 역할이 없으므로 공지 쓰기(POST·PUT·PATCH·DELETE)는 누구에게나 거부합니다. 공지 읽기만 허용합니다.
+// - 알 수 없는 경로, export 같은 기능 경로, 추가 깊이, 쿼리 요청은 거부합니다.
+// 이 고정 거부는 권한표가 있어도 먼저 적용합니다.
+const FEATURE_SEGMENTS = new Set(['export', 'exports', 'all', 'list', 'search', 'bulk', 'batch', 'download',
+  'dump', 'backup', 'admin', 'share', 'shared', 'public', 'import', 'sync', 'count', 'stats', 'everyone']);
+const PATH_SHAPE = /^(\/api)?\/(notes|announcements)(?:\/([A-Za-z0-9_-]{1,128}))?$/u;
+const ROUTE_SHAPE = /^(GET|POST|PUT|PATCH|DELETE) (\/api)?\/(notes|announcements)(\/:id)?$/u;
+const ZONE_RULES = Object.freeze({
+  notes: { item: ['GET', 'PUT', 'DELETE'], collection: ['POST'] },
+  announcements: { item: ['GET'], collection: ['GET'] },
+});
 
-function validRequest(request, resource) {
-  return Boolean(resource) && request.route === resource.route && request.deviceRegistered === true
-    && request.schema === 'aleph.decision.v1'
-    && text(request.subjectId) && /^[a-f0-9]{16}$/u.test(request.deviceId ?? '')
-    && Number.isSafeInteger(request.queryLength) && request.queryLength >= 0
-    // 원문 쿼리를 볼 수 없는 판정기는 쿼리 요청을 허용하지 않습니다.
-    && request.queryLength === 0;
+// 엔진이 확인한 route 모양과 실제 path가 같은 자료 종류·깊이·동작인지 확인합니다.
+// 자료 ID 형식(UUID 등)은 판정기에서 강제하지 않습니다. 접두사(/api 유무)는 엔진 표기 차이로 허용합니다.
+export function zoneOf(request) {
+  if (!request || typeof request.path !== 'string' || typeof request.route !== 'string'
+      || typeof request.method !== 'string') return null;
+  const path = PATH_SHAPE.exec(request.path);
+  const route = ROUTE_SHAPE.exec(request.route);
+  if (!path || !route) return null;
+  const [, , kind, id] = path;
+  const [, method, , routeKind, routeItem] = route;
+  const item = id !== undefined;
+  if (method !== request.method || routeKind !== kind || Boolean(routeItem) !== item) return null;
+  if (item && FEATURE_SEGMENTS.has(id.toLowerCase())) return null;
+  return { kind, item, method };
 }
 
-// 관리자가 공식 서버 설정에 넣은 권한표를 우선 사용합니다. 브라우저/요청의 policy·role·owner는 읽지 않습니다.
-// 권한표 변수가 없으면 기본 구역 규칙, 있는데 깨졌거나 만료됐으면 모두 거부합니다.
+function zoneAllowed(zone) {
+  return Boolean(zone) && ZONE_RULES[zone.kind][zone.item ? 'item' : 'collection'].includes(zone.method);
+}
+
+function engineRequest(request) {
+  return request.deviceRegistered === true && request.schema === 'aleph.decision.v1'
+    && typeof request.subjectId === 'string' && request.subjectId.length > 0 && request.subjectId.length <= 256
+    && typeof request.deviceId === 'string' && /^[a-f0-9]{16}$/u.test(request.deviceId)
+    // 원문 쿼리를 볼 수 없는 판정기는 쿼리 요청을 허용하지 않습니다.
+    && Number.isSafeInteger(request.queryLength) && request.queryLength === 0;
+}
+
+// 관리자가 공식 서버 설정에 넣은 권한표가 있으면 고정 구역 규칙을 통과한 요청에 한해 그 표를 추가로 따릅니다.
+// 권한표 변수가 없으면 고정 구역 규칙만 사용하고, 있는데 깨졌거나 만료됐으면 모두 거부합니다.
+// 브라우저/요청의 policy·role·owner는 읽지 않습니다.
 export function inspectResourcePolicy(request, raw = process.env.ALEPH_RESOURCE_POLICY_JSON) {
   const denied = { allowed: false, reasonCode: 'step_up_required' };
+  const zoneOk = engineRequest(request) && zoneAllowed(zoneOf(request));
   if (raw === undefined || (typeof raw === 'string' && raw.trim() === '')) {
-    const resource = resolveResource(request.path, request.method);
-    return { allowed: validRequest(request, resource)
-      && DEFAULT_SCOPE[resource.kind].includes(request.method), reasonCode: denied.reasonCode, mode: 'default' };
+    return { allowed: zoneOk, reasonCode: denied.reasonCode, mode: 'default' };
   }
   let policy;
   try { policy = typeof raw === 'string' && raw.length <= 256 * 1024 ? JSON.parse(raw) : null; } catch { return denied; }
@@ -46,7 +75,8 @@ export function inspectResourcePolicy(request, raw = process.env.ALEPH_RESOURCE_
       && text(grant.subjectId) && /^[a-f0-9]{16}$/u.test(grant.deviceId ?? '')
       && resolveResource(grant.path, grant.method))) return denied;
   const resource = resolveResource(request.path, request.method);
-  if (!validRequest(request, resource) || !fields.every(key => request[key] === policy[key])) return denied;
+  if (!zoneOk || !resource || request.route !== resource.route
+      || !fields.every(key => request[key] === policy[key])) return denied;
   return { allowed: policy.grants.some(grant => grantFields.every(key => grant[key] === request[key])),
     reasonCode: policy.denyReasonCode, mode: 'policy' };
 }

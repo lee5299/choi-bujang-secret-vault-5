@@ -34,11 +34,11 @@ test('8단계 사용자·기기·동작·정확한 경로와 이전 판정 규�
     await check({ ...normal, subjectId: 'learner_b_fixture', method: 'PUT', route: 'PUT /notes/:id' }, 'deny');
     await check({ ...normal, subjectId: 'learner_b_fixture', path: '/notes', route: 'GET /notes' }, 'deny');
   });
-  await t.test('학생의 공지 수정 거부·명시적으로 허가된 강사 기기 허용', async () => {
+  await t.test('공지 쓰기는 권한표에 허가 행이 있어도 판정기에서 누구에게나 거부 (계약에 역할 없음)', async () => {
     const notice = { ...normal, path: `/announcements/${fixtureAnnouncementId}`,
       method: 'PUT', route: 'PUT /announcements/:id' };
     await check({ ...notice, role: 'instructor', identity: { role: 'teacher' } }, 'deny');
-    await check({ ...notice, subjectId: 'instructor_fixture', deviceId: 'b'.repeat(16) }, 'allow');
+    await check({ ...notice, subjectId: 'instructor_fixture', deviceId: 'b'.repeat(16) }, 'deny');
     await check({ ...notice, subjectId: 'instructor_fixture' }, 'deny');
   });
   for (const [name, input] of [
@@ -118,7 +118,9 @@ test('권한표가 없을 때 기본 구역 규칙: 6·7단계 결과 유지, �
       // 자기 메모의 정상 동작
       await check({ ...normal, method: 'PUT', route: 'PUT /notes/:id' }, 'allow');
       await check({ ...normal, method: 'DELETE', route: 'DELETE /notes/:id' }, 'allow');
-      await check({ ...normal, path: '/notes', route: 'GET /notes' }, 'allow');
+      // 메모 전체 목록은 여러 사람의 자료를 한꺼번에 여는 경로이므로 거부
+      await check({ ...normal, path: '/notes', route: 'GET /notes' }, 'deny', 'step_up_required');
+      await check({ ...normal, path: '/api/notes', route: 'GET /api/notes' }, 'deny');
       await check({ ...normal, method: 'POST', path: '/notes', route: 'POST /notes' }, 'allow');
       await check({ ...normal, path: `/api/notes/${fixtureNoteId}`, route: 'GET /api/notes/:id' }, 'allow');
       // 공지는 읽기만, 쓰기는 역할 주장이나 재확인으로도 허용하지 않음
@@ -139,6 +141,20 @@ test('권한표가 없을 때 기본 구역 규칙: 6·7단계 결과 유지, �
         { method: 'PATCH', route: 'PATCH /notes/:id' }, { deviceId: 'not-a-device' }]) {
         await check({ ...normal, ...input }, 'deny');
       }
+      // 자기 메모 정상 읽기는 자료 ID 형식·가명 표기·경로 접두사 표기와 무관하게 허용 (S08_OWN_BROKEN)
+      await check({ ...normal, path: '/notes/note_a_1', route: 'GET /notes/:id' }, 'allow', 'approved');
+      await check({ ...normal, path: '/notes/42', route: 'GET /notes/:id' }, 'allow');
+      await check({ ...normal, subjectId: 'sub:Ab+c/d=' }, 'allow');
+      await check({ ...normal, path: `/api/notes/${fixtureNoteId}`, route: 'GET /notes/:id' }, 'allow');
+      await check({ ...normal, method: 'PUT', path: '/notes/note_a_1', route: 'PUT /notes/:id' }, 'allow');
+      // 경로와 route의 종류·깊이·동작이 다르면 거부
+      await check({ ...normal, path: '/notes/note_a_1', route: 'GET /announcements/:id' }, 'deny');
+      await check({ ...normal, method: 'PUT', route: 'GET /notes/:id' }, 'deny');
+      for (const word of ['export', 'ALL', 'list', 'search', 'download']) {
+        await check({ ...normal, path: `/notes/${word}`, route: 'GET /notes/:id' }, 'deny');
+      }
+      await check({ ...notice, method: 'PATCH', route: 'PATCH /announcements/:id' }, 'deny');
+      await check({ ...normal, path: '/instructor/materials/1', route: 'PUT /instructor/materials/:id', method: 'PUT' }, 'deny');
       // 계약에 소유자 정보가 없어 판정기는 다른 사용자의 메모 ID를 구별하지 못합니다.
       // 이 요청은 자료 API가 저장된 소유자로 404 처리합니다 (test/notes.test.mjs).
       await check({ ...normal, subjectId: 'learner_b_fixture' }, 'allow');

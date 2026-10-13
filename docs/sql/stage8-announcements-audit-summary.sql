@@ -1,0 +1,32 @@
+-- 8단계 공지·강사 권한 읽기 전용 요약 조회 (결과 1개 표, 사용자 ID·본문 미포함)
+-- Supabase SQL Editor에서 Run. 정상 기대값은 8/README.md 「DB 권한 조회 결과」 표를 참고합니다.
+SELECT * FROM (VALUES
+  ('announcements_rls', (SELECT relrowsecurity::text FROM pg_class WHERE oid='public.library_announcements'::regclass)),
+  ('instructors_rls', (SELECT relrowsecurity::text FROM pg_class WHERE oid='public.library_instructors'::regclass)),
+  ('anon_table_announcements', has_table_privilege('anon','public.library_announcements','SELECT,INSERT,UPDATE,DELETE')::text),
+  ('anon_column_announcements', has_any_column_privilege('anon','public.library_announcements','SELECT,INSERT,UPDATE,REFERENCES')::text),
+  ('anon_table_instructors', has_table_privilege('anon','public.library_instructors','SELECT,INSERT,UPDATE,DELETE')::text),
+  ('anon_column_instructors', has_any_column_privilege('anon','public.library_instructors','SELECT,INSERT,UPDATE,REFERENCES')::text),
+  ('student_table_announcements', has_table_privilege('authenticated','public.library_announcements','SELECT,INSERT,UPDATE,DELETE')::text),
+  ('student_column_announcements', has_any_column_privilege('authenticated','public.library_announcements','SELECT,INSERT,UPDATE,REFERENCES')::text),
+  ('student_table_instructors', has_table_privilege('authenticated','public.library_instructors','SELECT,INSERT,UPDATE,DELETE')::text),
+  ('student_column_instructors', has_any_column_privilege('authenticated','public.library_instructors','SELECT,INSERT,UPDATE,REFERENCES')::text),
+  ('server_select_announcements', has_table_privilege('service_role','public.library_announcements','SELECT')::text),
+  ('server_insert_announcements', has_table_privilege('service_role','public.library_announcements','INSERT')::text),
+  ('server_update_announcements', has_table_privilege('service_role','public.library_announcements','UPDATE')::text),
+  ('server_delete_announcements', has_table_privilege('service_role','public.library_announcements','DELETE')::text),
+  ('server_select_instructors', has_table_privilege('service_role','public.library_instructors','SELECT')::text),
+  ('server_insert_instructors', has_table_privilege('service_role','public.library_instructors','INSERT')::text),
+  ('server_update_instructors', has_table_privilege('service_role','public.library_instructors','UPDATE')::text),
+  ('server_delete_instructors', has_table_privilege('service_role','public.library_instructors','DELETE')::text),
+  ('server_column_write_instructors', has_any_column_privilege('service_role','public.library_instructors','INSERT,UPDATE')::text),
+  ('anon_rpc', has_function_privilege('anon','public.library_announcement_access(uuid,text,uuid,text,text)','EXECUTE')::text),
+  ('student_rpc', has_function_privilege('authenticated','public.library_announcement_access(uuid,text,uuid,text,text)','EXECUTE')::text),
+  ('server_rpc', has_function_privilege('service_role','public.library_announcement_access(uuid,text,uuid,text,text)','EXECUTE')::text),
+  ('fixed_function_definer', (SELECT prosecdef::text FROM pg_proc WHERE oid='public.library_announcement_access(uuid,text,uuid,text,text)'::regprocedure)),
+  ('function_settings', (SELECT coalesce(proconfig::text,'(none)') FROM pg_proc WHERE oid='public.library_announcement_access(uuid,text,uuid,text,text)'::regprocedure)),
+  ('function_owner', (SELECT pg_get_userbyid(proowner)::text FROM pg_proc WHERE oid='public.library_announcement_access(uuid,text,uuid,text,text)'::regprocedure)),
+  ('active_instructor_count', (SELECT count(*)::text FROM public.library_instructors WHERE active)),
+  ('instructor_row_count', (SELECT count(*)::text FROM public.library_instructors)),
+  ('announcement_row_count', (SELECT count(*)::text FROM public.library_announcements))
+) AS t(check_name, value);

@@ -96,19 +96,30 @@ export async function checkDecider({ decide, ruleIds }) {
   return results;
 }
 
+// 권한표가 없는 실제 기본 상태와 시험용 가상 권한표 상태를 모두 연습합니다.
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const restore = installFixturePolicy();
+  const saved = process.env.ALEPH_RESOURCE_POLICY_JSON;
+  let restore = () => { if (saved === undefined) delete process.env.ALEPH_RESOURCE_POLICY_JSON;
+    else process.env.ALEPH_RESOURCE_POLICY_JSON = saved; };
   try {
     const { decide, RULE_IDS } = await import('../src/decider.mjs');
-    const results = await checkDecider({ decide, ruleIds: RULE_IDS });
-    for (const item of results) {
-      const decision = ['allow', 'deny', 'step_up'].includes(item.decision) ? item.decision : 'invalid';
-      const reasonCode = ['approved', 'device_not_registered', 'step_up_required'].includes(item.reasonCode)
-        ? item.reasonCode : 'other_or_invalid';
-      process.stdout.write(`${item.passed ? '통과' : '확인 필요'} · ${item.name} · ${decision} / ${reasonCode}\n`);
+    let failed = false;
+    for (const [label, setup] of [
+      ['권한표 없음', () => { delete process.env.ALEPH_RESOURCE_POLICY_JSON; }],
+      ['가상 권한표', () => { restore(); restore = installFixturePolicy(); }],
+    ]) {
+      setup();
+      const results = await checkDecider({ decide, ruleIds: RULE_IDS });
+      for (const item of results) {
+        const decision = ['allow', 'deny', 'step_up'].includes(item.decision) ? item.decision : 'invalid';
+        const reasonCode = ['approved', 'device_not_registered', 'step_up_required'].includes(item.reasonCode)
+          ? item.reasonCode : 'other_or_invalid';
+        process.stdout.write(`[${label}] ${item.passed ? '통과' : '확인 필요'} · ${item.name} · ${decision} / ${reasonCode}\n`);
+      }
+      if (results.some(item => !item.passed)) failed = true;
     }
     process.stdout.write('이 명령은 가상 요청으로 연습하며 심판 통과 증거가 아닙니다.\n');
-    if (results.some(item => !item.passed)) process.exitCode = 1;
+    if (failed) process.exitCode = 1;
   } catch (error) {
     process.stderr.write(`판정기 연습 첫 오류: ${error.message}\n`);
     process.exitCode = 1;

@@ -17,6 +17,8 @@ ALTER TABLE public.library_announcements ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.library_instructors, public.library_announcements FROM PUBLIC, anon, authenticated;
 REVOKE ALL (user_id, active) ON public.library_instructors FROM PUBLIC, anon, authenticated;
 REVOKE ALL (id, owner_id, title, content, created_at) ON public.library_announcements FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.library_instructors FROM service_role;
+REVOKE ALL (user_id, active) ON public.library_instructors FROM service_role;
 GRANT SELECT ON public.library_instructors TO service_role;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.library_announcements TO service_role;
 
@@ -24,7 +26,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON public.library_announcements TO service_
 -- 강사 권한 행 잠금과 소유자 조건을 같은 트랜잭션에서 검사해 권한 회수·소유자 변경 경쟁을 막습니다.
 CREATE OR REPLACE FUNCTION public.library_announcement_access(
   p_user_id uuid, p_method text, p_id uuid, p_title text DEFAULT NULL, p_content text DEFAULT NULL
-) RETURNS jsonb LANGUAGE plpgsql SECURITY INVOKER SET search_path = '' AS $stage8$
+) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $stage8$
 DECLARE
   result_rows jsonb;
   saved_row public.library_announcements%ROWTYPE;

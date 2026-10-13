@@ -63,7 +63,7 @@ test('8단계 사용자·기기·동작·정확한 경로와 이전 판정 규�
     await check({ ...suspicious, subjectId: 'learner_b_fixture', stepUp: { verified: true, authAgeSeconds: 60 } }, 'deny');
   });
   for (const [name, raw] of [
-    ['미설정', undefined], ['깨진 JSON', '{broken'], ['배열', '[]'],
+    ['깨진 JSON', '{broken'], ['배열', '[]'],
     ['빈 권한표', JSON.stringify({ ...policy, grants: [] })],
     ['만료 권한표', JSON.stringify({ ...policy, expiresAt: '2020-01-01T00:00:00.000Z' })],
     ['잘못된 만료', JSON.stringify({ ...policy, expiresAt: 'unknown' })],
@@ -87,4 +87,65 @@ test('같은 UUID의 메모·공지를 구별하고 기능 경로를 자원으�
   for (const path of ['/api/notes/export', '/api/announcements/export', '/api/notes/:id', '/notes//', '/api/notes/a%2fb']) {
     assert.equal(resolveResource(path, 'GET'), null);
   }
+});
+
+test('권한표가 없을 때 기본 구역 규칙: 6·7단계 결과 유지, 공지 쓰기와 기능 경로 거부', async t => {
+  const saved = process.env.ALEPH_RESOURCE_POLICY_JSON;
+  t.after(() => { if (saved === undefined) delete process.env.ALEPH_RESOURCE_POLICY_JSON;
+    else process.env.ALEPH_RESOURCE_POLICY_JSON = saved; });
+  const { normal, suspicious } = fixtureRequests();
+  const check = async (request, expected, reason) => {
+    const copy = structuredClone(request);
+    const result = await decide(request);
+    assert.deepEqual(Object.keys(result).sort(), ['decision', 'reasonCode', 'requestId', 'ruleIds', 'schema']);
+    assert.equal(result.requestId, request.requestId);
+    assert.equal(result.decision, expected);
+    if (reason) assert.equal(result.reasonCode, reason);
+    assert.ok(result.ruleIds.length > 0 && result.ruleIds.every(id => RULE_IDS.includes(id)));
+    assert.deepEqual(request, copy);
+    return result;
+  };
+  const notice = { ...normal, path: `/announcements/${fixtureAnnouncementId}`, route: 'GET /announcements/:id' };
+  for (const [label, raw] of [['변수 없음', undefined], ['빈 값', ''], ['공백 값', '  ']]) {
+    await t.test(label, async () => {
+      if (raw === undefined) delete process.env.ALEPH_RESOURCE_POLICY_JSON;
+      else process.env.ALEPH_RESOURCE_POLICY_JSON = raw;
+      // 6·7단계 결과 유지
+      await check(normal, 'allow', 'approved');
+      await check({ ...normal, deviceRegistered: false }, 'deny', 'device_not_registered');
+      await check(suspicious, 'step_up', 'step_up_required');
+      await check({ ...suspicious, stepUp: { verified: true, authAgeSeconds: 60 } }, 'allow', 'approved');
+      // 자기 메모의 정상 동작
+      await check({ ...normal, method: 'PUT', route: 'PUT /notes/:id' }, 'allow');
+      await check({ ...normal, method: 'DELETE', route: 'DELETE /notes/:id' }, 'allow');
+      await check({ ...normal, path: '/notes', route: 'GET /notes' }, 'allow');
+      await check({ ...normal, method: 'POST', path: '/notes', route: 'POST /notes' }, 'allow');
+      await check({ ...normal, path: `/api/notes/${fixtureNoteId}`, route: 'GET /api/notes/:id' }, 'allow');
+      // 공지는 읽기만, 쓰기는 역할 주장이나 재확인으로도 허용하지 않음
+      await check(notice, 'allow');
+      await check({ ...notice, path: '/announcements', route: 'GET /announcements' }, 'allow');
+      for (const method of ['PUT', 'DELETE']) {
+        await check({ ...notice, method, route: `${method} /announcements/:id` }, 'deny', 'step_up_required');
+      }
+      await check({ ...notice, method: 'POST', path: '/announcements', route: 'POST /announcements' }, 'deny');
+      await check({ ...notice, method: 'PUT', route: 'PUT /announcements/:id', role: 'instructor',
+        identity: { role: 'teacher' } }, 'deny');
+      await check({ ...suspicious, path: notice.path, method: 'PUT', route: 'PUT /announcements/:id',
+        stepUp: { verified: true, authAgeSeconds: 60 } }, 'deny');
+      // 기능 경로·쿼리·알 수 없는 경로·경로 모양 불일치 거부
+      for (const input of [{ path: '/notes/export' }, { path: `${normal.path}/export` }, { path: `${normal.path}/` },
+        { path: normal.path.replace('/notes/', '/notes/%2f') }, { path: `${normal.path}?action=export` },
+        { queryLength: 12 }, { path: '/unknown', route: 'GET /unknown' }, { route: 'GET /notes' },
+        { method: 'PATCH', route: 'PATCH /notes/:id' }, { deviceId: 'not-a-device' }]) {
+        await check({ ...normal, ...input }, 'deny');
+      }
+      // 계약에 소유자 정보가 없어 판정기는 다른 사용자의 메모 ID를 구별하지 못합니다.
+      // 이 요청은 자료 API가 저장된 소유자로 404 처리합니다 (test/notes.test.mjs).
+      await check({ ...normal, subjectId: 'learner_b_fixture' }, 'allow');
+    });
+  }
+  await t.test('설정했지만 깨진 권한표는 기본 규칙으로 바꾸지 않고 모두 거부', async () => {
+    process.env.ALEPH_RESOURCE_POLICY_JSON = '{broken';
+    await check(normal, 'deny', 'step_up_required');
+  });
 });

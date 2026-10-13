@@ -197,3 +197,111 @@ bundle-notes.json·제출 JSON·실제 설정값은 커밋하지 않습니다.
 **현재 JSON은 준비 상태 기록용입니다. 최종 제출 전 DB SQL·강사 지정·운영 권한표·이유 코드 확인·8단계 배포가 필요합니다.**
 그 뒤 배포 커밋·단계·허용 경로를 맞추고 실제 정상/거부 요청과 bundle을 다시 실행합니다.
 설정 순서와 모호한 부분은 [권한 설정 안내](권한설정.md), 남은 작업은 [TODO](../TODO.md)에 있습니다.
+
+## Supabase·강사 계정 설정 지원 (2026-10-13)
+
+사용자의 SQL 적용·강사 계정 생성과 운영 연결 추천 요청으로 기존 관리자 로그인과 ZTNA 프로젝트를 확인했습니다.
+공지 읽기를 로그인 사용자에게 공유하고 활성 강사의 자기 공지만 쓰도록 하는 정책은 사용자가 승인했습니다.
+docs/sql/stage8-announcements-apply.sql에서 FOR SHARE 잠금 권한을 고정 서버 전용 SECURITY DEFINER 함수로 처리하도록 보완하고,
+강사 권한표에 대한 서버 직접 쓰기를 회수했습니다. 조회 SQL도 그 직접 쓰기와 고정 함수 설정을 확인하도록 갱신했습니다.
+
+보완 SQL을 사이드 탭에 입력했으나 실제 실행 확인 클릭은 자동 승인 심사가 거부했습니다.
+사용자가 직접 Run을 누르는 방식으로 선택했으므로 에이전트가 다른 경로로 실행하지 않았습니다.
+실제 DB 적용·권한 조회 결과는 아직 확인하지 않았습니다. 준비한 SQL이나 열린 화면을 완료 증거로 보고하지 않습니다.
+별도 사이드 탭에 Authentication → Users → Add user → Create new user를 열었습니다.
+새 계정의 이메일·비밀번호는 사용자가 공식 입력란에 직접 넣고 생성합니다. 계정 생성·강사 권한 지정은 아직 미완료입니다.
+실제 계정 ID·연락처·비밀번호·토큰을 코드·Git·로그·답변에 넣지 않았습니다.
+
+운영 환경변수 지원과 가명 사용자·기기 연결·등록 거부 코드를 확인할 요청안을 [운영연결확인.txt](운영연결확인.txt)에 작성했습니다.
+이 요청안은 외부로 보내지 않았습니다. 기존 자료실 계정과 별도인 운영 엔진 정보를 임의로 만들지 않습니다.
+이번 SQL 보완은 앞선 제출 JSON 생성 이후의 미커밋 변경이며, 기존 JSON을 최신 코드 제출물로 간주하지 않습니다.
+
+## DB 권한 조회 결과 (2026-10-13)
+
+사용자가 Claude 앱의 브라우저 창에서 Supabase에 직접 로그인한 뒤, ZTNA 프로젝트 SQL Editor에서
+[읽기 전용 요약 조회](../docs/sql/stage8-announcements-audit-summary.sql)를 실제 실행했습니다.
+[기존 조회 SQL](../docs/sql/stage8-announcements-audit.sql)의 세 조회와 남아 있던 함수·서버 쓰기 권한 확인을 결과표 하나로 합친 것이며,
+DB 구조·권한·행을 바꾸는 문장은 없습니다. 결과에 사용자 ID·메일·공지 본문은 포함하지 않았습니다.
+
+| 확인 항목 | 기대값 | 실제 결과 |
+| --- | --- | --- |
+| 두 테이블 RLS | true | `library_announcements` true · `library_instructors` true |
+| anon 테이블·열 직접 접근 (두 테이블) | false | 모두 false |
+| authenticated(학생) 테이블·열 직접 접근 (두 테이블) | false | 모두 false |
+| service_role 공지 SELECT·INSERT·UPDATE·DELETE | true | 모두 true |
+| service_role 강사 권한표 SELECT | true | true |
+| service_role 강사 권한표 INSERT·UPDATE·DELETE·열 쓰기 | false | 모두 false |
+| 공지 함수 EXECUTE: anon_rpc · student_rpc · server_rpc | false · false · true | false · false · true |
+| 고정 함수 SECURITY DEFINER | true | true |
+| 함수 설정 | 빈 search_path | `search_path=""` |
+| 함수 소유자 | 관리자 역할 | `postgres` |
+| 활성 강사 수 · 강사 행 수 | 지정 후 1 이상 | **0 · 0** |
+| 공지 행 수 | 정보 | 0 |
+
+결론: 공지 SQL 적용과 인계 문서의 남은 권한 조회 항목(함수 EXECUTE·고정 함수 설정·강사 권한표 서버 직접 쓰기 차단·공지 서버 CRUD)은 모두 기대값과 일치합니다.
+**강사 지정은 아직 없습니다.** 따라서 활성 강사의 공지 쓰기 정상 시험은 아직 할 수 없습니다.
+이 조회는 권한 카탈로그 확인이며, 함수 내부의 강사·소유자 판정을 실제 호출한 결과나 운영 엔진·심판 판정이 아닙니다.
+
+## 강사 지정 결과 (2026-10-13)
+
+사용자가 Supabase **Authentication → Users**에서 강사용 시험 계정 2개를 직접 만들었습니다.
+Claude가 SQL Editor에 강사 지정 SQL을 입력했고, 사용자가 직접 Run을 눌렀습니다.
+이 SQL은 사용자가 알려 준 두 시험 계정 메일과 정확히 일치하는 계정이 2개일 때만 `library_instructors`에 `active=true`로 등록하고,
+아니면 아무것도 바꾸지 않고 오류로 멈추도록 작성했습니다. 기존 학생 계정은 승격하지 않았습니다.
+실행 결과 화면은 `active_instructor_count = 2`, `designated_test_instructors = 2`였습니다.
+
+이어서 [읽기 전용 요약 조회](../docs/sql/stage8-announcements-audit-summary.sql)를 다시 실행했습니다.
+앞 표의 권한 26개 항목은 그대로이며, **활성 강사 2명·강사 행 2개·공지 0개**입니다.
+강사 두 명은 「강사 자기 공지 쓰기 허용」과 「다른 강사의 공지 수정·삭제 404」 실제 API 시험에 사용합니다.
+계정 메일·UUID·비밀번호는 이 기록·코드·Git에 넣지 않았습니다. 지정 SQL도 메일이 들어 있어 저장소에 저장하지 않았습니다.
+권한 회수는 Table Editor의 해당 행에서 `active`를 false로 바꿉니다.
+실제 공지 API 시험·운영 엔진 연결·8단계 배포는 아직 실행하지 않았습니다.
+
+## 권한표 미설정 시 기본 구역 규칙 보완 (2026-10-13)
+
+8단계 요구사항(「만들 방어 도구」·「이번 단계에 들어오는 괴물」·「직접 확인할 것」)과 코드를 대조하면서 다음 문제를 찾았습니다.
+판정기는 `ALEPH_RESOURCE_POLICY_JSON` 권한표가 없으면 등록 기기의 본인 메모 요청까지 모두 `deny`했습니다.
+그 권한표를 심판·운영 엔진의 판정기 실행 환경에 넣을 방법과 가명 사용자·기기 값은 확인되지 않았습니다.
+이 상태로는 「본인 정상 요청 유지」가 실패하고, 구역 검사가 7단계 검사보다 먼저 끝나므로
+이미 통과한 6·7단계의 정상 허용·복합 이상 step_up·재확인 뒤 allow도 deny로 바뀝니다 (총공세 회귀 위험).
+로컬 시험은 가상 권한표를 주입해서 통과했기 때문에 이 문제가 드러나지 않았습니다.
+
+사용자 승인으로 권한표 변수가 **없거나 빈 값일 때만** 계약 값으로 판단하는 기본 구역 규칙을 추가했습니다.
+권한표가 설정돼 있으면 기존처럼 그 표만 따르고, 설정됐는데 깨졌거나 만료됐으면 기본 규칙으로 바꾸지 않고 모두 거부합니다.
+
+| 요청 (등록 기기·쿼리 없음·경로 모양 일치) | 기본 규칙 결과 |
+| --- | --- |
+| 메모 목록 `GET /notes`, 추가 `POST /notes` | allow |
+| 메모 `GET·PUT·DELETE /notes/:id` (UUID 경로) | allow. 소유자 확인은 자료 API가 수행 |
+| 공지 목록·상세 `GET` | allow |
+| 공지 `POST·PUT·DELETE` | **deny** · `step_up_required`. role 주장·재확인으로도 허용하지 않음 |
+| export 같은 기능 경로, 추가 깊이, 후행 슬래시, 인코딩 경로, 쿼리, 알 수 없는 경로, 경로 모양 불일치, PATCH | deny |
+
+검사 순서(기기 → 구역 → 7단계 복합 이상·재확인)와 7단계 코드는 바꾸지 않았습니다. 재확인으로 구역 거부를 우회할 수 없습니다.
+거부 이유 코드는 운영 등록부를 확인할 수 없어 새 코드를 만들지 않고 기존 `step_up_required`를 유지했습니다.
+
+**판정기와 API 두 층의 역할:** 계약에 메모 소유자 정보가 없어 판정기는 「B가 A의 메모 ID로 요청」을 구별할 수 없습니다 (시험에 allow로 명시).
+이 요청은 자료 API가 저장된 소유자 조건으로 404 처리합니다. 학생의 공지 수정은 판정기 deny와 API 403 두 층에서 막습니다.
+
+변경 파일:
+- `src/resource-policy.mjs`: 기본 구역 규칙과 공통 요청 검사 함수 추가. 권한표 경로의 검사 조건은 동일.
+- `src/decider.mjs`: 설명 주석 한 줄만 추가. 판정 로직 변경 없음.
+- `test/decider-stage8.test.mjs`: 「미설정이면 deny」 시험을 기본 규칙 시험으로 교체. 변수 없음·빈 값·공백 값 각각 6·7단계 결과 유지, 메모 정상 동작, 공지 쓰기·기능 경로 거부, 깨진 권한표 거부 확인.
+
+확인 결과 (클라우드 작업 공간의 복사본에서 실제 실행):
+- 판정기 관련 시험 `node --test` 11개 파일(decider-stage7·8, r5~r8, package-starter, notes-ui, xdr 3개) **161개 통과·실패 0**.
+- `node scripts/fixture-7.mjs`: 정상 allow · 복합 이상 step_up · 재확인 뒤 allow. `node scripts/decider-test.mjs` 전 항목 통과.
+- 권한표 없이 직접 판정: 정상 allow/approved, 복합 이상 step_up, 재확인 뒤 allow/approved, 학생 공지 수정 deny.
+- **미실행:** `notes`·`announcements`·`auth`·`xdr-ai` 시험 4개 파일은 클라우드에서 의존 패키지를 받을 수 없어 실행하지 못했습니다. 이번 변경은 이 파일들이 쓰는 코드를 바꾸지 않았지만, PC에서 `node --test test/*.test.mjs` 전체 회귀로 확인해야 합니다.
+- 가상 시험이며 심판 판정·운영 엔진 연결·배포 결과가 아닙니다.
+
+### 연습 스크립트도 권한표 없는 상태를 함께 확인 (2026-10-13)
+
+`npm run fixture:7`과 `npm run decider:test`는 실행할 때 가상 권한표를 자동으로 넣어서, 권한표 없는 실제 기본 상태의 거부를 드러내지 못했습니다.
+두 스크립트가 **권한표 없음 → 가상 권한표** 순서로 같은 연습을 두 번 실행하고, 출력 줄 앞에 `[권한표 없음]`·`[가상 권한표]`를 붙이도록 바꿨습니다.
+기대값은 바꾸지 않았습니다 (정상 allow, 복합 이상 step_up, 재확인 뒤 allow/approved, 미등록 deny).
+
+- 변경 파일: `scripts/fixture-7.mjs`, `scripts/decider-test.mjs` (실행부만. `fixtureRequests`·`checkDecider`는 그대로).
+- 확인: `fixture:7` 두 상태 모두 allow·step_up·allow, `decider:test` 두 상태 × 18건 모두 통과. 판정기 관련 시험 161개 통과.
+- 검증: 기본 구역 규칙을 잠시 빼서 이전 동작을 재현하면 두 스크립트가 `[권한표 없음]` 줄에서 deny를 보고하고 실패로 끝나는 것을 확인한 뒤 원래 코드로 되돌렸습니다.
+- 다시 확인하기: `npm.cmd run fixture:7`, `npm.cmd run decider:test`. 가상 연습이며 심판 판정이 아닙니다.

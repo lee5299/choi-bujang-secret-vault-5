@@ -333,3 +333,37 @@ Claude가 SQL Editor에 강사 지정 SQL을 입력했고, 사용자가 직접 R
 - 확인 (클라우드 복사본 실제 실행): 판정기 관련 시험 161개 통과·실패 0, `fixture:7` 두 상태 allow·step_up·allow, `decider:test` 36건 통과.
   새 시험: 비UUID 자료 ID·특수문자 가명·접두사 표기 차이의 자기 메모 allow, 메모 전체 목록 deny, 공지 POST·PUT·PATCH·DELETE deny(권한표 허가 행 포함), 기능 단어·강사 자료 경로 deny.
 - 미실행: PC 전체 회귀, 새 커밋 push·배포, 재제출과 심판 재판정.
+
+### 보완 저장점·배포·제출 생성 결과 (2026-10-13)
+
+사용자가 `local-only/stage8-finish.ps1`을 PC에서 실행해 아래를 실제로 완료했습니다 (스크립트 출력 기준).
+
+- 전체 시험 `node --test test/*.test.mjs` 실패 0 확인 후, 보완 4개 파일을 커밋 `aa8f00a`로 저장하고 GitHub main에 일반 push.
+- 배포의 `/aleph.json`이 단계 8·커밋 `aa8f00a`로 바뀐 것을 확인. 무로그인 `/api/notes`·`/api/announcements` 모두 401.
+- 깨끗한 복제 폴더에서 `npm run bundle` 성공: 단계 8 · 커밋 `aa8f00a` · 규칙 `device_registered`, `step_up_required`, `resource_scope` · 공개 HTTP 자기 점검 7개.
+  결과를 `artifacts/submission.json`에 복사했고 이전 제출 파일·설명은 `local-only/submission-records/`에 보관했습니다.
+- 미실행·미확인: 로그인한 A·B 학생·강사 계정의 실제 API 정상/거부 요청, 심판 재판정 결과, 운영 권한표 연결.
+
+이 기록은 제출 커밋 이후 작성했으며 아직 커밋하지 않았습니다. 심판 결과를 받은 뒤 함께 기록·커밋합니다.
+
+### 심판 재제출 결과 (2026-10-13)
+
+`aa8f00a`를 Vercel URL·GitHub 주소로 두 번 제출했고, 두 번 모두 「확인하지 못했습니다 · 로그인 없는 응답에서 본문 유무를 가를 수 없습니다 · `UNV_AMBIGUOUS`」(36/100)였습니다 (사용자 보고).
+심판 기록 코드에는 요청 주소가 표시되지 않았습니다. 심판 안내는 「실패가 아님」이며 같은 결과가 반복되면 질문 게시판·강사에게 문의입니다.
+같은 시각 로그인 없이 확인한 응답: `/api/notes`·`/api/notes/:id`·`/api/announcements`·`/api/announcements/:id`(GET·PUT) 모두 401 JSON·본문 없음,
+`/notes`·`/notes/:id`·`/data.json` 404, Supabase 원본 API 401 `No API key found in request`, `/aleph.json` 단계 8·`aa8f00a`.
+`22fed3d`에서 `aa8f00a`까지 배포 API 코드는 바뀌지 않았으므로 원인은 확인되지 않았습니다. 문의 결과는 받은 뒤 기록합니다.
+
+## 강사 공지 화면 추가 (2026-10-13)
+
+사용자 요청으로 화면에 「강사 공지」 영역을 추가했습니다. 공지 API·DB·판정기 규칙과 허용 경로는 바꾸지 않았습니다.
+
+- `api/auth.js`: 기존 사용자 확인 응답(`/api/auth?route=user`)에 `instructor` 값을 추가했습니다.
+  Supabase Auth가 토큰으로 확인한 사용자 ID만 사용해, 서버 전용 키로 `library_instructors`의 활성 행을 조회합니다.
+  키·주소 미설정, 조회 실패, 형식 이상은 모두 false입니다. 요청의 쿼리·본문(role, instructor 등)은 읽지 않습니다.
+- **이 값은 화면 표시용입니다.** 공지 API는 이 값을 읽지 않고 요청마다 DB 함수로 활성 강사·작성자를 다시 검사합니다 (학생 403, 다른 강사 404).
+- `public/index.html`: 로그인하면 공지 목록을 보여 주고, 강사 표시 값이 true일 때만 등록 폼과 각 공지의 수정·삭제 버튼을 보여 줍니다.
+  본문은 텍스트로만 표시합니다. 서버가 거부하면 「강사 권한이 필요합니다」 등 짧은 사유를 표시합니다. 로그아웃하면 영역을 숨깁니다.
+- 새 시험: `test/announcements-ui.test.mjs`(학생 읽기만·강사 등록/수정/삭제·표시 값이 강사여도 서버 403이면 미등록), `test/auth-instructor.test.mjs`(검증된 ID·active=true 조회, 실패·미설정 false, 응답 세 항목).
+- 클라우드 확인: 실행 가능한 시험 166개 통과(공지 화면 3·강사 표시 2·메모 화면·판정기·XDR). `auth.test.mjs`·`notes.test.mjs`·`announcements.test.mjs`는 패키지 제한으로 클라우드 미실행, PC 전체 회귀로 확인.
+- 기존 미커밋 XDR-01 Jev 시험 화면은 이번 커밋에 넣지 않았습니다. 커밋용 파일과 작업 파일(공지+XDR)을 분리해 커밋 뒤 작업 파일로 되돌립니다.

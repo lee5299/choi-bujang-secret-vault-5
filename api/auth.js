@@ -1,5 +1,29 @@
 import config from '../aleph.config.json' with { type: 'json' };
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
+
+// Auth가 검증한 사용자 ID로 활성 강사 행이 있는지만 서버 전용 키로 조회합니다.
+// 화면 표시용이므로 키 미설정·조회 실패·형식 이상은 모두 false입니다. ID·키·DB 응답을 기록하지 않습니다.
+async function isActiveInstructor(userId) {
+  const secretKey = process.env.SUPABASE_SECRET_KEY?.trim();
+  const databaseUrl = process.env.SUPABASE_URL?.trim();
+  if (!secretKey || !databaseUrl || typeof userId !== 'string' || !UUID.test(userId)) return false;
+  try {
+    const project = new URL(databaseUrl);
+    if (project.protocol !== 'https:' || project.origin !== new URL(config.identityProvider.issuer).origin) return false;
+    const endpoint = new URL('/rest/v1/library_instructors', project);
+    endpoint.searchParams.set('select', 'user_id');
+    endpoint.searchParams.set('user_id', `eq.${userId.toLowerCase()}`);
+    endpoint.searchParams.set('active', 'eq.true');
+    endpoint.searchParams.set('limit', '1');
+    const upstream = await fetch(endpoint, { method: 'GET', redirect: 'error', cache: 'no-store',
+      signal: AbortSignal.timeout(5000), headers: { apikey: secretKey, Accept: 'application/json' } });
+    if (!upstream.ok) return false;
+    const rows = await upstream.json();
+    return Array.isArray(rows) && rows.length === 1 && rows[0]?.user_id?.toLowerCase?.() === userId.toLowerCase();
+  } catch { return false; }
+}
+
 // Auth SDK의 로그인·갱신·사용자 조회·로그아웃만 허용합니다. DB 프록시가 아닙니다.
 export default async function handler(request, response) {
   response.setHeader('Cache-Control', 'no-store');
@@ -63,7 +87,8 @@ export default async function handler(request, response) {
     }
     if (route === 'user') {
       if (typeof data?.id !== 'string') return fail(502, 'auth_unavailable');
-      return response.status(200).json({ id: data.id, aud: 'authenticated' });
+      // instructor는 화면 표시용 힌트입니다. 공지 API는 이 값을 읽지 않고 요청마다 DB 함수로 다시 검사합니다.
+      return response.status(200).json({ id: data.id, aud: 'authenticated', instructor: await isActiveInstructor(data.id) });
     }
     if (typeof data?.access_token !== 'string' || typeof data?.refresh_token !== 'string'
         || !Number.isFinite(data.expires_in) || typeof data?.user?.id !== 'string') return fail(502, 'auth_unavailable');

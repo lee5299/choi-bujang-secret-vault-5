@@ -75,6 +75,27 @@
       <p id="memo-status" role="status"></p>
     </section>
     <ul id="notes" aria-live="polite"><li>로그인 후 자료를 확인할 수 있습니다.</li></ul>
+    <section id="notice-board" class="auth" aria-labelledby="notice-heading" hidden>
+      <h2 id="notice-heading">강사 공지</h2>
+      <p id="notice-role" role="status"></p>
+      <form id="notice-form" hidden>
+        <fieldset id="notice-fields">
+          <label for="notice-title">공지 제목
+            <input id="notice-title" maxlength="200" required>
+          </label>
+          <label for="notice-body">공지 본문
+            <textarea id="notice-body" maxlength="10000"></textarea>
+          </label>
+          <div class="actions">
+            <button id="notice-save" type="submit">공지 등록</button>
+            <button id="notice-cancel" type="button" hidden>수정 취소</button>
+          </div>
+        </fieldset>
+      </form>
+      <button id="notice-refresh" type="button">공지 새로고침</button>
+      <p id="notice-status" role="status"></p>
+      <ul id="notices" aria-live="polite"></ul>
+    </section>
   </main>
   <script type="module">
     const loginForm = document.querySelector('#login-form');
@@ -106,6 +127,23 @@
     let editId = null;
     let memoBusy = false;
     let memoAbort;
+    const noticeBoard = document.querySelector('#notice-board');
+    const noticeRole = document.querySelector('#notice-role');
+    const noticeForm = document.querySelector('#notice-form');
+    const noticeFields = document.querySelector('#notice-fields');
+    const noticeTitle = document.querySelector('#notice-title');
+    const noticeBody = document.querySelector('#notice-body');
+    const noticeSave = document.querySelector('#notice-save');
+    const noticeCancel = document.querySelector('#notice-cancel');
+    const noticeRefresh = document.querySelector('#notice-refresh');
+    const noticeStatus = document.querySelector('#notice-status');
+    const noticesList = document.querySelector('#notices');
+    // 서버가 로그인 확인 응답으로 알려 준 화면 표시용 값입니다. 권한 판단은 공지 API가 요청마다 다시 합니다.
+    let instructorHint = false;
+    let noticeEditId = null;
+    let noticeBusy = false;
+    let noticeAbort;
+    let noticeVersion = 0;
 
     function resetEditor() {
       editId = null;
@@ -160,6 +198,182 @@
         }
       }
     }
+
+    function resetNotice() {
+      noticeEditId = null;
+      noticeForm.reset();
+      noticeSave.textContent = '공지 등록';
+      noticeCancel.hidden = true;
+    }
+
+    function noticeError(status) {
+      if (status === 401) return '로그인 정보를 확인하지 못했습니다. 다시 로그인하세요.';
+      if (status === 403) return '강사 권한이 필요합니다. 학생 계정은 공지를 읽기만 할 수 있습니다.';
+      if (status === 404) return '공지를 찾을 수 없거나 본인이 작성한 공지가 아닙니다.';
+      if (status === 400 || status === 415) return '공지 제목과 본문 입력을 확인하세요.';
+      return '공지 요청을 처리하지 못했습니다. 잠시 후 다시 시도하세요.';
+    }
+
+    function showNoticesMessage(message) {
+      const item = document.createElement('li');
+      item.textContent = message;
+      noticesList.replaceChildren(item);
+    }
+
+    function showNoticeRole() {
+      noticeForm.hidden = !instructorHint;
+      noticeRole.textContent = instructorHint
+        ? '강사 계정입니다. 공지를 등록하고 본인이 쓴 공지를 수정·삭제할 수 있습니다.'
+        : '공지는 읽기만 할 수 있습니다.';
+    }
+
+    async function loadNotices(session, version) {
+      if (!session?.access_token) {
+        showNoticesMessage('로그인 후 공지를 확인할 수 있습니다.');
+        return;
+      }
+      noticeAbort?.abort();
+      noticeAbort = new AbortController();
+      try {
+        const response = await fetch('/api/announcements', {
+          cache: 'no-store', signal: noticeAbort.signal,
+          headers: { Authorization: `Bearer ${session.access_token}`, Accept: 'application/json' },
+        });
+        if (version !== noticeVersion) return;
+        if (!response.ok) {
+          showNoticesMessage(response.status === 401 ? '로그인 정보를 확인하지 못했습니다. 다시 로그인하세요.'
+            : '공지를 불러올 수 없습니다. 잠시 후 다시 시도하세요.');
+          return;
+        }
+        const data = await response.json();
+        if (version !== noticeVersion) return;
+        if (!Array.isArray(data) || data.some(notice =>
+          typeof notice?.id !== 'string' || typeof notice?.title !== 'string' || typeof notice?.body !== 'string')) {
+          throw new Error('invalid_notices');
+        }
+        if (!data.length) {
+          showNoticesMessage('등록된 공지가 없습니다.');
+          return;
+        }
+        noticesList.replaceChildren(...data.map(notice => {
+          const item = document.createElement('li');
+          const title = document.createElement('strong');
+          const content = document.createElement('span');
+          title.textContent = notice.title;
+          content.textContent = notice.body;
+          item.append(title, content);
+          if (instructorHint) {
+            const actions = document.createElement('div');
+            actions.className = 'actions';
+            const edit = document.createElement('button');
+            edit.type = 'button';
+            edit.textContent = '공지 수정';
+            edit.addEventListener('click', () => {
+              if (noticeBusy) return;
+              noticeEditId = notice.id;
+              noticeTitle.value = notice.title;
+              noticeBody.value = notice.body;
+              noticeSave.textContent = '공지 수정 저장';
+              noticeCancel.hidden = false;
+              noticeStatus.textContent = '제목과 본문을 바꾼 뒤 공지 수정 저장을 누르세요.';
+              noticeTitle.focus();
+            });
+            const remove = document.createElement('button');
+            remove.type = 'button';
+            remove.textContent = '공지 삭제';
+            remove.addEventListener('click', () => {
+              void noticeAction('DELETE', notice.id, null, () => {
+                if (noticeEditId === notice.id) resetNotice();
+                noticeStatus.textContent = '공지를 삭제했습니다.';
+              });
+            });
+            actions.append(edit, remove);
+            item.append(actions);
+          }
+          return item;
+        }));
+        updateControls();
+      } catch {
+        if (version === noticeVersion) showNoticesMessage('공지를 불러올 수 없습니다. 잠시 후 다시 시도하세요.');
+      }
+    }
+
+    async function loadNoticeBoard(session) {
+      const version = ++noticeVersion;
+      noticeAbort?.abort();
+      instructorHint = false;
+      showNoticeRole();
+      if (!session?.access_token) {
+        showNoticesMessage('로그인 후 공지를 확인할 수 있습니다.');
+        return;
+      }
+      showNoticesMessage('공지를 불러오는 중입니다.');
+      try {
+        const response = await fetch('/api/auth?route=user', {
+          method: 'GET', cache: 'no-store', redirect: 'error',
+          headers: { Authorization: `Bearer ${session.access_token}`, Accept: 'application/json' },
+        });
+        const data = response.ok ? await response.json() : null;
+        if (version !== noticeVersion) return;
+        instructorHint = data?.instructor === true;
+      } catch {
+        if (version !== noticeVersion) return;
+        instructorHint = false;
+      }
+      showNoticeRole();
+      await loadNotices(session, version);
+    }
+
+    async function noticeAction(method, id, payload, onSuccess) {
+      if (!ready || busy || noticeBusy || !currentSession?.access_token) return;
+      const session = currentSession;
+      const version = sessionVersion;
+      noticeBusy = true;
+      noticeStatus.textContent = '공지 요청을 처리하는 중입니다.';
+      updateControls();
+      try {
+        const response = await fetch(id ? `/api/announcements/${encodeURIComponent(id)}` : '/api/announcements', {
+          method, cache: 'no-store',
+          headers: {
+            Authorization: `Bearer ${session.access_token}`, Accept: 'application/json',
+            ...(payload ? { 'Content-Type': 'application/json' } : {}),
+          },
+          ...(payload ? { body: JSON.stringify(payload) } : {}),
+        });
+        if (version !== sessionVersion) return;
+        if (!response.ok) {
+          noticeStatus.textContent = noticeError(response.status);
+          return;
+        }
+        const result = await response.json();
+        if (version !== sessionVersion) return;
+        onSuccess(result);
+        await loadNotices(currentSession, noticeVersion);
+      } catch {
+        if (version === sessionVersion) noticeStatus.textContent = '공지 요청을 처리하지 못했습니다. 잠시 후 다시 시도하세요.';
+      } finally {
+        if (version === sessionVersion) {
+          noticeBusy = false;
+          updateControls();
+        }
+      }
+    }
+
+    noticeForm.addEventListener('submit', event => {
+      event.preventDefault();
+      const updating = noticeEditId !== null;
+      void noticeAction(updating ? 'PUT' : 'POST', noticeEditId,
+        { title: noticeTitle.value, body: noticeBody.value }, () => {
+          resetNotice();
+          noticeStatus.textContent = updating ? '공지를 수정했습니다.' : '공지를 등록했습니다.';
+        });
+    });
+    noticeCancel.addEventListener('click', () => {
+      if (noticeBusy) return;
+      resetNotice();
+      noticeStatus.textContent = '';
+    });
+    noticeRefresh.addEventListener('click', () => { if (!noticeBusy) void loadNotices(currentSession, noticeVersion); });
 
     memoForm.addEventListener('submit', event => {
       event.preventDefault();
@@ -270,6 +484,10 @@
       memoRefresh.disabled = memoFields.disabled;
       memoForm.setAttribute('aria-busy', String(memoBusy));
       notesList.querySelectorAll('button').forEach(button => { button.disabled = memoFields.disabled; });
+      noticeFields.disabled = !ready || !signedIn || busy || noticeBusy;
+      noticeRefresh.disabled = noticeFields.disabled;
+      noticeForm.setAttribute('aria-busy', String(noticeBusy));
+      noticesList.querySelectorAll('button').forEach(button => { button.disabled = noticeFields.disabled; });
     }
 
     function showSession(session) {
@@ -278,6 +496,7 @@
       loginForm.hidden = signedIn;
       logoutButton.hidden = !signedIn;
       memoEditor.hidden = !signedIn;
+      noticeBoard.hidden = !signedIn;
       authStatus.textContent = signedIn ? '로그인되었습니다.' : '로그인하지 않은 상태입니다.';
       if (signedIn) passwordInput.value = '';
       updateControls();
@@ -290,8 +509,12 @@
         memoStatus.textContent = '';
         lastAccessToken = token;
         updateControls();
+        noticeBusy = false;
+        resetNotice();
+        noticeStatus.textContent = '';
         // 콜백 안에서 SDK 메서드를 다시 호출하지 않습니다.
         void loadNotes(session);
+        void loadNoticeBoard(session);
       }
     }
 

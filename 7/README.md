@@ -264,3 +264,21 @@ stepUp은 verified·authAgeSeconds 두 계약 필드만 허용하며 verified가
 다시 확인할 명령은 npm.cmd run fixture:7입니다. 파일 목록의 **7 → README.md**에서 기록을 확인하고, 제출 파일은 **artifacts → submission.json**을 엽니다.
 정상 예상은 정상 allow와 재확인 뒤 allow, 거부 예상은 재확인 전 복합 이상 step_up과 미등록 deny입니다.
 보완판의 실제 심판 판정·새 점수는 재제출 후 확인해야 합니다. 저장점·배포·bundle 결과는 실행 후 후속 기록에 추가합니다.
+
+### 보완 저장점·배포·제출 생성 결과
+
+보완 코드 저장점은 c042e4dc4f183d2a32ca0ec431f2b0fe28079209입니다. 위 일곱 파일만 커밋하고 GitHub main에 일반 push했습니다.
+커밋 대상·제출 설명의 비밀값·연락처 패턴 검출은 0건이며 제출 설명과 JSON은 Git에서 제외했습니다.
+제출용 로컬 체크아웃 갱신의 Git 하위 프로세스 권한 오류는 같은 로컬 fetch를 승인된 환경에서 재실행하여 해결했습니다.
+원래 폴더와 제출용 체크아웃에서 정적 빌드를 실행했으며 최종 bundle은 깨끗한 제출용 체크아웃에서만 생성했습니다.
+보존 대상 19개 파일의 해시를 비교해 변경 0개를 확인했습니다. 학습 DB는 수정하지 않았습니다.
+
+공개 배포의 /aleph.json은 HTTP 200·단계 7·위 보완 커밋과 일치했습니다. 저장소·judgeIssuer·허용 경로·원본 API도 일치했습니다.
+첫 화면은 HTTP 200·로그인 문구·nosniff 확인·검사한 키 및 표식 미검출, 무로그인 /api/notes는 401·JSON, /data.json은 404였습니다.
+npm.cmd run bundle을 실제 실행해 단계 7·규칙 두 개·직접 HTTP 자기 점검 다섯 개의 제출 JSON을 생성했습니다.
+설정·커밋·배포 일치·비밀값 검사를 통과한 JSON을 artifacts/submission.json으로 복사했습니다.
+이는 공개 HTTP 자기 점검이며 실제 민감 자료·새 로그인 시각 검증·심판 재판정 결과가 아닙니다.
+
+이 결과 기록을 저장한 뒤에는 최신 기록 커밋의 배포를 확인하고 같은 깨끗한 체크아웃에서 bundle을 다시 실행해 최종 JSON을 갱신합니다.
+최종 검증 메타데이터는 Git 제외 artifacts/stage7-preflight.json에 기록합니다. 이전 JSON은 로컬 보관합니다.
+제출 화면에는 기존 f40b48c JSON 대신 새 artifacts/submission.json의 전체 내용을 넣습니다. 보완판 점수는 재제출 후 확인합니다.

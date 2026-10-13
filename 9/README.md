@@ -255,3 +255,20 @@ artifacts/stage9-preflight.json의 finalSubmissionReady는 false입니다.
 정확한 목적지 업로드 승인 뒤 배포의 단계·커밋·허용 경로 일치와 최종 JSON을 재확인해야 합니다.
 원문 네트워크 결합·기기 한 개 지정은 미구현이고 실제 회수·경과 시간·심판 접수는 미실행입니다.
 기존 AGENTS·CLAUDE의 절차 안내·AI·화면·XDR 병행 변경은 원본 폴더에 보존했습니다.
+
+## 승인 후 업로드·배포 확인 (2026-10-13)
+
+사용자가 정확한 GitHub 저장소 main 업로드와 연결된 Vercel 배포 질문에 「네」라고 명시적으로 승인했습니다.
+그 승인 후 git push origin main이 성공하여 f07ac95에서 d7dcdc5로 올라갔습니다.
+이전 자동 승인 심사 거부를 우회하지 않았으며 승인받은 동일 저장소·main에 일반 push했습니다.
+
+공개 /aleph.json을 다시 GET으로 확인한 최초 결과:
+
+- HTTP 200, step 9, commit d7dcdc5ca1f18a7f0d70a7d2d1026038bca056b3.
+- 로컬 HEAD·배포 커밋 일치, allowedRoutes 6개 정확히 일치.
+- judgeIssuer·originalApiUrl·repoUrl 일치. 값은 임의로 교체하지 않았습니다.
+
+이전 「공개 배포 step 8」과 「업로드 승인 대기」는 승인 전 기록입니다.
+아래 결과 문서를 커밋·업로드한 뒤 최신 HEAD의 배포를 다시 확인하고 bundle을 최종 재생성합니다.
+artifacts/submission.json과 artifacts/stage9-preflight.json은 Git 제외 산출물이며 실제 일치 결과는 preflight에 기록합니다.
+실제 심판 접수는 사용자 제출 화면에서 진행할 단계입니다. 복합 조건·기기 한 개 지정의 한계는 그대로 보존합니다.

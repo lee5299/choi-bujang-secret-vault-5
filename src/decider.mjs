@@ -47,13 +47,19 @@ export async function decide(request) {
       && request.signals.network === 'unusual' && request.signals.hour < 6
       && request.recentEvents.some(event => event.kind === 'risk_signal'
         && event.ageSeconds <= 60 && event.count >= 20);
-    if (source === 'invalid' || compoundRisk) {
+    // 엔진이 확인한 요청에서만 재확인 완료 값을 사용합니다.
+    // 기기·신호 검사를 먼저 유지하며 브라우저 헤더로 인증 상태를 채우지 않습니다.
+    const confirmed = hasKeys(request.stepUp, ['verified', 'authAgeSeconds'])
+      && request.stepUp.verified === true
+      && Number.isFinite(request.stepUp.authAgeSeconds)
+      && request.stepUp.authAgeSeconds >= 0 && request.stepUp.authAgeSeconds <= 900;
+    if (source === 'invalid' || (compoundRisk && !confirmed)) {
       decision = 'step_up';
       reasonCode = 'step_up_required';
       ruleIds.push(RULE_IDS[1]);
     }
-    // 현재 계약에는 추가 확인 요청 이후의 새 로그인 증명이 없습니다.
-    // stepUp.verified/authAgeSeconds만으로 위 추가 확인을 건너뛰지 않습니다.
+    // 유효한 엔진 재확인 완료 값이 있는 복합 사건은 allow·approved입니다.
+    // 실제 새 로그인 시각 검증·자료 반환 통제는 제공 엔진의 역할입니다.
   }
   return {
     schema: 'aleph.decision.v1',

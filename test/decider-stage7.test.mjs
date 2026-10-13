@@ -137,7 +137,7 @@ test('대량 수정에도 복합 이상 규칙을 적용하며 정상 수정·�
       await expectDecision({ ...suspicious, method, route, path, deviceRegistered: false },
         'deny', 'device_not_registered');
       await expectDecision({ ...suspicious, method, route, path,
-        stepUp: { verified: true, authAgeSeconds: 60 } }, 'step_up', 'step_up_required');
+        stepUp: { verified: true, authAgeSeconds: 60 } }, 'allow', 'approved');
       // 평소 시각의 네트워크·행동 두 신호만으로는 정해진 복합 조건이 아닙니다.
       await expectDecision({ ...suspicious, method, route, path,
         signals: { ...suspicious.signals, hour: 14 } }, 'allow', 'approved');
@@ -145,12 +145,37 @@ test('대량 수정에도 복합 이상 규칙을 적용하며 정상 수정·�
   }
 });
 
-test('추가 확인 요약만으로 복합 이상을 허용하지 않으며 매 요청을 다시 판정', async () => {
+test('엔진 재확인 완료 값의 유효 범위만 허용하고 잘못된 완료 값은 추가 확인', async t => {
   const { normal, suspicious } = fixtureRequests();
-  for (const stepUp of [undefined, { verified: false, authAgeSeconds: null },
-    ...[0, 60, 900, 901, -1, null, '60'].map(authAgeSeconds => ({ verified: true, authAgeSeconds }))]) {
-    await expectDecision({ ...suspicious, stepUp }, 'step_up', 'step_up_required');
+  for (const authAgeSeconds of [0, 60, 900]) {
+    await t.test(`재확인 완료 ${authAgeSeconds}초`, async () => {
+      const stepUp = { verified: true, authAgeSeconds };
+      await expectDecision({ ...suspicious, stepUp }, 'allow', 'approved');
+      await expectDecision({ ...suspicious, stepUp, deviceRegistered: false }, 'deny', 'device_not_registered');
+      await expectDecision({ ...suspicious, stepUp,
+        signals: { ...suspicious.signals, source: 'client_header' } }, 'step_up', 'step_up_required');
+      await expectDecision({ ...suspicious, stepUp, recentEvents: undefined }, 'step_up', 'step_up_required');
+    });
   }
-  await expectDecision(normal, 'allow', 'approved');
+  const invalid = [
+    ['재확인 값 없음', undefined], ['재확인 값 null', null], ['재확인 값 배열', []],
+    ['재확인 미완료', { verified: false, authAgeSeconds: null }],
+    ['미완료와 최근 시각', { verified: false, authAgeSeconds: 0 }],
+    ['문자열 완료', { verified: 'true', authAgeSeconds: 60 }],
+    ['숫자 완료', { verified: 1, authAgeSeconds: 60 }],
+    ['나이 필드 없음', { verified: true }], ['완료 필드 없음', { authAgeSeconds: 60 }],
+    ['추가 필드', { verified: true, authAgeSeconds: 60, source: 'client_header' }],
+    ...[901, -1, null, '60', NaN, Infinity].map(authAgeSeconds =>
+      [`잘못된 인증 나이 ${String(authAgeSeconds)}`, { verified: true, authAgeSeconds }]),
+  ];
+  for (const [name, stepUp] of invalid) {
+    await t.test(name, () => expectDecision({ ...suspicious, stepUp }, 'step_up', 'step_up_required'));
+  }
+  await expectDecision({ ...suspicious, headers: { 'x-step-up-verified': 'true', 'x-auth-age-seconds': '60' } },
+    'step_up', 'step_up_required');
   await expectDecision(suspicious, 'step_up', 'step_up_required');
+  await expectDecision({ ...suspicious, stepUp: { verified: true, authAgeSeconds: 60 } }, 'allow', 'approved');
+  // 한 요청의 완료 값을 다른 새 요청에 자동 승계하지 않습니다.
+  await expectDecision(suspicious, 'step_up', 'step_up_required');
+  await expectDecision(normal, 'allow', 'approved');
 });

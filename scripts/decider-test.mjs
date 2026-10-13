@@ -53,10 +53,9 @@ export async function checkDecider({ decide, ruleIds }) {
     checks.push(
       { name: '복합 이상 접속', request: suspicious, decision: 'step_up',
         reasonCode: 'step_up_required' },
-      // verified 요약은 추가 확인 요청 이후의 새 로그인 증명이 아닙니다.
-      { name: '인증 요약만 있는 복합 이상 접속', request: { ...suspicious,
+      { name: '재확인 뒤 복합 이상 접속', request: { ...suspicious,
         requestId: randomUUID(), stepUp: { verified: true, authAgeSeconds: 60 } },
-      decision: 'step_up', reasonCode: 'step_up_required' },
+      decision: 'allow', reasonCode: 'approved' },
       { name: '등록 기기의 정상 수정', request: { ...normal,
         requestId: randomUUID(), method: 'PUT', route: 'PUT /notes/:id' },
       decision: 'allow' },
@@ -66,6 +65,19 @@ export async function checkDecider({ decide, ruleIds }) {
       { name: '미등록 기기의 복합 이상 수정', request: { ...suspicious,
         requestId: randomUUID(), method: 'PUT', route: 'PUT /notes/:id', deviceRegistered: false },
       decision: 'deny', reasonCode: 'device_not_registered' },
+      { name: '재확인 뒤 복합 이상 수정', request: { ...suspicious,
+        requestId: randomUUID(), method: 'PUT', route: 'PUT /notes/:id',
+        stepUp: { verified: true, authAgeSeconds: 60 } },
+      decision: 'allow', reasonCode: 'approved' },
+      { name: '재확인 값이 없는 복합 이상 접속', request: { ...suspicious,
+        requestId: randomUUID(), stepUp: undefined },
+      decision: 'step_up', reasonCode: 'step_up_required' },
+      { name: '재확인 유효 시간이 지난 복합 이상 접속', request: { ...suspicious,
+        requestId: randomUUID(), stepUp: { verified: true, authAgeSeconds: 901 } },
+      decision: 'step_up', reasonCode: 'step_up_required' },
+      { name: '문자열 재확인 값이 있는 복합 이상 접속', request: { ...suspicious,
+        requestId: randomUUID(), stepUp: { verified: 'true', authAgeSeconds: 60 } },
+      decision: 'step_up', reasonCode: 'step_up_required' },
     );
   }
   const results = [];

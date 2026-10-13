@@ -1,0 +1,178 @@
+{
+  "scope": "7단계 문서 렌더링, 서비스/심판 시험 아님",
+  "date": "2026-10-13",
+  "implementationCommit": "c32ddfc780f3c831b7829163cde9a3225df07557",
+  "renderer": "Chrome + local Mermaid",
+  "viewports": [
+    {
+      "width": 1600,
+      "scrollWidth": 1600,
+      "overflow": false,
+      "images": [
+        {
+          "alt": "7단계 서비스 구성과 확인 범위",
+          "loaded": true
+        },
+        {
+          "alt": "정상·복합 이상·재확인 뒤 가상 판정 순서",
+          "loaded": true
+        },
+        {
+          "alt": "제출 묶음 생성과 공개 HTTP 자기 점검 순서",
+          "loaded": true
+        },
+        {
+          "alt": "기기·입력·복합 이상·재확인 판단 흐름",
+          "loaded": true
+        }
+      ],
+      "toc": 9,
+      "sections": 9,
+      "badges": {
+        "count": 20,
+        "column": "기존 역할",
+        "wrongColumn": 0,
+        "radius": "7px",
+        "font": "12px"
+      },
+      "externalScripts": 0
+    },
+    {
+      "width": 1280,
+      "scrollWidth": 1280,
+      "overflow": false,
+      "images": [
+        {
+          "alt": "7단계 서비스 구성과 확인 범위",
+          "loaded": true
+        },
+        {
+          "alt": "정상·복합 이상·재확인 뒤 가상 판정 순서",
+          "loaded": true
+        },
+        {
+          "alt": "제출 묶음 생성과 공개 HTTP 자기 점검 순서",
+          "loaded": true
+        },
+        {
+          "alt": "기기·입력·복합 이상·재확인 판단 흐름",
+          "loaded": true
+        }
+      ],
+      "toc": 9,
+      "sections": 9,
+      "badges": {
+        "count": 20,
+        "column": "기존 역할",
+        "wrongColumn": 0,
+        "radius": "7px",
+        "font": "12px"
+      },
+      "externalScripts": 0
+    },
+    {
+      "width": 900,
+      "scrollWidth": 900,
+      "overflow": false,
+      "images": [
+        {
+          "alt": "7단계 서비스 구성과 확인 범위",
+          "loaded": true
+        },
+        {
+          "alt": "정상·복합 이상·재확인 뒤 가상 판정 순서",
+          "loaded": true
+        },
+        {
+          "alt": "제출 묶음 생성과 공개 HTTP 자기 점검 순서",
+          "loaded": true
+        },
+        {
+          "alt": "기기·입력·복합 이상·재확인 판단 흐름",
+          "loaded": true
+        }
+      ],
+      "toc": 9,
+      "sections": 9,
+      "badges": {
+        "count": 20,
+        "column": "기존 역할",
+        "wrongColumn": 0,
+        "radius": "7px",
+        "font": "12px"
+      },
+      "externalScripts": 0
+    }
+  ],
+  "diagrams": [
+    {
+      "name": "service-overview",
+      "title": "7단계 서비스 구성과 확인 범위",
+      "viewBox": "0 0 1400 1220",
+      "textCount": 56,
+      "legend": true,
+      "textOutside": []
+    },
+    {
+      "name": "decider-sequence",
+      "title": "정상·복합 이상·재확인 뒤 가상 판정",
+      "viewBox": "0 0 1200 1189",
+      "textCount": 36,
+      "legend": true,
+      "textOutside": []
+    },
+    {
+      "name": "bundle-sequence",
+      "title": "제출 생성과 공개 HTTP 자기 점검",
+      "viewBox": "0 0 1200 1597",
+      "textCount": 49,
+      "legend": true,
+      "textOutside": []
+    },
+    {
+      "name": "rule-flow",
+      "title": "기기·입력·복합 이상·재확인 판단",
+      "viewBox": "0 0 1200 1754",
+      "textCount": 20,
+      "legend": true,
+      "textOutside": []
+    }
+  ],
+  "mermaid": [
+    {
+      "name": "decider-sequence",
+      "width": 1200,
+      "height": 1189,
+      "clipped": []
+    },
+    {
+      "name": "bundle-sequence",
+      "width": 1200,
+      "height": 1597,
+      "clipped": []
+    },
+    {
+      "name": "rule-flow",
+      "width": 1200,
+      "height": 1754,
+      "clipped": []
+    }
+  ],
+  "externalRequests": 0,
+  "pageErrors": [],
+  "visualReview": {
+    "performed": true,
+    "items": [
+      "목차·상대 링크",
+      "기존 역할 칸의 배지 20개·색상",
+      "표 배치",
+      "그림 4개 로딩·범례·연결선",
+      "한글·잘림·겹침"
+    ],
+    "unresolvedIssues": 0
+  },
+  "localLinks": {
+    "missing": 0
+  },
+  "secretOrContactPatternHits": 0
+}

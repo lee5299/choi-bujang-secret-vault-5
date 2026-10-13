@@ -1,0 +1,19 @@
+flowchart TD
+    A["엔진 검증 경계의 요청<br/>또는 로컬 가상 요청"] --> B{"deviceRegistered<br/>정확히 true인가?"}
+    B -->|아니오| D["deny<br/>device_not_registered"]
+    B -->|예| C["신호·최근 사건 검사<br/>judge_fixture / none / invalid 구분"]
+    C --> E["복합 이상·재확인 완료 계산<br/>네트워크·시각·대량 사건<br/>verified·인증 나이"]
+    E --> F{"입력 검사 결과가<br/>invalid인가?"}
+    F -->|예| S["step_up<br/>step_up_required"]
+    F -->|아니오| G{"복합 이상이며<br/>유효한 재확인이 없는가?"}
+    G -->|예| S
+    G -->|아니오| H["allow<br/>approved"]
+    D --> R["계약의 응답 다섯 항목 반환<br/>새 요청마다 다시 판정"]
+    S --> R
+    H --> R
+    classDef prior fill:#F1F5F9,stroke:#A6B2C3,color:#172B4D;
+    classDef changed fill:#EDF5FF,stroke:#AAC7E5,color:#315A83;
+    classDef refuse fill:#FFF0EF,stroke:#D97777,color:#A23C3C;
+    class A,B,D,R prior;
+    class C,E,F,G,H changed;
+    class S refuse;

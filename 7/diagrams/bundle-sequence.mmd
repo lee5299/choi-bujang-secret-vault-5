@@ -1,0 +1,24 @@
+sequenceDiagram
+    autonumber
+    actor User as 실행자
+    participant Bundle as scripts/bundle.mjs
+    participant Check as src/attack-check.mjs
+    participant Web as 공개 배포
+    User->>Bundle: npm.cmd run bundle
+    Bundle->>Bundle: 깨끗한 Git·커밋·origin 확인
+    Bundle->>Bundle: 커밋 설정·로컬 설명·RULE_IDS 읽기
+    Bundle->>Check: runAttackChecks(config)
+    Check->>Web: GET /api/notes (무로그인)
+    Web-->>Check: HTTP 401 · JSON 오류
+    Check->>Web: GET /aleph.json
+    Web-->>Check: HTTP 200 · 단계·설정 식별
+    Check->>Web: GET /
+    Web-->>Check: HTTP 200 · 첫 화면
+    Check->>Check: 같은 응답의 키·표식과 보안 헤더 검사
+    Check->>Web: GET /data.json
+    Web-->>Check: HTTP 404
+    Check-->>Bundle: 실제 요청 4건의 점검 결과 5개
+    Bundle->>Bundle: 제출 필드 구성·비밀값 검사
+    Bundle->>Bundle: artifacts/submission.json 저장
+    Bundle-->>User: 단계·커밋·규칙·점검 개수 출력
+    Note over Bundle,Web: 7단계 당시의 HTTP 근거 · 심판 판정/재인증 실측 아님

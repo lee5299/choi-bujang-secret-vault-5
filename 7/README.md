@@ -282,3 +282,12 @@ npm.cmd run bundle을 실제 실행해 단계 7·규칙 두 개·직접 HTTP 자
 이 결과 기록을 저장한 뒤에는 최신 기록 커밋의 배포를 확인하고 같은 깨끗한 체크아웃에서 bundle을 다시 실행해 최종 JSON을 갱신합니다.
 최종 검증 메타데이터는 Git 제외 artifacts/stage7-preflight.json에 기록합니다. 이전 JSON은 로컬 보관합니다.
 제출 화면에는 기존 f40b48c JSON 대신 새 artifacts/submission.json의 전체 내용을 넣습니다. 보완판 점수는 재제출 후 확인합니다.
+
+## 전체 작업 정리 문서
+
+2026-10-13 작성한 [수정용 Markdown·GitHub 본문](작업정리.md)과 [PC 열람용 HTML](작업정리.html)에 7단계 작업을 모았습니다.
+구현 기준은 50986bb에서 c32ddfc까지이며 이후 단계의 변경은 포함하지 않습니다.
+[그림 원본·수정 안내](diagrams/README.md)와 [그림 미리보기](diagrams/preview.html)도 함께 보관합니다.
+파일 목록의 **7 → 작업정리.html**을 누르거나 프로젝트 루트에서 `Invoke-Item '7/작업정리.html'`을 실행합니다.
+정상 표시는 목차·표·배지·네 그림이며, 판정 기준은 정상 및 유효 재확인 뒤 allow·재확인 전 복합 이상 step_up·미등록 deny입니다.
+이번 문서 작성에서는 서비스 코드·설정·데이터를 고치거나 서비스 시험·bundle·심판 접수를 다시 실행하지 않았습니다.

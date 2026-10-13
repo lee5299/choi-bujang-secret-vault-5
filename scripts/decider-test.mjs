@@ -53,9 +53,19 @@ export async function checkDecider({ decide, ruleIds }) {
     checks.push(
       { name: '복합 이상 접속', request: suspicious, decision: 'step_up',
         reasonCode: 'step_up_required' },
-      { name: '다시 확인한 복합 이상 접속', request: { ...suspicious,
+      // verified 요약은 추가 확인 요청 이후의 새 로그인 증명이 아닙니다.
+      { name: '인증 요약만 있는 복합 이상 접속', request: { ...suspicious,
         requestId: randomUUID(), stepUp: { verified: true, authAgeSeconds: 60 } },
+      decision: 'step_up', reasonCode: 'step_up_required' },
+      { name: '등록 기기의 정상 수정', request: { ...normal,
+        requestId: randomUUID(), method: 'PUT', route: 'PUT /notes/:id' },
       decision: 'allow' },
+      { name: '낯선 네트워크·새벽·대량 수정', request: { ...suspicious,
+        requestId: randomUUID(), method: 'PUT', route: 'PUT /notes/:id' },
+      decision: 'step_up', reasonCode: 'step_up_required' },
+      { name: '미등록 기기의 복합 이상 수정', request: { ...suspicious,
+        requestId: randomUUID(), method: 'PUT', route: 'PUT /notes/:id', deviceRegistered: false },
+      decision: 'deny', reasonCode: 'device_not_registered' },
     );
   }
   const results = [];

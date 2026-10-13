@@ -1,7 +1,8 @@
 // The student changes this check as each stage adds an attack to the same app.
 // Never return tokens, private keys, real names, or note bodies.
 export async function runAttackChecks(config) {
-  if (![1, 3, 4, 5, 6, 7, 8].includes(config.step)) throw new Error('이 단계의 공격 점검을 src/attack-check.mjs에 구현해 주세요.');
+  if (![1, 3, 4, 5, 6, 7, 8, 9].includes(config.step)) throw new Error('이 단계의 공격 점검을 src/attack-check.mjs에 구현해 주세요.');
+  // 9단계도 기존 공개 HTTP 경로만 점검합니다. 이 결과로 탐지·회수·심판 통과를 주장하지 않습니다.
   let app;
   try {
     app = new URL(config.publicAppUrl);

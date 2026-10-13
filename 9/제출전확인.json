@@ -1,0 +1,250 @@
+{
+  "date": "2026-10-13",
+  "type": "local_replay_not_judge_result",
+  "codeChanged": false,
+  "source": "test/fixtures/stage9-events-proposal.json",
+  "localContract": {
+    "cases": 6,
+    "matched": 6
+  },
+  "studentProposal": {
+    "cases": 9,
+    "matched": 4,
+    "mismatches": [
+      "P03",
+      "P04",
+      "P05",
+      "P06",
+      "P07"
+    ]
+  },
+  "results": [
+    {
+      "group": "current_local_contract",
+      "id": "L01",
+      "name": "정상 조회 30건",
+      "events": 30,
+      "expected": {
+        "action": "observe"
+      },
+      "actual": {
+        "action": "observe"
+      },
+      "matched": true
+    },
+    {
+      "group": "current_local_contract",
+      "id": "L02",
+      "name": "정확히 120건",
+      "events": 120,
+      "expected": {
+        "action": "observe"
+      },
+      "actual": {
+        "action": "observe"
+      },
+      "matched": true
+    },
+    {
+      "group": "current_local_contract",
+      "id": "L03",
+      "name": "10분 안에 121건",
+      "events": 121,
+      "expected": {
+        "action": "propose_revocation",
+        "reasonCode": "burst_read",
+        "subject": "learner_fixture"
+      },
+      "actual": {
+        "action": "propose_revocation",
+        "reasonCode": "burst_read",
+        "subject": "learner_fixture"
+      },
+      "matched": true
+    },
+    {
+      "group": "current_local_contract",
+      "id": "L04",
+      "name": "폭주 조회 200건",
+      "events": 200,
+      "expected": {
+        "action": "propose_revocation",
+        "reasonCode": "burst_read",
+        "subject": "learner_fixture"
+      },
+      "actual": {
+        "action": "propose_revocation",
+        "reasonCode": "burst_read",
+        "subject": "learner_fixture"
+      },
+      "matched": true
+    },
+    {
+      "group": "current_local_contract",
+      "id": "L05",
+      "name": "다른 사용자 각각 100건",
+      "events": 200,
+      "expected": {
+        "action": "observe"
+      },
+      "actual": {
+        "action": "observe"
+      },
+      "matched": true
+    },
+    {
+      "group": "current_local_contract",
+      "id": "L06",
+      "name": "10분 밖으로 흩어진 200건",
+      "events": 200,
+      "expected": {
+        "action": "observe"
+      },
+      "actual": {
+        "action": "observe"
+      },
+      "matched": true
+    },
+    {
+      "group": "student_proposal_expectation",
+      "id": "P01",
+      "name": "정상 네트워크 정상 조회",
+      "events": 30,
+      "expected": {
+        "action": "observe"
+      },
+      "actual": {
+        "action": "observe"
+      },
+      "matched": true
+    },
+    {
+      "group": "student_proposal_expectation",
+      "id": "P02",
+      "name": "네트워크만 다름",
+      "events": 30,
+      "expected": {
+        "action": "observe"
+      },
+      "actual": {
+        "action": "observe"
+      },
+      "matched": true
+    },
+    {
+      "group": "student_proposal_expectation",
+      "id": "P03",
+      "name": "평소 네트워크에서 다량 조회",
+      "events": 121,
+      "expected": {
+        "action": "observe"
+      },
+      "actual": {
+        "action": "propose_revocation",
+        "reasonCode": "burst_read",
+        "subject": "learner_fixture"
+      },
+      "matched": false
+    },
+    {
+      "group": "student_proposal_expectation",
+      "id": "P04",
+      "name": "다른 네트워크와 다량 조회 결합",
+      "events": 121,
+      "expected": {
+        "action": "propose_revocation",
+        "reasonCode": "compound_read_anomaly",
+        "subject": "learner_fixture",
+        "deviceId": "1111111111111111"
+      },
+      "actual": {
+        "action": "propose_revocation",
+        "reasonCode": "burst_read",
+        "subject": "learner_fixture"
+      },
+      "matched": false
+    },
+    {
+      "group": "student_proposal_expectation",
+      "id": "P05",
+      "name": "같은 사용자 두 기기의 조회를 합산하지 않음",
+      "events": 200,
+      "expected": {
+        "action": "observe"
+      },
+      "actual": {
+        "action": "propose_revocation",
+        "reasonCode": "burst_read",
+        "subject": "learner_fixture"
+      },
+      "matched": false
+    },
+    {
+      "group": "student_proposal_expectation",
+      "id": "P06",
+      "name": "의심 기기만 제안하고 다른 정상 기기 유지",
+      "events": 151,
+      "expected": {
+        "action": "propose_revocation",
+        "reasonCode": "compound_read_anomaly",
+        "subject": "learner_fixture",
+        "deviceId": "1111111111111111"
+      },
+      "actual": {
+        "action": "propose_revocation",
+        "reasonCode": "burst_read",
+        "subject": "learner_fixture"
+      },
+      "matched": false
+    },
+    {
+      "group": "student_proposal_expectation",
+      "id": "P07",
+      "name": "네트워크 확인 불가",
+      "events": 121,
+      "expected": {
+        "action": "observe"
+      },
+      "actual": {
+        "action": "propose_revocation",
+        "reasonCode": "burst_read",
+        "subject": "learner_fixture"
+      },
+      "matched": false
+    },
+    {
+      "group": "student_proposal_expectation",
+      "id": "P08",
+      "name": "다른 네트워크지만 정확히 120건",
+      "events": 120,
+      "expected": {
+        "action": "observe"
+      },
+      "actual": {
+        "action": "observe"
+      },
+      "matched": true
+    },
+    {
+      "group": "student_proposal_expectation",
+      "id": "P09",
+      "name": "다른 네트워크지만 조회가 창 밖에 분산",
+      "events": 200,
+      "expected": {
+        "action": "observe"
+      },
+      "actual": {
+        "action": "observe"
+      },
+      "matched": true
+    }
+  ],
+  "notVerified": [
+    "actual_revocation",
+    "elapsed_time",
+    "revoked_identity_retry",
+    "stolen_session_reconnect",
+    "move_to_other_resource",
+    "judge_submission"
+  ]
+}

@@ -1,0 +1,27 @@
+sequenceDiagram
+    autonumber
+    actor Student as 학생 · 터미널
+    participant Bundle as 기존 생성기<br/>scripts/bundle.mjs
+    participant Files as Git · 설정 · 설명 파일
+    participant Check as 변경 · 자기 점검<br/>src/attack-check.mjs
+    participant Web as 기존 Vercel HTTPS
+    Student->>Bundle: npm.cmd run bundle (깨끗한 체크아웃)
+    Bundle->>Files: Git 상태 · HEAD · origin · 마지막 변경 파일 확인
+    Files-->>Bundle: 커밋 메타데이터
+    Bundle->>Files: HEAD 설정 · RULE_IDS · bundle-notes 읽기
+    Files-->>Bundle: 단계 6 · 규칙 1개 · 제출 설명
+    Bundle->>Check: await runAttackChecks(config)
+    Check->>Web: GET /api/notes (인증정보 없음)
+    Web-->>Check: 401 · JSON 오류
+    Check->>Web: GET /aleph.json
+    Web-->>Check: 200 · 배포 식별 JSON
+    Check->>Web: GET /
+    Web-->>Check: 200 · 첫 화면 HTML · 보안 헤더
+    Check->>Check: 같은 첫 화면에서 키·표식 / 헤더 각각 기록
+    Check->>Web: GET /data.json
+    Web-->>Check: 404
+    Check-->>Bundle: 공개 HTTP 4요청의 관측 5항목
+    Bundle->>Bundle: 관측 형식 · ID 중복 · 비밀값 패턴 검사
+    Bundle->>Files: artifacts/submission.json 쓰기 (Git 제외)
+    Bundle-->>Student: 생성 경로 · 단계 · 커밋 · 항목 수
+    Note over Student,Web: 심판 접수 요청 없음 / HEAD와 배포 커밋 일치는 별도 조회로 확인

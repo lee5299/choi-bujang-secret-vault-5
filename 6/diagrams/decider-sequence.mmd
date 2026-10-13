@@ -1,0 +1,19 @@
+sequenceDiagram
+    autonumber
+    actor Student as 학생 · 터미널
+    participant Test as 가상 시험기<br/>scripts/decider-test.mjs
+    participant Fixture as 기존 fixture<br/>fixture-7.mjs
+    participant Decide as 변경 · 판정기<br/>src/decider.mjs
+    Student->>Test: npm.cmd run decider:test
+    Test->>Fixture: fixtureRequests()
+    Fixture-->>Test: normal · suspicious 가상 요청
+    Test->>Test: 등록 여부·경계값 등을 바꿔 9건 준비
+    Note over Test,Decide: 운영 엔진·브라우저·인증서는 이 실행에 연결되지 않음
+    loop 가상 요청 9건을 순서대로 처리
+        Test->>Decide: await decide(request)
+        Decide->>Decide: deviceRegistered === true 확인
+        Decide-->>Test: 응답 5항목 · allow 또는 deny
+        Test->>Test: 형식·판정·이유 코드·규칙 이름 검사
+    end
+    Test-->>Student: 통과 여부 · 제한된 판정/이유 코드 출력
+    Note over Student,Decide: 정상 1건 허용 · 거부 8건 / 실제 심판 판정 아님

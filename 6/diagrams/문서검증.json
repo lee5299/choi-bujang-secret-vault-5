@@ -1,0 +1,210 @@
+{
+  "kind": "문서 렌더링 확인 · 서비스 보안 시험 아님",
+  "date": "2026-10-13",
+  "browser": "Microsoft Edge · 별도 임시 프로필 · headless",
+  "offline": true,
+  "html": [
+    {
+      "width": 1600,
+      "horizontalOverflow": false,
+      "images": [
+        {
+          "src": "diagrams/service-overview.svg",
+          "loaded": true
+        },
+        {
+          "src": "diagrams/decider-sequence.svg",
+          "loaded": true
+        },
+        {
+          "src": "diagrams/rule-flow.svg",
+          "loaded": true
+        },
+        {
+          "src": "diagrams/bundle-sequence.svg",
+          "loaded": true
+        }
+      ],
+      "badgeCount": 21,
+      "badgeWrongColumn": 0,
+      "badgeNotAtFront": 0,
+      "badgeStyle": [
+        {
+          "text": "신규",
+          "font": "12px",
+          "radius": "7px",
+          "padding": "1px 9px",
+          "border": "1px",
+          "background": "rgb(234, 247, 238)"
+        },
+        {
+          "text": "변경",
+          "font": "12px",
+          "radius": "7px",
+          "padding": "1px 9px",
+          "border": "1px",
+          "background": "rgb(237, 245, 255)"
+        }
+      ],
+      "toc": 8,
+      "brokenAnchors": 0,
+      "tableCount": 12,
+      "clippedCells": 0,
+      "scriptCount": 0
+    },
+    {
+      "width": 1280,
+      "horizontalOverflow": false,
+      "images": [
+        {
+          "src": "diagrams/service-overview.svg",
+          "loaded": true
+        },
+        {
+          "src": "diagrams/decider-sequence.svg",
+          "loaded": true
+        },
+        {
+          "src": "diagrams/rule-flow.svg",
+          "loaded": true
+        },
+        {
+          "src": "diagrams/bundle-sequence.svg",
+          "loaded": true
+        }
+      ],
+      "badgeCount": 21,
+      "badgeWrongColumn": 0,
+      "badgeNotAtFront": 0,
+      "badgeStyle": [
+        {
+          "text": "신규",
+          "font": "12px",
+          "radius": "7px",
+          "padding": "1px 9px",
+          "border": "1px",
+          "background": "rgb(234, 247, 238)"
+        },
+        {
+          "text": "변경",
+          "font": "12px",
+          "radius": "7px",
+          "padding": "1px 9px",
+          "border": "1px",
+          "background": "rgb(237, 245, 255)"
+        }
+      ],
+      "toc": 8,
+      "brokenAnchors": 0,
+      "tableCount": 12,
+      "clippedCells": 0,
+      "scriptCount": 0
+    },
+    {
+      "width": 800,
+      "horizontalOverflow": false,
+      "images": [
+        {
+          "src": "diagrams/service-overview.svg",
+          "loaded": true
+        },
+        {
+          "src": "diagrams/decider-sequence.svg",
+          "loaded": true
+        },
+        {
+          "src": "diagrams/rule-flow.svg",
+          "loaded": true
+        },
+        {
+          "src": "diagrams/bundle-sequence.svg",
+          "loaded": true
+        }
+      ],
+      "badgeCount": 21,
+      "badgeWrongColumn": 0,
+      "badgeNotAtFront": 0,
+      "badgeStyle": [
+        {
+          "text": "신규",
+          "font": "12px",
+          "radius": "7px",
+          "padding": "1px 9px",
+          "border": "1px",
+          "background": "rgb(234, 247, 238)"
+        },
+        {
+          "text": "변경",
+          "font": "12px",
+          "radius": "7px",
+          "padding": "1px 9px",
+          "border": "1px",
+          "background": "rgb(237, 245, 255)"
+        }
+      ],
+      "toc": 8,
+      "brokenAnchors": 0,
+      "tableCount": 12,
+      "clippedCells": 0,
+      "scriptCount": 0
+    }
+  ],
+  "diagrams": [
+    {
+      "name": "service-overview",
+      "viewBox": "0 0 1440 1050",
+      "legendCount": 1,
+      "legendText": [
+        "색상 범례 · 상태와 역할 구분"
+      ],
+      "textOutsideViewBox": []
+    },
+    {
+      "name": "decider-sequence",
+      "viewBox": "0 0 1100 1261",
+      "legendCount": 1,
+      "legendText": [
+        "색상 범례 · 상태와 역할 구분"
+      ],
+      "textOutsideViewBox": []
+    },
+    {
+      "name": "rule-flow",
+      "viewBox": "0 0 1100 1116.5999755859375",
+      "legendCount": 1,
+      "legendText": [
+        "색상 범례 · 상태와 역할 구분"
+      ],
+      "textOutsideViewBox": []
+    },
+    {
+      "name": "bundle-sequence",
+      "viewBox": "0 0 1259 1675",
+      "legendCount": 1,
+      "legendText": [
+        "색상 범례 · 상태와 역할 구분"
+      ],
+      "textOutsideViewBox": []
+    }
+  ],
+  "missingLocalLinks": [],
+  "remoteRequests": [],
+  "pageErrors": [],
+  "serviceTestsRerun": false,
+  "commitPushDeployExecuted": false,
+  "githubMarkdown": {
+    "renderer": "GitHub Markdown API · mode gfm",
+    "tables": 12,
+    "badgeImages": 21,
+    "rawCssSpans": 0,
+    "sourceLocalAbsolutePaths": 0
+  },
+  "visualReview": {
+    "reviewed": "HTML 표의 배지와 문서 상단, 그림 네 개",
+    "result": "표 배지는 기존 역할 칸 맨 앞; 한글·그림 잘림 없음"
+  },
+  "secretScan": {
+    "textFiles": 17,
+    "matches": 0
+  }
+}

@@ -1,0 +1,13 @@
+flowchart TD
+    A["계약에 맞는 request를 받음<br/>변경 · decide(request)"] --> B{"deviceRegistered === true ?"}
+    B -->|예 · boolean true| C["allow / approved"]
+    B -->|아니오 · false / 누락 / 잘못된 값| D["deny / device_not_registered"]
+    C --> E["응답 5항목 반환<br/>schema · requestId · decision<br/>reasonCode · ruleIds"]
+    D --> E
+    E --> F["ruleIds: device_registered<br/>등록 값의 출처·사용자 연결은 자체 검증하지 않음"]
+    classDef changed fill:#EDF5FF,stroke:#AAC7E5,color:#315A83,stroke-width:1px
+    classDef plain fill:#F1F5F9,stroke:#A6B2C3,color:#172B4D,stroke-width:1px
+    classDef denied fill:#FFF0F0,stroke:#D7A4A4,color:#9B3434,stroke-width:1px
+    class A,B changed
+    class C,E,F plain
+    class D denied

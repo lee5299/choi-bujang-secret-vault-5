@@ -1,0 +1,52 @@
+{
+  "theme": "base",
+  "securityLevel": "strict",
+  "fontFamily": "Malgun Gothic, Segoe UI, sans-serif",
+  "themeVariables": {
+    "fontFamily": "Malgun Gothic, Segoe UI, sans-serif",
+    "fontSize": "16px",
+    "primaryColor": "#F1F5F9",
+    "primaryTextColor": "#172B4D",
+    "primaryBorderColor": "#A6B2C3",
+    "secondaryColor": "#EDF5FF",
+    "tertiaryColor": "#F1F5F9",
+    "lineColor": "#718096",
+    "textColor": "#172B4D",
+    "actorBkg": "#F1F5F9",
+    "actorBorder": "#A6B2C3",
+    "actorTextColor": "#172B4D",
+    "actorLineColor": "#C5CFDC",
+    "signalColor": "#5D6B82",
+    "signalTextColor": "#172B4D",
+    "labelBoxBkgColor": "#FFFFFF",
+    "labelBoxBorderColor": "#A6B2C3",
+    "labelTextColor": "#172B4D",
+    "loopTextColor": "#172B4D",
+    "noteBkgColor": "#F1F5F9",
+    "noteBorderColor": "#A6B2C3",
+    "noteTextColor": "#172B4D",
+    "sequenceNumberColor": "#FFFFFF"
+  },
+  "sequence": {
+    "actorMargin": 48,
+    "width": 190,
+    "height": 62,
+    "messageMargin": 38,
+    "noteMargin": 20,
+    "boxMargin": 18,
+    "boxTextMargin": 14,
+    "diagramMarginX": 30,
+    "diagramMarginY": 24,
+    "mirrorActors": false,
+    "wrap": true,
+    "useMaxWidth": false
+  },
+  "flowchart": {
+    "curve": "linear",
+    "nodeSpacing": 48,
+    "rankSpacing": 52,
+    "htmlLabels": false,
+    "useMaxWidth": false
+  },
+  "themeCSS": ".actor { font-weight: 600; } rect.actor[name=\"Decide\"],rect.actor[name=\"Check\"],rect.actor[name=\"Test\"] {fill:#EDF5FF;stroke:#AAC7E5;} .messageText {font-size:16px;}"
+}

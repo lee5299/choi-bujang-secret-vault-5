@@ -8,3 +8,4 @@ local-only/
 5/cap/
 /data.json
 /public/data.json
+.claude/settings.local.json

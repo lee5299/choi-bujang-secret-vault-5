@@ -21,3 +21,17 @@
 `aleph.config.json`의 `judgeIssuer`는 운영 측이 ZIP을 만들 때 채운 심판 접수 서버 주소입니다. 학생 요청으로 바꾸거나 다른 발급자 주소로 대체하지 마세요.
 
 커밋 전에 포함할 파일과 비밀값 검사 결과를 보여 주세요. 비밀번호·토큰·개인키·서버 전용 키·실명·메모 본문은 제출 묶음에서 제외하세요. `bundle-notes.json`과 `artifacts/submission.json`은 커밋하지 마세요. `npm run bundle`에서 오류가 나면 첫 오류만 근거로 한 가지를 고치고 다시 실행하세요.
+
+## 반복 작업 절차
+
+아래 작업은 매 단계 같은 순서로 반복합니다. 해당 요청을 받으면 먼저 `docs/workflows/`의 절차 문서를 읽고 그 순서와 기록 형식을 따르세요.
+이전 단계 기록을 다시 조사해 절차나 형식을 추측하지 마세요. Claude도 같은 문서를 사용합니다.
+
+- 새 단계 시작(「폴더 N을 만들어주세요」·「이어받기」): `docs/workflows/stage-start.md`
+- 「제작 k」 구현과 기록: `docs/workflows/stage-build.md`
+- 저장점·제출 전 작업·bundle: `docs/workflows/savepoint.md`
+- 보너스 XDR 모듈: `docs/workflows/xdr-module.md`
+- 단계 작업정리 문서: `docs/workflows/work-summary.md`
+
+최종 총공세는 1~12단계에서 조치한 방어 전체가 한꺼번에 들어옵니다. 제작·저장점마다 `node --test test/*.test.mjs` 전체 회귀를 실행하고, 이전 단계 시험이 실패하면 완료로 보고하지 마세요.
+절차 문서와 이 파일이 다르면 이 파일이 우선합니다. 절차를 바꿔야 하면 사용자에게 먼저 알리고 `docs/workflows/` 문서만 고치세요.

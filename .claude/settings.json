@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(git ls-files:*)",
+      "Bash(git branch --show-current)",
+      "Bash(node --test:*)",
+      "Bash(npm.cmd run test:*)",
+      "Bash(npm run test:*)",
+      "Bash(npm.cmd run decider:test)",
+      "Bash(npm run decider:test)",
+      "Bash(npm.cmd run detect:test)",
+      "Bash(npm run detect:test)",
+      "Bash(npm.cmd run fixture:*)",
+      "Bash(npm run fixture:*)",
+      "Bash(npm.cmd run xdr:run:*)",
+      "Bash(npm run xdr:run:*)",
+      "Bash(npm.cmd run build -- --local)",
+      "Bash(npm run build -- --local)"
+    ],
+    "ask": [
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git pull:*)",
+      "Bash(git fetch:*)",
+      "Bash(git checkout:*)",
+      "Bash(git switch:*)",
+      "Bash(git restore:*)",
+      "Bash(git stash:*)",
+      "Bash(git rebase:*)",
+      "Bash(git merge:*)",
+      "Bash(git reset:*)",
+      "Bash(git rm:*)",
+      "Bash(git clone:*)",
+      "Bash(git remote:*)",
+      "Bash(npm.cmd run bundle)",
+      "Bash(npm run bundle)",
+      "Bash(npm.cmd install:*)",
+      "Bash(npm install:*)",
+      "Bash(npm.cmd ci)",
+      "Bash(npm ci)",
+      "Bash(npx:*)",
+      "Bash(vercel:*)",
+      "Bash(supabase:*)"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(**/.env)",
+      "Read(**/.env.*)",
+      "Edit(./.env)",
+      "Edit(./.env.*)",
+      "Bash(git reset --hard:*)",
+      "Bash(git clean:*)",
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)",
+      "Bash(git filter-repo:*)",
+      "Bash(cat .env:*)",
+      "Bash(type .env:*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard.mjs\"",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}

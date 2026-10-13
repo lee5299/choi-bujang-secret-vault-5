@@ -110,16 +110,26 @@ test('authenticated owner-scoped virtual memo CRUD and rejection contracts', asy
     await t.test('anonymous requests to every route return JSON 401 before DB access', async () => {
       delete process.env.SUPABASE_URL;
       delete process.env.SUPABASE_SECRET_KEY;
+      const originalWarn = console.warn;
+      const warnings = [];
+      console.warn = (...args) => warnings.push(args);
+      t.after(() => { console.warn = originalWarn; });
       for (const [method, id] of [['GET'], ['POST'], ['GET', randomUUID()], ['PUT', randomUUID()], ['DELETE', randomUUID()]]) {
         for (const authorization of [undefined, '', 'Bearer not-a-token', 'Basic ignored']) {
           const result = await request(authorization, method, { id, body: { userId: userA, role: 'admin' } });
           assert.equal(result.code, 401);
-          assert.deepEqual(Object.keys(result.body), ['message']);
+          assert.deepEqual(result.body, { error: 'login_required', message: '로그인이 필요하거나 로그인 정보가 유효하지 않습니다.' });
           assert.equal(result.headers['Cache-Control'], 'no-store');
         }
       }
       assert.equal(databaseCalls, 0);
       assert.equal(authCalls, 0);
+      // 거부 사유는 짧은 분류만 기록하고 헤더 값은 남기지 않습니다.
+      const reasons = new Set(warnings.map(([label, record]) => `${label}:${record.reason}`));
+      assert.deepEqual([...reasons].sort(), ['resource_api_unauthorized:MALFORMED_AUTHORIZATION', 'resource_api_unauthorized:NO_AUTHORIZATION']);
+      assert.ok(warnings.every(([, record]) => Object.keys(record).join(',') === 'reason,issuer'));
+      assert.doesNotMatch(JSON.stringify(warnings), /not-a-token|Basic ignored/u);
+      console.warn = originalWarn;
     });
     await t.test('missing settings produce generic 503', async () => {
       assert.equal((await request(bearerA)).code, 503);
@@ -176,7 +186,7 @@ test('authenticated owner-scoped virtual memo CRUD and rejection contracts', asy
         for (const [method, id] of [['POST'], ['PUT', noteId]]) {
           const result = await request(bearerA, method, { id, body: { title: 'Denied', body: '', ...spoof } });
           assert.equal(result.code, 400);
-          assert.deepEqual(Object.keys(result.body), ['message']);
+          assert.deepEqual(Object.keys(result.body), ['error', 'message']); assert.equal(result.body.error, 'field_not_allowed');
         }
       }
       assert.equal((await request(bearerA, 'PUT', {
@@ -230,7 +240,7 @@ test('authenticated owner-scoped virtual memo CRUD and rejection contracts', asy
       for (const method of ['GET', 'PUT', 'DELETE']) {
         const result = await request(bearerA, method, { id: noteId, body: { title: 'Virtual', body: '' } });
         assert.equal(result.code, 404);
-        assert.deepEqual(Object.keys(result.body), ['message']);
+        assert.deepEqual(Object.keys(result.body), ['error', 'message']); assert.equal(result.body.error, 'not_found_or_not_owner');
       }
       assert.deepEqual((await request(bearerA)).body, []);
     });
@@ -298,7 +308,7 @@ test('authenticated owner-scoped virtual memo CRUD and rejection contracts', asy
         for (const [method, note] of [['GET'], ['POST'], ['GET', id], ['PUT', id], ['DELETE', id]]) {
           const result = await request(`Bearer ${token}`, method, { id: note, body: { title: 'Denied fixture', body: '' } });
           assert.equal(result.code, 401);
-          assert.deepEqual(Object.keys(result.body), ['message']);
+          assert.deepEqual(result.body, { error: 'login_required', message: '로그인이 필요하거나 로그인 정보가 유효하지 않습니다.' });
         }
       }
       assert.equal(databaseCalls, callsBefore);
@@ -362,7 +372,7 @@ test('authenticated owner-scoped virtual memo CRUD and rejection contracts', asy
             id, body: { title: 'Denied change', body: '' }, query: { owner_id: judgeOwner, role: 'judge' },
           });
           assert.equal(result.code, 404);
-          assert.deepEqual(Object.keys(result.body), ['message']);
+          assert.deepEqual(Object.keys(result.body), ['error', 'message']); assert.equal(result.body.error, 'not_found_or_not_owner');
           assert.deepEqual(rows.get(id), previous);
         }
       }

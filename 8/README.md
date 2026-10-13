@@ -367,3 +367,41 @@ Claude가 SQL Editor에 강사 지정 SQL을 입력했고, 사용자가 직접 R
 - 새 시험: `test/announcements-ui.test.mjs`(학생 읽기만·강사 등록/수정/삭제·표시 값이 강사여도 서버 403이면 미등록), `test/auth-instructor.test.mjs`(검증된 ID·active=true 조회, 실패·미설정 false, 응답 세 항목).
 - 클라우드 확인: 실행 가능한 시험 166개 통과(공지 화면 3·강사 표시 2·메모 화면·판정기·XDR). `auth.test.mjs`·`notes.test.mjs`·`announcements.test.mjs`는 패키지 제한으로 클라우드 미실행, PC 전체 회귀로 확인.
 - 기존 미커밋 XDR-01 Jev 시험 화면은 이번 커밋에 넣지 않았습니다. 커밋용 파일과 작업 파일(공지+XDR)을 분리해 커밋 뒤 작업 파일로 되돌립니다.
+
+## 심판 판정 보류 원인 추적과 거부 사유 보완 (2026-10-13)
+
+### Vercel 요청 로그 확인
+
+사용자가 Claude 앱 브라우저에서 Vercel에 로그인했고, 프로젝트 요청 로그(보관 범위 15:29 이후)를 읽기 전용으로 확인했습니다.
+15:29·15:38·15:39·15:41(`aa8f00a` 배포)과 16:16·16:17·16:19(`a898a1b` 배포) 일곱 번의 채점에서 심판(User-Agent `ALEPH-Defense-Judge/1 (read-only)`, Railway)은
+매번 `GET /api/notes`, `GET /api/notes/00000000-0000-4000-8000-000000000001`, `GET /api/announcements`, `GET /api/announcements/00000000-0000-4000-8000-000000000001` 네 건만 보냈고 모두 401을 받았습니다.
+서버 처리 시간 5~33ms, 오류·시간 초과·함수 충돌 없음. 쓰기 요청과 심판 계정 메모 생성 기록은 없었습니다(DB에서도 확인).
+당시 401 응답은 `{"message": "..."}` 한 모양이었고 서버 로그에 401 사유가 남지 않아, 토큰 미전송과 토큰 검증 실패를 구분할 수 없었습니다.
+
+### 요구사항 대조 (제작 3)
+
+검증된 사용자와 저장된 소유자·강사 권한 대조, 화면 메뉴·본문 role 불신, 직접 API 요청에서 다른 구역 자료 미노출은 구현되어 있었습니다.
+「거부 사유를 짧게 남겨」는 부족했습니다: 404·403은 서버 로그에만 사유가 남고 응답에는 사유 코드가 없었으며, 401은 로그에도 사유가 없었습니다.
+
+### 보완 내용
+
+- 모든 거부 응답(4xx)에 짧은 사유 코드 `error`를 추가하고 기존 한국어 `message`와 상태 코드는 유지했습니다. 자료 필드는 넣지 않습니다.
+
+| 상황 | 상태 | `error` |
+| --- | --- | --- |
+| 로그인 없음·토큰 무효·종료된 세션 | 401 | `login_required` |
+| 다른 사람 메모·없는 메모, 다른 강사 공지·없는 공지 | 404 | `not_found_or_not_owner` (존재 여부를 구분하지 않음) |
+| 학생의 공지 추가·수정·삭제 | 403 | `instructor_required` |
+| 허용되지 않은 경로(export 등) | 404 | `route_not_allowed` |
+| 소유자·role 등 허용되지 않은 본문 항목 | 400 | `field_not_allowed` |
+| 형식 오류·UUID 아님·JSON 아님 | 400·415 | `invalid_request` |
+| 지원하지 않는 메서드 / 이미 쓰는 메모 ID | 405 / 409 | `method_not_allowed` / `id_conflict` |
+
+- 401은 서버 로그(`console.warn`)에 `resource_api_unauthorized { reason, issuer }`만 남깁니다.
+  reason: `NO_AUTHORIZATION`·`MALFORMED_AUTHORIZATION`·`TOKEN_REJECTED`·`SESSION_REJECTED`, issuer: `none`·`judge`·`student`·`other`·`unreadable`.
+  토큰 원문·서명·사용자 ID는 기록하지 않으며, issuer는 서명 검증 전 값이므로 판정에 쓰지 않고 분류에만 씁니다.
+- 5xx(서버·DB 장애)는 거부가 아니므로 기존 일반 메시지를 유지했습니다.
+- 변경 파일: `src/resource-auth.mjs`, `api/notes.js`, `api/announcements.js`, `test/notes.test.mjs`, `test/announcements.test.mjs`. 판정기·DB·화면·허용 경로는 바꾸지 않았습니다.
+- 확인: PC의 `node_modules`를 클라우드로 복사해 커밋 상태 + 이번 변경으로 전체 시험 `node --test test/*.test.mjs` **198개 통과·실패 0** (메모·공지·로그인 API 시험 포함).
+  시험은 401 응답 본문·사유 로그 분류와 헤더 값 미기록, 403·404·400 사유 코드, 다른 사람 메모와 없는 메모의 응답 동일성을 확인합니다.
+- 미실행: 배포 후 심판 재제출. 다음 채점 때 Vercel 로그의 `resource_api_unauthorized` 사유로 심판의 토큰 전송 여부를 확인합니다.

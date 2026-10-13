@@ -16,22 +16,22 @@ export async function handleAnnouncements(request, response, detail = false) {
   const resource = resolveResource(requestPath(request.url), request.method);
   if (!resource || resource.kind !== 'announcements' || Boolean(resource.id) !== detail
       || !requestPath(request.url).startsWith('/api/')) {
-    return response.status(404).json({ message: '허용되지 않은 자료 경로입니다.' });
+    return response.status(404).json({ error: 'route_not_allowed', message: '허용되지 않은 자료 경로입니다.' });
   }
   response.setHeader('X-Resource-Id', resource.resourceId);
   // 심판 신원도 강사로 승격하지 않습니다. 검증한 사용자 ID만 DB 권한 검사로 전달합니다.
   const payload = { p_user_id: identity.userId, p_method: request.method, p_id: resource.id };
   if (['POST', 'PUT'].includes(request.method)) {
     if (!/^application\/json(?:\s*;|$)/iu.test(request.headers?.['content-type'] ?? '')) {
-      return response.status(415).json({ message: 'JSON 형식으로 요청하세요.' });
+      return response.status(415).json({ error: 'invalid_request', message: 'JSON 형식으로 요청하세요.' });
     }
     let input = request.body;
     try { if (typeof input === 'string' || Buffer.isBuffer(input)) input = JSON.parse(input.toString()); }
-    catch { return response.status(400).json({ message: '올바른 JSON을 보내세요.' }); }
+    catch { return response.status(400).json({ error: 'invalid_request', message: '올바른 JSON을 보내세요.' }); }
     if (!input || Array.isArray(input) || typeof input.title !== 'string' || !input.title.trim()
         || input.title.length > 200 || typeof input.body !== 'string' || input.body.length > 10000
         || Object.keys(input).some(key => !['title', 'body'].includes(key))) {
-      return response.status(400).json({ message: '허용된 제목과 본문만 보내세요.' });
+      return response.status(400).json({ error: 'field_not_allowed', message: '허용된 제목과 본문만 보내세요.' });
     }
     payload.p_title = input.title; payload.p_content = input.body;
   }
@@ -51,7 +51,9 @@ export async function handleAnnouncements(request, response, detail = false) {
   }
   if (result.status >= 400) {
     console.error('announcements_api_denied', { reason: result.status === 403 ? 'INSTRUCTOR_REQUIRED' : 'RESOURCE_NOT_OWNED_OR_MISSING' });
-    return response.status(result.status).json({ message: result.status === 403 ? '강사 권한이 필요합니다.' : '공지를 찾을 수 없습니다.' });
+    return response.status(result.status).json(result.status === 403
+      ? { error: 'instructor_required', message: '강사 권한이 필요합니다.' }
+      : { error: 'not_found_or_not_owner', message: '공지를 찾을 수 없습니다.' });
   }
   if ((request.method === 'POST' || detail) && result.rows.length !== 1
       || result.rows.some(row => !UUID.test(row?.id ?? '') || typeof row?.title !== 'string'

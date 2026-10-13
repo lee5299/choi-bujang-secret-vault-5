@@ -23,44 +23,44 @@ export async function handleNotes(request, response, noteId = null) {
   // 사용자 ID와 역할은 요청 본문/쿼리가 아니라 위 도우미의 검증 결과만 사용합니다.
   const detail = noteId !== null;
   if (detail && (typeof noteId !== 'string' || !uuid.test(noteId))) {
-    return response.status(400).json({ message: '메모 ID는 UUID여야 합니다.' });
+    return response.status(400).json({ error: 'invalid_request', message: '메모 ID는 UUID여야 합니다.' });
   }
   const path = requestPath(request.url);
   const resource = resolveResource(path, request.method);
   if (path !== (detail ? `/api/notes/${noteId}` : '/api/notes')) {
-    return response.status(404).json({ message: '허용되지 않은 자료 경로입니다.' });
+    return response.status(404).json({ error: 'route_not_allowed', message: '허용되지 않은 자료 경로입니다.' });
   }
   const methods = detail ? ['GET', 'PUT', 'DELETE'] : ['GET', 'POST'];
   if (!methods.includes(request.method)) {
     response.setHeader('Allow', methods.join(', '));
-    return response.status(405).json({ message: '지원하지 않는 요청 방식입니다.' });
+    return response.status(405).json({ error: 'method_not_allowed', message: '지원하지 않는 요청 방식입니다.' });
   }
-  if (!resource) return response.status(404).json({ message: '허용되지 않은 자료 경로입니다.' });
+  if (!resource) return response.status(404).json({ error: 'route_not_allowed', message: '허용되지 않은 자료 경로입니다.' });
   response.setHeader('X-Resource-Id', resource.resourceId);
 
   let payload;
   if (request.method === 'POST' || request.method === 'PUT') {
     if (!/^application\/json(?:\s*;|$)/iu.test(request.headers?.['content-type'] ?? '')) {
-      return response.status(415).json({ message: 'JSON 형식으로 요청하세요.' });
+      return response.status(415).json({ error: 'invalid_request', message: 'JSON 형식으로 요청하세요.' });
     }
     let input = request.body;
     try {
       if (typeof input === 'string' || Buffer.isBuffer(input)) input = JSON.parse(input.toString());
     } catch {
-      return response.status(400).json({ message: '올바른 JSON을 보내세요.' });
+      return response.status(400).json({ error: 'invalid_request', message: '올바른 JSON을 보내세요.' });
     }
     if (!input || Array.isArray(input) || typeof input.title !== 'string'
       || !input.title.trim() || input.title.length > 200
       || typeof input.body !== 'string' || input.body.length > 10000) {
-      return response.status(400).json({ message: '제목은 1~200자, 본문은 10,000자 이내로 입력하세요.' });
+      return response.status(400).json({ error: 'invalid_request', message: '제목은 1~200자, 본문은 10,000자 이내로 입력하세요.' });
     }
     const allowedFields = request.method === 'POST' ? ['id', 'title', 'body'] : ['title', 'body'];
     if (Object.keys(input).some(field => !allowedFields.includes(field))) {
-      return response.status(400).json({ message: '허용되지 않은 메모 항목입니다. 소유자는 변경할 수 없습니다.' });
+      return response.status(400).json({ error: 'field_not_allowed', message: '허용되지 않은 메모 항목입니다. 소유자는 변경할 수 없습니다.' });
     }
     if (request.method === 'POST' && input.id !== undefined
       && (typeof input.id !== 'string' || !uuid.test(input.id))) {
-      return response.status(400).json({ message: '메모 ID는 UUID여야 합니다.' });
+      return response.status(400).json({ error: 'invalid_request', message: '메모 ID는 UUID여야 합니다.' });
     }
     // 추가·수정의 새 행 소유자는 검증된 사용자로 고정합니다.
     payload = { title: input.title, content: input.body, owner_id: identity.userId };
@@ -103,7 +103,7 @@ export async function handleNotes(request, response, noteId = null) {
   }
   if (!upstream.ok) {
     if (upstream.status === 409 && request.method === 'POST') {
-      return response.status(409).json({ message: '이미 사용 중인 메모 ID입니다.' });
+      return response.status(409).json({ error: 'id_conflict', message: '이미 사용 중인 메모 ID입니다.' });
     }
     const reason = upstream.status === 401 ? 'DB_AUTH_REJECTED'
       : upstream.status === 403 ? 'DB_ACCESS_DENIED'
@@ -124,7 +124,7 @@ export async function handleNotes(request, response, noteId = null) {
     }
     if (detail && !rows.length) {
       console.error('notes_api_denied', { reason: 'RESOURCE_NOT_OWNED_OR_MISSING' });
-      return response.status(404).json({ message: '메모를 찾을 수 없습니다.' });
+      return response.status(404).json({ error: 'not_found_or_not_owner', message: '메모를 찾을 수 없습니다.' });
     }
     if (request.method === 'POST') {
       if (rows.length !== 1 || rows[0].id !== payload.id) throw new Error('Invalid insert');

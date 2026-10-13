@@ -84,7 +84,8 @@ test('최종 공지 API: 검증 사용자·저장 강사 권한·소유자 재�
   await t.test('모든 무로그인·서명 위조 요청은 DB 호출 전 401', async () => {
     for (const auth of [undefined, 'Bearer invalid', forgedAuth]) {
       for (const [method, note] of [['GET'], ['POST'], ['GET', randomUUID()], ['PUT', randomUUID()], ['DELETE', randomUUID()]]) {
-        assert.equal((await request(auth, method, { id: note, body })).code, 401);
+        const denied = await request(auth, method, { id: note, body });
+        assert.equal(denied.code, 401); assert.equal(denied.body.error, 'login_required');
       }
     }
     assert.equal(rpcCalls, 0);
@@ -107,13 +108,16 @@ test('최종 공지 API: 검증 사용자·저장 강사 권한·소유자 재�
     for (const [method, note] of [['POST'], ['PUT', id], ['DELETE', id]]) {
       const result = await request(studentAuth, method, { id: note, body, query: { role: 'instructor', owner_id: teacher } });
       assert.equal(result.code, 403); assert.equal(lastPayload.p_user_id, student);
+      assert.deepEqual(result.body, { error: 'instructor_required', message: '강사 권한이 필요합니다.' });
     }
     assert.equal(rows.get(id).title, 'Edited fixture');
-    assert.equal((await request(otherAuth, 'PUT', { id, body })).code, 404);
+    const otherTeacherEdit = await request(otherAuth, 'PUT', { id, body });
+    assert.equal(otherTeacherEdit.code, 404); assert.equal(otherTeacherEdit.body.error, 'not_found_or_not_owner');
     assert.equal((await request(otherAuth, 'DELETE', { id })).code, 404);
     for (const extra of [{ role: 'instructor' }, { owner_id: teacher }, { resourceId: resourceId('announcements', id) }]) {
       const before = rpcCalls;
-      assert.equal((await request(studentAuth, 'PUT', { id, body: { ...body, ...extra } })).code, 400);
+      const spoofed = await request(studentAuth, 'PUT', { id, body: { ...body, ...extra } });
+      assert.equal(spoofed.code, 400); assert.equal(spoofed.body.error, 'field_not_allowed');
       assert.equal(rpcCalls, before);
     }
   });
@@ -122,7 +126,8 @@ test('최종 공지 API: 검증 사용자·저장 강사 권한·소유자 재�
     assert.equal(lastPayload.p_method, 'GET'); assert.equal(lastPayload.p_id, id); assert.ok(rows.has(id));
     for (const path of ['/api/announcements/export', `/api/announcements/${id}/export`, `/api/notes/${id}`, '/api/announcements/%2e%2e']) {
       const before = rpcCalls;
-      assert.equal((await request(teacherAuth, 'GET', { id, path })).code, 404);
+      const blocked = await request(teacherAuth, 'GET', { id, path });
+      assert.equal(blocked.code, 404); assert.equal(blocked.body.error, 'route_not_allowed');
       assert.equal(rpcCalls, before);
     }
   });

@@ -86,7 +86,9 @@ SQL은 학생이 검토한 뒤 학습 DB에서 실행합니다.
 - [ ] 제작 3 원문 대상: 확인된 가상 기기 한 개 지정은 공식 연결·응답 계약 확인 후 진행. 로컬 propose_revocation·burst_read·subject는 구현 완료이며 decide 응답은 보존.
 - [ ] N7의 실제 bundle 출력 미노출 확인: 사건 결과·로그·임시 저장소는 합성 입력 시험으로 확인. 이번에는 bundle 미실행이며 저장점에서 확인.
 - [ ] 제작마다 요구사항 행의 가상 시험과 전체 회귀 `node --test test/*.test.mjs` 실행. 이전 단계 실패가 있으면 완료로 보고하지 않음.
-- [ ] 저장점 요청 시 docs/workflows/savepoint.md에 따라 문서·설정·구현 규칙 대조, 비밀값 검사, 지정 파일 커밋 후 bundle 실행. 이번에는 미실행.
+- [ ] 정확한 GitHub 목적지 main 업로드 승인 후 9단계 배포·최종 JSON 일치 확인. 자동 승인 심사가 git push를 거부했으므로 승인 전 우회하지 않음.
+  코드 저장점 1242f4f·7단계 문서 병합 c8345d7·비밀값 검사·깨끗한 사본 빌드·로컬 bundle 생성은 완료해 9/README.md에 기록.
+  현재 공개 배포는 step 8·f07ac95이며 artifacts/stage9-preflight.json의 finalSubmissionReady는 false. 실제 심판 접수도 미실행.
 
 심판 측 확인(Q5·Q6·M2~M4)은 실제 회수·경과 시간·회수된 신원 재시도·탈취 세션 재접속·다른 자원 이동 거부입니다.
 학생 제작의 완료 조건이나 선행 차단 항목으로 두지 않으며, 자체 회수 API·decide 회수 상태 검사를 이번 단계에서 추가하지 않습니다.

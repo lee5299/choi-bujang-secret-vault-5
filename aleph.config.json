@@ -10,16 +10,12 @@
     "audience": "authenticated"
   },
   "allowedRoutes": [
-    "GET /api/notes",
     "POST /api/notes",
     "GET /api/notes/:id",
     "PUT /api/notes/:id",
     "DELETE /api/notes/:id",
     "GET /api/announcements",
-    "POST /api/announcements",
-    "GET /api/announcements/:id",
-    "PUT /api/announcements/:id",
-    "DELETE /api/announcements/:id"
+    "GET /api/announcements/:id"
   ],
   "originalApiUrl": "https://kwmdcywakbaydceasxpx.supabase.co/rest/v1/library_notes",
   "restoreRoute": null

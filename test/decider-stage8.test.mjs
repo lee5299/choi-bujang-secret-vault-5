@@ -14,7 +14,7 @@ test('8단계 사용자·기기·동작·정확한 경로와 이전 판정 규�
   policy.grants.push({ subjectId: 'instructor_fixture', deviceId: 'b'.repeat(16), method: 'PUT',
     path: `/announcements/${fixtureAnnouncementId}` });
   process.env.ALEPH_RESOURCE_POLICY_JSON = JSON.stringify(policy);
-  assert.deepEqual(RULE_IDS, ['device_registered', 'step_up_required', 'resource_scope']);
+  assert.deepEqual(RULE_IDS, ['device_registered', 'step_up_required', 'resource_scope', 'announcement_zone', 'instructor_material_zone']);
   const check = async (request, expected, reason) => {
     const copy = structuredClone(request);
     const result = await decide(request);
@@ -119,7 +119,7 @@ test('권한표가 없을 때 기본 구역 규칙: 6·7단계 결과 유지, �
       await check({ ...normal, method: 'PUT', route: 'PUT /notes/:id' }, 'allow');
       await check({ ...normal, method: 'DELETE', route: 'DELETE /notes/:id' }, 'allow');
       // 메모 전체 목록은 여러 사람의 자료를 한꺼번에 여는 경로이므로 거부
-      await check({ ...normal, path: '/notes', route: 'GET /notes' }, 'deny', 'step_up_required');
+      await check({ ...normal, path: '/notes', route: 'GET /notes' }, 'deny', 'note_zone_denied');
       await check({ ...normal, path: '/api/notes', route: 'GET /api/notes' }, 'deny');
       await check({ ...normal, method: 'POST', path: '/notes', route: 'POST /notes' }, 'allow');
       await check({ ...normal, path: `/api/notes/${fixtureNoteId}`, route: 'GET /api/notes/:id' }, 'allow');
@@ -127,9 +127,9 @@ test('권한표가 없을 때 기본 구역 규칙: 6·7단계 결과 유지, �
       await check(notice, 'allow');
       await check({ ...notice, path: '/announcements', route: 'GET /announcements' }, 'allow');
       for (const method of ['PUT', 'DELETE']) {
-        await check({ ...notice, method, route: `${method} /announcements/:id` }, 'deny', 'step_up_required');
+        await check({ ...notice, method, route: `${method} /announcements/:id` }, 'deny', 'announcement_write_denied');
       }
-      await check({ ...notice, method: 'POST', path: '/announcements', route: 'POST /announcements' }, 'deny');
+      await check({ ...notice, method: 'POST', path: '/announcements', route: 'POST /announcements' }, 'deny', 'announcement_write_denied');
       await check({ ...notice, method: 'PUT', route: 'PUT /announcements/:id', role: 'instructor',
         identity: { role: 'teacher' } }, 'deny');
       await check({ ...suspicious, path: notice.path, method: 'PUT', route: 'PUT /announcements/:id',
@@ -153,8 +153,29 @@ test('권한표가 없을 때 기본 구역 규칙: 6·7단계 결과 유지, �
       for (const word of ['export', 'ALL', 'list', 'search', 'download']) {
         await check({ ...normal, path: `/notes/${word}`, route: 'GET /notes/:id' }, 'deny');
       }
-      await check({ ...notice, method: 'PATCH', route: 'PATCH /announcements/:id' }, 'deny');
-      await check({ ...normal, path: '/instructor/materials/1', route: 'PUT /instructor/materials/:id', method: 'PUT' }, 'deny');
+      await check({ ...notice, method: 'PATCH', route: 'PATCH /announcements/:id' }, 'deny', 'announcement_write_denied');
+      // 강사 자료 구역: 경로 표기·동작·service와 무관하게 모든 요청을 구역 규칙으로 거부
+      for (const input of [
+        { path: '/instructor/materials/1', route: 'PUT /instructor/materials/:id', method: 'PUT' },
+        { path: '/materials/m1', route: 'GET /materials/:id' }, { path: '/api/materials/m1', route: 'GET /api/materials/:id' },
+        { path: '/materials', route: 'GET /materials' }, { path: '/materials/m1', route: 'DELETE /materials/:id', method: 'DELETE' },
+        { service: 'materials', path: '/materials/m1', route: 'GET /materials/:id' },
+        { service: 'materials', path: normal.path },
+      ]) {
+        const result = await check({ ...normal, ...input }, 'deny', 'instructor_material_denied');
+        assert.ok(result.ruleIds.includes('instructor_material_zone'));
+      }
+      // 공지 구역: service로 와도 쓰기는 공지 구역 규칙으로 거부, 읽기는 허용
+      const write = await check({ ...notice, service: 'announcements', method: 'PUT', route: 'PUT /announcements/:id' },
+        'deny', 'announcement_write_denied');
+      assert.ok(write.ruleIds.includes('announcement_zone'));
+      const read = await check({ ...notice, service: 'announcements' }, 'allow', 'approved');
+      assert.ok(read.ruleIds.includes('announcement_zone'));
+      await check({ ...notice, path: `/api/announcements/${fixtureAnnouncementId}`, route: 'DELETE /api/announcements/:id',
+        method: 'DELETE' }, 'deny', 'announcement_write_denied');
+      // 알 수 없는 경로·기능 경로는 구역 밖 거부
+      await check({ ...normal, path: '/unknown', route: 'GET /unknown' }, 'deny', 'resource_scope_denied');
+      await check({ ...normal, path: '/notes/export', route: 'GET /notes/:id' }, 'deny', 'resource_scope_denied');
       // 계약에 소유자 정보가 없어 판정기는 다른 사용자의 메모 ID를 구별하지 못합니다.
       // 이 요청은 자료 API가 저장된 소유자로 404 처리합니다 (test/notes.test.mjs).
       await check({ ...normal, subjectId: 'learner_b_fixture' }, 'allow');
@@ -162,6 +183,6 @@ test('권한표가 없을 때 기본 구역 규칙: 6·7단계 결과 유지, �
   }
   await t.test('설정했지만 깨진 권한표는 기본 규칙으로 바꾸지 않고 모두 거부', async () => {
     process.env.ALEPH_RESOURCE_POLICY_JSON = '{broken';
-    await check(normal, 'deny', 'step_up_required');
+    await check(normal, 'deny', 'resource_policy_invalid');
   });
 });

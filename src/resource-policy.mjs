@@ -6,24 +6,31 @@ const grantFields = ['subjectId', 'deviceId', 'method', 'path'];
 const exactKeys = (value, keys) => value && typeof value === 'object' && !Array.isArray(value)
   && Object.keys(value).length === keys.length && keys.every(key => Object.hasOwn(value, key));
 
-// 8단계 구역 규칙 (심판 지적 S08_OWN_BROKEN·S08_OTHER_ZONE_ALLOWED 반영).
-// - 메모 한 건(GET·PUT·DELETE /notes/:id)과 메모 추가(POST /notes)는 허용합니다.
-//   계약에 메모 소유자가 없으므로 주인 비교는 자료 API가 저장된 소유자로 합니다 (다른 사람 메모는 404).
-// - 메모 전체 목록(GET /notes)은 여러 사람의 자료를 한꺼번에 여는 경로이므로 판정기에서 거부합니다.
-// - 계약에 역할이 없으므로 공지 쓰기(POST·PUT·PATCH·DELETE)는 누구에게나 거부합니다. 공지 읽기만 허용합니다.
-// - 알 수 없는 경로, export 같은 기능 경로, 추가 깊이, 쿼리 요청은 거부합니다.
-// 이 고정 거부는 권한표가 있어도 먼저 적용합니다.
+// 8단계 구역 규칙. 판정기는 계약의 service·method·path·route만 사용합니다.
+// 계약에 역할·자료 소유자가 없으므로 메모 한 건의 주인 비교는 자료 API가 저장된 소유자로 수행합니다(다른 사람 메모 404).
+// 자료 ID 형식(UUID 등)은 판정기에서 강제하지 않습니다. 심판의 가상 요청 ID가 UUID가 아닐 수 있습니다.
+//
+// 구역              | service        | 경로                                   | 허용            | 거부 사유
+// 메모              | notes          | /notes(/:id), /api/notes(/:id)         | 한 건 GET·PUT·DELETE, 추가 POST | note_zone_denied (전체 목록 GET 등)
+// 반 공지           | announcements  | /announcements(/:id), /api/announcements(/:id) | GET     | announcement_write_denied (POST·PUT·PATCH·DELETE)
+// 강사 자료         | materials      | /materials(/:id), /api/materials(/:id) | 없음            | instructor_material_denied (모든 요청)
+// 그 밖의 경로·기능 경로·쿼리 요청은 resource_scope_denied 입니다. 이 구역 규칙은 권한표가 있어도 먼저 적용합니다.
+const ZONES = Object.freeze({
+  notes: Object.freeze({ item: ['GET', 'PUT', 'DELETE'], collection: ['POST'], reasonCode: 'note_zone_denied', ruleId: 'resource_scope' }),
+  announcements: Object.freeze({ item: ['GET'], collection: ['GET'], reasonCode: 'announcement_write_denied', ruleId: 'announcement_zone' }),
+  materials: Object.freeze({ item: [], collection: [], reasonCode: 'instructor_material_denied', ruleId: 'instructor_material_zone' }),
+});
+const SCOPE_DENIED = Object.freeze({ allowed: false, reasonCode: 'resource_scope_denied', ruleId: 'resource_scope' });
 const FEATURE_SEGMENTS = new Set(['export', 'exports', 'all', 'list', 'search', 'bulk', 'batch', 'download',
   'dump', 'backup', 'admin', 'share', 'shared', 'public', 'import', 'sync', 'count', 'stats', 'everyone']);
-const PATH_SHAPE = /^(\/api)?\/(notes|announcements)(?:\/([A-Za-z0-9_-]{1,128}))?$/u;
-const ROUTE_SHAPE = /^(GET|POST|PUT|PATCH|DELETE) (\/api)?\/(notes|announcements)(\/:id)?$/u;
-const ZONE_RULES = Object.freeze({
-  notes: { item: ['GET', 'PUT', 'DELETE'], collection: ['POST'] },
-  announcements: { item: ['GET'], collection: ['GET'] },
-});
+const PATH_SHAPE = /^(\/api)?\/(notes|announcements|materials)(?:\/([A-Za-z0-9_-]{1,128}))?$/u;
+const ROUTE_SHAPE = /^(GET|POST|PUT|PATCH|DELETE) (\/api)?\/(notes|announcements|materials)(\/:id)?$/u;
+// 강사 자료는 표기와 깊이에 관계없이 구역 전체를 거부합니다.
+const MATERIALS_PATH = /^(\/api)?\/(instructor[-_/])?materials(\/|$)/iu;
 
-// 엔진이 확인한 route 모양과 실제 path가 같은 자료 종류·깊이·동작인지 확인합니다.
-// 자료 ID 형식(UUID 등)은 판정기에서 강제하지 않습니다. 접두사(/api 유무)는 엔진 표기 차이로 허용합니다.
+const deny = kind => Object.freeze({ allowed: false, reasonCode: ZONES[kind].reasonCode, ruleId: ZONES[kind].ruleId });
+
+// 엔진이 확인한 route 모양과 실제 path가 같은 자료 종류·깊이·동작인지 확인합니다. 접두사(/api 유무)는 엔진 표기 차이로 허용합니다.
 export function zoneOf(request) {
   if (!request || typeof request.path !== 'string' || typeof request.route !== 'string'
       || typeof request.method !== 'string') return null;
@@ -38,10 +45,6 @@ export function zoneOf(request) {
   return { kind, item, method };
 }
 
-function zoneAllowed(zone) {
-  return Boolean(zone) && ZONE_RULES[zone.kind][zone.item ? 'item' : 'collection'].includes(zone.method);
-}
-
 function engineRequest(request) {
   return request.deviceRegistered === true && request.schema === 'aleph.decision.v1'
     && typeof request.subjectId === 'string' && request.subjectId.length > 0 && request.subjectId.length <= 256
@@ -50,15 +53,31 @@ function engineRequest(request) {
     && Number.isSafeInteger(request.queryLength) && request.queryLength === 0;
 }
 
+// 구역 규칙만으로 판단합니다. 허용이면 { allowed: true, ruleId }, 거부면 사유 코드와 규칙 이름을 돌려줍니다.
+export function inspectZone(request) {
+  const path = typeof request?.path === 'string' ? request.path : '';
+  const method = typeof request?.method === 'string' ? request.method : '';
+  // 강사 자료 구역: 모든 요청 거부.
+  if (request?.service === 'materials' || MATERIALS_PATH.test(path)) return deny('materials');
+  // 반 공지 구역: 읽기만 허용, 쓰기는 누구에게나 거부 (계약에 역할 없음).
+  const announcementPath = /^(\/api)?\/announcements(\/|$)/u.test(path);
+  if ((request?.service === 'announcements' || announcementPath) && method !== 'GET') return deny('announcements');
+  if (!engineRequest(request)) return SCOPE_DENIED;
+  const zone = zoneOf(request);
+  if (!zone) return SCOPE_DENIED;
+  const rule = ZONES[zone.kind];
+  if (!rule[zone.item ? 'item' : 'collection'].includes(zone.method)) return deny(zone.kind);
+  return Object.freeze({ allowed: true, reasonCode: 'approved', ruleId: rule.ruleId });
+}
+
 // 관리자가 공식 서버 설정에 넣은 권한표가 있으면 고정 구역 규칙을 통과한 요청에 한해 그 표를 추가로 따릅니다.
 // 권한표 변수가 없으면 고정 구역 규칙만 사용하고, 있는데 깨졌거나 만료됐으면 모두 거부합니다.
 // 브라우저/요청의 policy·role·owner는 읽지 않습니다.
 export function inspectResourcePolicy(request, raw = process.env.ALEPH_RESOURCE_POLICY_JSON) {
-  const denied = { allowed: false, reasonCode: 'step_up_required' };
-  const zoneOk = engineRequest(request) && zoneAllowed(zoneOf(request));
-  if (raw === undefined || (typeof raw === 'string' && raw.trim() === '')) {
-    return { allowed: zoneOk, reasonCode: denied.reasonCode, mode: 'default' };
-  }
+  const zone = inspectZone(request);
+  if (!zone.allowed) return { ...zone, mode: 'zone' };
+  if (raw === undefined || (typeof raw === 'string' && raw.trim() === '')) return { ...zone, mode: 'default' };
+  const denied = { allowed: false, reasonCode: 'resource_policy_invalid', ruleId: 'resource_scope' };
   let policy;
   try { policy = typeof raw === 'string' && raw.length <= 256 * 1024 ? JSON.parse(raw) : null; } catch { return denied; }
   if (!exactKeys(policy, ['schema', ...fields, 'expiresAt', 'denyReasonCode', 'grants'])
@@ -75,8 +94,8 @@ export function inspectResourcePolicy(request, raw = process.env.ALEPH_RESOURCE_
       && text(grant.subjectId) && /^[a-f0-9]{16}$/u.test(grant.deviceId ?? '')
       && resolveResource(grant.path, grant.method))) return denied;
   const resource = resolveResource(request.path, request.method);
-  if (!zoneOk || !resource || request.route !== resource.route
+  if (!resource || request.route !== resource.route
       || !fields.every(key => request[key] === policy[key])) return denied;
-  return { allowed: policy.grants.some(grant => grantFields.every(key => grant[key] === request[key])),
-    reasonCode: policy.denyReasonCode, mode: 'policy' };
+  const granted = policy.grants.some(grant => grantFields.every(key => grant[key] === request[key]));
+  return { allowed: granted, reasonCode: granted ? 'approved' : policy.denyReasonCode, ruleId: zone.ruleId, mode: 'policy' };
 }

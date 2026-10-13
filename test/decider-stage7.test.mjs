@@ -25,7 +25,8 @@ async function expectDecision(request, decision, reasonCode) {
 }
 
 test('정상 허용·복합 이상 추가 확인·기존 기기 거부와 응답 계약', async () => {
-  assert.deepEqual(RULE_IDS, ['device_registered', 'step_up_required', 'resource_scope']);
+  assert.deepEqual(RULE_IDS, ['device_registered', 'step_up_required', 'resource_scope',
+    'announcement_zone', 'instructor_material_zone']);
   const { normal, suspicious } = fixtureRequests();
   await expectDecision(normal, 'allow', 'approved');
   await expectDecision(suspicious, 'step_up', 'step_up_required');

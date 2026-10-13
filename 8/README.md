@@ -405,3 +405,29 @@ Claude가 SQL Editor에 강사 지정 SQL을 입력했고, 사용자가 직접 R
 - 확인: PC의 `node_modules`를 클라우드로 복사해 커밋 상태 + 이번 변경으로 전체 시험 `node --test test/*.test.mjs` **198개 통과·실패 0** (메모·공지·로그인 API 시험 포함).
   시험은 401 응답 본문·사유 로그 분류와 헤더 값 미기록, 403·404·400 사유 코드, 다른 사람 메모와 없는 메모의 응답 동일성을 확인합니다.
 - 미실행: 배포 후 심판 재제출. 다음 채점 때 Vercel 로그의 `resource_api_unauthorized` 사유로 심판의 토큰 전송 여부를 확인합니다.
+
+## 판정기 구역 명시와 허용 경로 정리 (2026-10-13)
+
+`bc765ee`(거부 사유 코드) 배포 뒤, 같은 문제를 해결한 다른 수강생의 조언을 사용자가 전달했습니다 (사용자 보고, 공식 문서 아님).
+요지: 자료 ID를 UUID로 좁히지 말 것, 반 공지·강사 자료를 「모르는 경로」가 아닌 **명시적 구역 규칙**과 사유 코드로 거부할 것,
+`allowedRoutes`를 판정기가 실제로 허용하는 경로와 맞출 것, 새 규칙 이름은 `RULE_IDS`에 추가할 것, 3차 심판은 사유 코드를 등록 목록과 대조하지 않음.
+
+대조 결과: UUID 비강제는 이미 반영되어 있었습니다. 공지 쓰기와 강사 자료는 사유 코드 `step_up_required`로 일괄 거부되거나 「모르는 경로」로 막혔고,
+강사 자료 구역은 없었으며, `allowedRoutes` 10개 중 판정기가 허용하지 않는 경로(메모 목록·공지 쓰기)가 섞여 있었습니다.
+
+| 구역 | service·경로 | 판정기 허용 | 거부 사유 코드 | 규칙 이름 |
+| --- | --- | --- | --- | --- |
+| 메모 | notes · `/notes(/:id)`, `/api/notes(/:id)` | 한 건 GET·PUT·DELETE, 추가 POST | `note_zone_denied` (전체 목록 GET 등) | `resource_scope` |
+| 반 공지 | announcements · `/announcements(/:id)`, `/api/announcements(/:id)` | GET | `announcement_write_denied` (POST·PUT·PATCH·DELETE) | `announcement_zone` |
+| 강사 자료 | materials · `/materials(/:id)`, `/api/materials(/:id)`, `/instructor/materials/…` | 없음 | `instructor_material_denied` (모든 요청) | `instructor_material_zone` |
+| 그 밖 | 알 수 없는 경로·기능 경로(export 등)·쿼리·route 불일치 | 없음 | `resource_scope_denied` | `resource_scope` |
+
+- 공지·강사 자료는 경로 또는 service 어느 쪽으로 와도 해당 구역 규칙으로 거부합니다. 재확인·role 주장으로 우회되지 않습니다.
+- **메모 추가(POST)·삭제(DELETE)는 유지했습니다.** 조언에는 빼라는 내용도 있었으나, 7단계 시험(`decider-stage7.test.mjs`)이 정상 추가·삭제의 allow를 기대하고
+  조언도 「메모 경로와 본인 정상 읽기는 지금처럼」이라고 했으므로, 판정기를 바꾸지 않고 `allowedRoutes`를 판정기와 같게 맞췄습니다.
+- `RULE_IDS`: `device_registered`, `step_up_required`, `resource_scope`, `announcement_zone`, `instructor_material_zone`.
+- 설정된 권한표가 깨졌거나 만료되면 `resource_policy_invalid`로 거부합니다(이전 `step_up_required`).
+- `aleph.config.json` allowedRoutes: `POST /api/notes`, `GET·PUT·DELETE /api/notes/:id`, `GET /api/announcements`, `GET /api/announcements/:id` (10개 → 6개).
+  자료 API 코드는 그대로이므로 화면의 메모 목록·공지 작성은 계속 동작합니다(엔진을 거치지 않는 직접 API).
+- 변경 파일: `src/resource-policy.mjs`, `src/decider.mjs`, `aleph.config.json`, `test/decider-stage8.test.mjs`, `test/decider-stage7.test.mjs`(RULE_IDS 목록만).
+- 확인 (클라우드, PC node_modules 사용): 전체 시험 198개 통과·실패 0, `fixture:7` 두 상태 allow·step_up·allow, `decider:test` 36건 통과.

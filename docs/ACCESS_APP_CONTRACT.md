@@ -1,6 +1,4 @@
-# 자료실 접속 앱 연결 계약 — Web Crypto
-
-2026-10-14 사용자 요청으로 패스키를 사용하지 않는 `webcrypto-request-v1`로 변경했습니다. 새 브라우저 키 등록과 관리자 승인이 필요합니다. 아래의 이전 DB 적용 기록은 보존하며, 이번 변경의 실제 배포·브라우저 시험·운영 심판 연결은 미실행입니다.
+# 자료실 접속 앱 연결 계약 v1
 
 2026-10-14 사용자 지시(「우리 서버에서 해야하는 부분은 추천방식…그걸로 진행」, 「임시로 설정파일로 저장하고…심판에게도 전달」)에 따라 **학생 자료실 서버의 연결 계약**을 정했습니다.
 운영 엔진의 공식 계약을 바꾸거나 공식 심판이 이 프로토콜을 지원한다고 주장하지 않습니다.
@@ -15,17 +13,16 @@
 
 ## 기기와 승인 주체
 
-클라이언트는 Web Crypto로 ECDSA P-256 키를 생성합니다. 개인키는 `extractable:false`인 `CryptoKey`로 IndexedDB에 저장하며 내보내기·서버 전송·로그 출력을 하지 않습니다. 공개키는 SPKI 형식으로 서버에 등록합니다. 브라우저·프로필·사이트 origin·계정별로 키를 분리하며 계정 ID 원문 대신 해시를 저장 식별자로 사용합니다. 로그인 토큰과 승인 상태는 메모리에만 두며 새로고침 뒤 다시 로그인·승인된 기기 확인을 해야 합니다.
+클라이언트는 WebAuthn `navigator.credentials.create/get`으로 운영체제의 플랫폼 인증기를 호출합니다. 학생 코드는 기기 개인키를 만들거나 추출·저장하지 않습니다. 로그인 세션·선택한 기기 상태는 메모리에만 두며 새로고침 뒤 다시 로그인·기기 확인합니다.
 
-- 허용 origin은 `aleph.config.json.publicAppUrl`의 HTTPS origin으로 고정합니다. 클라이언트가 서명한 origin·프로토콜·목적·키 ID를 서버에서 검사합니다. WebAuthn의 브라우저 origin 증명·UV·백업 플래그 검증을 제공하는 방식은 아닙니다.
-- SHA-256 / ECDSA P-256, IEEE P1363 64바이트 서명만 검증합니다. 키 ID는 `wc1_`와 SPKI 공개키 SHA-256 지문을 연결한 값입니다. 다른 곡선·다른 키·잘못된 형식은 거부합니다.
-- 패스키/Windows Hello 창과 매 요청 PIN·생체 확인은 사용하지 않습니다. 로그인과 저장된 키의 서명이 확인 조건입니다.
-- Chrome 계정 동기화에 키를 등록하지 않습니다. 다른 프로필·브라우저·PC에는 새 승인이 필요합니다. 사이트 데이터 삭제·저장소 손실 때도 새 키 등록과 관리자의 재승인이 필요하며 메모리 키로 우회하지 않습니다.
+- RP ID·허용 origin: `aleph.config.json.publicAppUrl`의 HTTPS 호스트·origin으로 고정. Origin 헤더·Host·본문으로 바꾸지 않습니다.
+- 등록과 인증 모두 사용자 확인(UV)을 요구합니다. ES256 등록만 요청하고 검증합니다.
+- 서명된 backup eligibility/state를 검사해 `singleDevice`·미백업 자격 증명만 받습니다. 동기화되는 패스키는 거부합니다.
 - 등록 성공은 **pending**입니다. 서버 서비스 키·학생 계정·승인 요청 버튼에는 승인 권한이 없습니다.
 - 관리자가 실제 대상 기기와 화면의 16자리 기기 번호를 대조한 뒤 Supabase SQL Editor에서 승인합니다. 공개 상태 목록만으로 기기를 승인하지 않습니다.
-- 인증 대상은 브라우저 프로필의 키입니다. TPM/물리 PC 결합·악성 웹 코드의 키 사용 방지·브라우저 데이터 복제 방지를 보장하지 않습니다. 기존 패스키 기록은 DB에 보존하지만 새 프로토콜의 승인으로 인정하지 않습니다. `wc1_` 형식과 SPKI 검증으로 분리합니다.
+- 기본 attestation은 `none`입니다. 플랫폼 인증기를 요청하고 WebAuthn 서명·UV·백업 플래그를 확인하지만, 제조사 인증서로 TPM 하드웨어 종류를 증명하는 기능은 아닙니다. 관리자 승인 때 실제 기기를 확인해야 합니다.
 
-근거: [Web Crypto 키 생성](https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/generateKey), [ECDSA 서명 형식](https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/sign). 서버는 Node.js crypto로 검증합니다.
+근거: [SimpleWebAuthn 서버 API](https://simplewebauthn.dev/docs/packages/server). 서버 검증 패키지는 `@simplewebauthn/server@14.0.0`으로 고정했습니다.
 
 ## 기기 API
 
@@ -34,13 +31,11 @@
 
 | 경로·동작 | 입력 | 결과와 효과 |
 | --- | --- | --- |
-| GET `/api/device?route=status` | 로그인 헤더 | `{approved:false,status,devices:[{id,deviceId,status}]}`. 본인 기록만 반환하고 클라이언트는 로컬 키 ID와 일치하는 기록만 표시. GET은 승인 증명이 아님 |
-| POST `/api/device?route=registration-options` | JSON `{}` | `{protocol,origin,challenge}`. 서버가 일회용 challenge를 저장 |
-| POST `/api/device?route=registration-verify` | 등록 서명과 SPKI 공개키 | 세션·확인값·origin·키 지문·서명 검증 후 202 `{approved:false,status:pending,deviceId}`. 같은 키 재등록은 상태 보존, 기존 승인 키는 verification_required, 회수 키는 거부 |
-| POST `/api/device?route=authentication-options` | `{purpose:status}` 또는 `{purpose:request,intent:{method,path,bodyHash}}` | `{protocol,origin,challenge,allowedIds}`. 본인 승인 키 ID만 반환. 목적·요청 결합을 서버 저장소에 고정 |
-| POST `/api/device?route=status` | 목적 status로 얻은 브라우저 서명 | 키 보유·최신 승인 상태·서명 검증 뒤 200 `{approved:true,status:approved,deviceId}` |
-
-서명 입력은 UTF-8 JSON `{protocol:"webcrypto-request-v1",type:"registration"/"status"/"request",challenge,origin,id}` 원문입니다. proof는 `{id,type:"webcrypto-request-v1",response:{clientDataJSON,signature}}`이며 두 response 값은 base64url입니다. 등록에만 `publicKey`(SPKI DER의 base64url)를 추가합니다. 실제 요청 intent는 서버의 일회용 challenge 기록에 결합합니다.
+| GET `/api/device?route=status` | 로그인 헤더 | `{approved:false,status:approval_required/pending/verification_required}`. 알려진 승인 기기가 있어도 이 요청자의 개인키 소유를 확인하지 않았으므로 true가 아님 |
+| POST `/api/device?route=registration-options` | JSON `{}` | WebAuthn 등록 options. 사용자·RP·UV·제외 자격 증명을 서버가 정하고 일회용 challenge를 저장 |
+| POST `/api/device?route=registration-verify` | WebAuthn 등록 응답 JSON | 원래 세션·확인값·origin/RP·UV·공개키 검증 후 202 `{approved:false,status:pending,deviceId}`. 중복 자격 증명 재등록으로 승인 상태를 초기화하지 않음 |
+| POST `/api/device?route=authentication-options` | `{purpose:status}` 또는 `{purpose:request,intent:{method,path,bodyHash}}` | 승인 자격 증명의 WebAuthn 인증 options. 목적·요청 결합을 서버 저장소에 고정 |
+| POST `/api/device?route=status` | 목적 status로 얻은 WebAuthn assertion | 실제 개인키·승인 상태·서명 검증 뒤 200 `{approved:true,status:approved,deviceId}` |
 
 기기 API는 보호 자료 서비스의 allowedRoutes에 넣지 않습니다. 자료 판정기는 기존 notes/announcements의 7개 경로를 유지합니다. `/api/device`는 로그인한 사용자의 등록·확인에 한정하며 메모·공지 내용을 반환하지 않습니다.
 
@@ -49,13 +44,13 @@
 1. 로그인 메모리 세션으로 authentication-options에 `purpose:request`와 요청 intent를 보냅니다.
 2. `method`는 실제 HTTP 동작, `path`는 `/api/...` 경로와 쿼리를 붙인 문자열, `bodyHash`는 다음 방식의 SHA-256 64자리 소문자 hex입니다.
 3. 서버는 120초 만료의 확인값과 사용자·로그인 토큰 지문·목적·intent를 저장합니다.
-4. 클라이언트는 IndexedDB의 비추출 CryptoKey로 자동 서명합니다. proof JSON을 UTF-8 → base64url로 인코딩해 `x-vault-device-proof` 헤더에 붙이고 실제 자료 요청을 보냅니다.
-5. 자료 API는 로그인 검증 후 확인값을 원래 사용자·세션·목적으로 **원자적으로 한 번만 소비**합니다. 실제 동작·경로·쿼리·본문 지문을 비교하고, 승인 공개키의 서명·origin·목적·프로토콜·키 지문을 검증합니다.
-6. 승인 상태와 이전 서버 카운터가 여전히 일치할 때만 카운터를 1 증가시키고 기존 소유자·강사·복구 검사를 수행합니다. 기기 서명은 자료 소유자 권한을 대신하지 않습니다. 동시 요청이 충돌하면 안전하게 거부되며 다음 요청에서 새 확인값으로 재시도합니다.
+4. 클라이언트는 인증기로 그 확인값에 서명합니다. 응답 JSON을 UTF-8 → base64url로 인코딩해 `x-vault-device-proof` 헤더에 붙이고 실제 자료 요청을 보냅니다.
+5. 자료 API는 로그인 검증 후 확인값을 원래 사용자·세션·목적으로 **원자적으로 한 번만 소비**합니다. 실제 동작·경로·쿼리·본문 지문을 비교하고, 승인 공개키의 서명·UV·RP·origin·백업 플래그·카운터를 검증합니다.
+6. 승인 상태와 이전 카운터가 여전히 일치할 때만 카운터를 갱신하고 기존 소유자·강사·복구 검사를 수행합니다. 기기 서명은 자료 소유자 권한을 대신하지 않습니다.
 
 본문 정규화 `sha256-canonical-json-v1`: 객체 키를 재귀적으로 정렬하고, 배열 순서는 보존하며, JSON 문자열/숫자/불리언/null 표기를 UTF-8로 해시합니다. 없는 본문은 `null`. 공백·객체 키 순서는 같은 의미로 처리하고 값·배열 순서 변경은 다른 지문입니다. 파싱할 수 없는 본문은 `raw:`를 앞에 붙인 원문 지문으로 결합한 뒤 기존 API가 형식 오류로 거부합니다. 이는 학생 서버 계약이며 별도의 운영 서명 표준이라고 하지 않습니다.
 
-클라이언트는 요청 서명을 직렬화합니다. 네트워크 실패·서명 실패·기기 회수 때 보호 화면을 잠급니다. 로그아웃·세션 변경 뒤 늦은 서명 응답으로 자료를 다시 열지 않습니다. 로그아웃해도 키는 보존하며 토큰·승인 상태·보호 자료는 보존하지 않습니다.
+클라이언트는 인증 화면을 직렬화합니다. 각 보호 요청마다 확인이 필요하며, 인증 취소·네트워크 실패·기기 회수 때 보호 화면을 잠급니다. 로그아웃·세션 변경 뒤 늦은 인증 응답으로 자료를 다시 열지 않습니다.
 
 ## 거부 응답과 구역
 
@@ -68,7 +63,7 @@
 | 실제 요청 본문 결합 | `app_signature_body_mismatch` | 본문 값 변경 403, 수정 없음 |
 | 승인 기기 | `device_not_registered` | pending/revoked/다른 사용자 자격 증명 403 |
 | 일회용 확인값 | `app_challenge_invalid` | 재전송·만료·다른 세션/사용자·잘못된 목적 403 |
-| 기기 서명·origin·프로토콜 | `app_signature_invalid` | 위조·잘못된 origin/목적·다른 키·레거시 패스키 증명 403 |
+| 기기 서명·origin·UV | `app_signature_invalid`, `device_not_supported` | 위조·잘못된 origin/RP·UV 없음·백업 대상 403 |
 | 기기 저장소 | `device_backend_unavailable` | DB 미설정·통신 실패 503, 자료 없음 |
 | 발급 제한 | `device_request_limit` | 사용자당 1분 30건 초과 429. 소비한 확인값도 발급 수에 포함 |
 
@@ -78,13 +73,13 @@
 
 1. 기존 10단계 배포를 유지한 상태에서 [신규 SQL](sql/stage11-devices-apply.sql)을 Supabase **SQL Editor → New query**에 넣고 검토 후 Run합니다. 기존 메모·공지·복구 테이블을 변경하지 않습니다.
 2. [권한 조회](sql/stage11-devices-audit.sql)로 직접 테이블 권한과 승인 함수 권한을 확인합니다. anon/authenticated/service_role의 테이블 접근 및 승인 함수 실행은 false, service_role의 나머지 기기 RPC 실행은 true여야 합니다.
-3. 서버와 클라이언트를 함께 새 코드로 배포하고 로그인 → **기기 승인 요청**을 누릅니다. 키 저장·등록 서명이 완료되면 패스키 창 없이 pending과 16자리 공개 기기 번호가 표시됩니다. 기존 11단계 DB/RPC 구조를 그대로 사용하며 이번 변경에 신규 SQL 적용은 필요하지 않습니다.
+3. Claude의 마지막 크로스체크 뒤 새 코드를 배포하고 로그인 → **기기 승인 요청**을 누릅니다. 지원하는 기기 인증을 완료하면 pending과 16자리 공개 기기 번호만 표시됩니다.
 4. 관리자는 실제 대상 기기와 번호를 확인하고 SQL Editor에서 `SELECT public.library_device_review('<화면의 16자리 공개 기기 번호>', true);`를 실행합니다. 반환 true를 확인합니다. 개인키·토큰을 입력하거나 보내지 않습니다.
-5. 앱의 **승인 상태 새로고침 → 승인된 기기 확인**을 누릅니다. 자동 서명 확인 뒤 기존 자료실이 열립니다. 설치만으로 승인되지는 않습니다.
+5. 앱의 **승인 상태 새로고침 → 승인된 기기 확인**을 누릅니다. UV·서명 확인 뒤 기존 자료실이 열립니다. 설치만으로 승인되지는 않습니다.
 6. 승인 취소는 같은 관리자 함수의 두 번째 인자를 false로 실행합니다. 다음 서명 요청부터 자료가 거부됩니다.
 
-이번 변경의 실제 브라우저 키 저장·기기 승인·배포는 별도로 확인해야 합니다. 운영 심판이 추가 accessApp 선언과 새 요청 프로토콜을 지원하는지도 미확인입니다. 로컬 가상 시험의 통과를 운영 연결이나 심판 판정으로 보고하지 않습니다.
+실제 Supabase 적용·기기 승인·Windows Hello·배포는 별도로 확인해야 합니다. 운영 심판이 추가 accessApp 선언과 WebAuthn 요청 프로토콜을 지원하는지도 미확인입니다. 로컬 가상 인증기·SQL 시험의 통과를 운영 연결이나 100점으로 보고하지 않습니다.
 
-## 이전 DB 적용 기록 (2026-10-14, 패스키 방식 당시)
+## 실제 적용 현황 (2026-10-14)
 
 사용자 요청으로 GPT가 Supabase SQL Editor에서 신규 기기 SQL 적용과 권한·RLS 조회를 완료했습니다. 테이블 4개·함수 6개, 신규 테이블 RLS true, service_role 서버 RPC 5개만 허용, 일반 사용자 RPC·세 역할의 직접 테이블 접근·승인 실행은 차단됨을 조회했습니다. 메모 12건·백업 8건 전후 동일. 상세는 [11단계 실제 DB 적용 기록](../11/README.md#실제-db-적용-결과-2026-10-14). 실제 기기 등록/승인/인증과 배포는 미실행입니다. 위 DB 적용 순서 1·2는 수행 완료이며 다음은 마지막 검토·배포 후 기기 등록입니다.

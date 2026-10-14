@@ -59,8 +59,7 @@
         <button id="device-verify" type="button" disabled>승인된 기기 확인</button>
         <button id="device-refresh" type="button" disabled>승인 상태 새로고침</button>
       </div>
-      <p>승인 요청 후 관리자가 이 브라우저의 기기 번호를 확인해야 합니다. 승인 확인과 자료 요청은 패스키 창 없이 자동으로 서명합니다.</p>
-      <p>이 브라우저 프로필에 인증 키를 보관합니다. 다른 PC·브라우저·프로필에서는 새 승인이 필요하며, 사이트 데이터를 삭제하면 다시 등록해야 합니다. 기존 패스키 승인은 새 인증으로 이전되지 않습니다.</p>
+      <p>승인 요청 후 관리자가 이 기기를 확인해야 합니다. 자료를 읽거나 바꿀 때도 기기 인증 화면이 열립니다.</p>
       <p>앱 설치와 로그인은 기기 승인을 뜻하지 않습니다. 기기 승인 여부는 서버와 판정기가 확인합니다.</p>
       <p id="connection-status" role="status">인터넷 연결 상태를 확인하고 있습니다.</p>
       <p id="offline-notice" role="alert" hidden>오프라인에서는 보호 자료를 표시하지 않습니다. 인터넷에 다시 연결해 주세요. 이 앱은 보호 자료를 오프라인 저장하지 않습니다.</p>
@@ -207,8 +206,7 @@
         const messages = { signed_out: '로그인 후 이 기기의 승인을 확인하세요.',
           approval_required: '등록된 기기가 없습니다. 기기 승인 요청을 눌러 주세요.',
           pending: '승인 대기 중입니다. 관리자가 기기를 확인한 뒤 승인 상태를 새로고침하세요.',
-          verification_required: '이 브라우저가 승인되어 있습니다. 승인된 기기 확인을 눌러 주세요.',
-          device_not_registered: '이 브라우저의 승인이 없거나 취소되었습니다. 관리자에게 문의하세요.',
+          verification_required: '승인된 기기가 있습니다. 이 기기의 인증으로 확인해 주세요.',
           approved: '서버가 이 기기의 승인과 서명을 확인했습니다.' };
         deviceStatus.textContent = (messages[state.status] ?? '기기 확인이 필요합니다. 다시 확인해 주세요.')
           + (state.deviceId ? ` 기기 번호: ${state.deviceId}` : '');
@@ -344,8 +342,7 @@
         deviceClient.clear();
         deviceStatus.textContent = error.message === 'device_backend_unavailable'
           ? '기기 확인 서버 설정이 필요합니다. 관리자에게 문의하세요.'
-          : error.message === 'device_not_supported' ? '이 브라우저에서 기기 키를 사용할 수 없습니다. HTTPS 주소에서 최신 브라우저로 접속하세요.'
-            : error.message === 'device_storage_unavailable' ? '브라우저의 기기 키 저장소를 사용할 수 없습니다. 사이트 데이터 저장 허용을 확인하세요. 사이트 데이터를 삭제했다면 재등록과 관리자 승인이 필요합니다.'
+          : error.message === 'device_not_supported' ? '이 기기의 인증 방식은 지원되지 않습니다. 동기화하지 않는 기기 인증이 필요합니다.'
             : error.message === 'device_not_registered' ? '승인된 기기를 확인하지 못했습니다. 관리자 승인 후 다시 확인해 주세요.'
               : '기기 확인을 마치지 못했습니다. 인증 취소 또는 연결 상태를 확인하고 다시 시도하세요.';
       } finally { deviceBusy = false; updateControls(); }

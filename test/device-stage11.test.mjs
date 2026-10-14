@@ -20,7 +20,7 @@ async function subject() {
   return { pool, user, req, record, service };
 }
 
-test('P3·P5·N1·N2: 브라우저 키의 등록 서명 검증 뒤 pending, 관리자 승인 후 개인키 확인', async () => {
+test('P3·P5·N1·N2: 실제 WebAuthn 등록 검증 뒤 pending, 관리자 승인 후 개인키 확인', async () => {
   const { pool, user, record, service } = await subject();
   pool.devices.delete(record.credential_id);
   const options = await service.registrationOptions();
@@ -44,18 +44,18 @@ test('M2·M3: 경로·method·쿼리·본문 변조는 서명 경계에서 거�
     const { pool, user, service } = await subject();
     const intent = { method: 'PUT', path: '/api/notes/item', bodyHash: digest('{"body":"before","title":"fixture"}') };
     const options = await service.authenticationOptions('request', intent);
-    await assert.rejects(service.verifyRequest(pool.assertion(user, options.challenge, { purpose: 'request' }), { ...intent, ...change }),
+    await assert.rejects(service.verifyRequest(pool.assertion(user, options.challenge), { ...intent, ...change }),
       { code: Object.hasOwn(change, 'bodyHash') ? 'app_signature_body_mismatch' : 'app_signature_path_mismatch' });
   }
 });
 
-test('N1·서명: 재전송·만료·다른 세션/사용자·위조·잘못된 목적/프로토콜·회수 거부', async () => {
-  const cases = ['replay', 'expired', 'session', 'user', 'signature', 'origin', 'purpose', 'protocol', 'revoked'];
+test('N1·서명: 재전송·만료·다른 세션/사용자·위조·UV 없음·백업 키 거부', async () => {
+  const cases = ['replay', 'expired', 'session', 'user', 'signature', 'origin', 'uv', 'backup', 'revoked'];
   for (const kind of cases) {
     const { pool, user, req, record, service } = await subject();
     const options = await service.authenticationOptions('status');
-    let proof = pool.assertion(user, options.challenge, kind === 'purpose' ? { purpose: 'request' }
-      : kind === 'protocol' ? { protocol: 'webauthn-request-v1' } : kind === 'origin' ? { origin: 'https://other.invalid' } : {});
+    let proof = pool.assertion(user, options.challenge, kind === 'uv' ? { flags: 1 }
+      : kind === 'backup' ? { flags: 13 } : kind === 'origin' ? { origin: 'https://other.invalid' } : {});
     let verifier = service;
     if (kind === 'replay') await service.verifyStatus(proof);
     if (kind === 'expired') pool.challenges.get(options.challenge).expires_at = new Date(Date.now() - 1000).toISOString();
@@ -67,13 +67,11 @@ test('N1·서명: 재전송·만료·다른 세션/사용자·위조·잘못된 
   }
 });
 
-test('P4·P5: 다른 공개키로 등록 서명 대체·사용한 확인값의 재등록 거부', async () => {
+test('P4·P5: 동기화 대상 키와 사용한 확인값의 재등록 거부', async () => {
   const { pool, user, record, service } = await subject();
   pool.devices.delete(record.credential_id);
   const options = await service.registrationOptions();
-  const proof = pool.registration(user, options.challenge);
-  proof.publicKey = pool.keyFor(randomUUID()).record.public_key;
-  await assert.rejects(service.register(proof), { code: 'app_signature_invalid' });
+  await assert.rejects(service.register(pool.registration(user, options.challenge, { flags: 0x4d })), { code: 'device_not_supported' });
   await assert.rejects(service.register(pool.registration(user, options.challenge)), { code: 'app_challenge_invalid' });
 });
 
@@ -82,42 +80,6 @@ test('M3: JSON 공백·객체 키 순서는 정규화하고 값·배열 순서�
   assert.equal(requestIntent(base).bodyHash, requestIntent({ ...base, body: '{ "x": [1,2], "body": "fixture", "title": "가상" }' }).bodyHash);
   assert.notEqual(requestIntent(base).bodyHash, requestIntent({ ...base, body: { ...base.body, x: [2, 1] } }).bodyHash);
   assert.notEqual(requestIntent(base).bodyHash, requestIntent({ ...base, body: { ...base.body, title: 'changed' } }).bodyHash);
-});
-
-test('기존 패스키 승인 기록은 보존하되 새 브라우저 승인으로 인정하지 않음', async () => {
-  const { pool, user, record, service } = await subject();
-  pool.devices.delete(record.credential_id);
-  const legacy = { ...record, credential_id: 'legacy-webauthn-key' };
-  pool.devices.set(legacy.credential_id, legacy);
-  const status = await service.status();
-  assert.equal(status.status, 'approval_required'); assert.equal(status.devices.length, 0);
-  await assert.rejects(service.authenticationOptions('status'), { code: 'device_not_registered' });
-  const options = await service.registrationOptions();
-  assert.equal((await service.register(pool.registration(user, options.challenge))).status, 'pending');
-  assert.equal(pool.devices.get(legacy.credential_id).status, 'approved');
-});
-
-test('복사한 공개 키 ID·전송 중 바뀐 서명 데이터만으로 승인 키를 위장할 수 없음', async () => {
-  const { pool, user, record, service } = await subject();
-  for (const kind of ['id', 'data', 'extra-key']) {
-    const options = await service.authenticationOptions('status');
-    const proof = pool.assertion(user, options.challenge);
-    if (kind === 'id') proof.id = pool.keyFor(randomUUID()).record.credential_id;
-    if (kind === 'data') {
-      const client = JSON.parse(Buffer.from(proof.response.clientDataJSON, 'base64url'));
-      client.origin = 'https://other.invalid';
-      proof.response.clientDataJSON = Buffer.from(JSON.stringify(client)).toString('base64url');
-    }
-    if (kind === 'extra-key') proof.publicKey = record.public_key;
-    await assert.rejects(service.verifyStatus(proof), { code: 'app_signature_invalid' });
-  }
-});
-
-test('서명 검증 도중 승인 취소 또는 카운터 경쟁이 생기면 최종 확인에서 거부', async () => {
-  const { pool, user, req, service } = await subject();
-  const options = await service.authenticationOptions('status');
-  const concurrent = createDeviceService(auth(user), req, (operation, input) => operation === 'counter' ? false : pool.repository(operation, input));
-  await assert.rejects(concurrent.verifyStatus(pool.assertion(user, options.challenge)), { code: 'device_not_registered' });
 });
 
 test('M1~M3·N1~N3: 실제 자료 API에서 서명 없이 403, 정상 200, 변조·미승인·재전송 시 자료 DB 호출 없음', async t => {

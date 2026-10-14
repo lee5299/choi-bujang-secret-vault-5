@@ -1,10 +1,11 @@
-import { createHash, createPublicKey, randomBytes, verify as verifySignature } from 'node:crypto';
+import { createHash } from 'node:crypto';
+import { generateRegistrationOptions, verifyRegistrationResponse, generateAuthenticationOptions, verifyAuthenticationResponse } from '@simplewebauthn/server';
 import app from '../access-app.config.json' with { type: 'json' };
 import config from '../aleph.config.json' with { type: 'json' };
 import { deviceRepository } from './device-repository.mjs';
 
 const origin = new URL(config.publicAppUrl).origin;
-const protocol = 'webcrypto-request-v1';
+const rpID = new URL(origin).hostname;
 // 요청 서명을 발급하는 보호 API: 메모·공지와 12단계 작전실 요약(쿼리·하위 경로 없는 정확한 경로만).
 export const SIGNED_PATH = /^\/api\/(?:(?:notes|announcements)(?:\/|\?|$)|operations-summary$)/u;
 export const digest = value => createHash('sha256').update(value).digest('hex');
@@ -36,33 +37,13 @@ export function requestIntent(request) {
   if (target.origin !== origin) throw new DeviceError('invalid_request', 400);
   return { method: request.method, path: target.pathname + target.search, bodyHash: digest(canonicalBody(request.body)) };
 }
-function decodeBytes(value, maxLength) {
-  if (typeof value !== 'string' || !value.length || value.length > maxLength || !/^[A-Za-z0-9_-]+$/u.test(value)) throw new DeviceError('app_signature_invalid');
-  const bytes = Buffer.from(value, 'base64url');
-  if (bytes.toString('base64url') !== value) throw new DeviceError('app_signature_invalid');
-  return bytes;
-}
-function decodeProof(proof, purpose) {
-  if (!proof || typeof proof !== 'object' || Array.isArray(proof) || !/^wc1_[a-f0-9]{64}$/u.test(proof.id)
-      || proof.type !== protocol || Object.keys(proof).some(key => !['id', 'type', 'response', 'publicKey'].includes(key))
-      || !proof.response || Object.keys(proof.response).sort().join(',') !== 'clientDataJSON,signature') throw new DeviceError('app_signature_invalid');
-  const data = decodeBytes(proof.response.clientDataJSON, 4096);
-  const signature = decodeBytes(proof.response.signature, 128);
-  if (signature.length !== 64) throw new DeviceError('app_signature_invalid');
+function decodeProof(proof) {
+  if (!proof || typeof proof !== 'object' || Array.isArray(proof) || typeof proof.id !== 'string' || proof.id.length > 1400
+      || proof.type !== 'public-key' || typeof proof.response?.clientDataJSON !== 'string' || proof.response.clientDataJSON.length > 4096) throw new DeviceError('app_signature_invalid');
   let client;
-  try { client = JSON.parse(data.toString('utf8')); } catch { throw new DeviceError('app_signature_invalid'); }
-  if (!client || Object.keys(client).sort().join(',') !== 'challenge,id,origin,protocol,type'
-      || client.protocol !== protocol || client.type !== purpose || client.origin !== origin || client.id !== proof.id
-      || typeof client.challenge !== 'string' || !/^[A-Za-z0-9_-]{43}$/u.test(client.challenge)) throw new DeviceError('app_signature_invalid');
-  return { nonce: client.challenge, data, signature };
-}
-function checkSignature(proof, decoded, encodedKey) {
-  const bytes = decodeBytes(encodedKey, 512);
-  if (proof.id !== `wc1_${digest(bytes)}`) throw new DeviceError('app_signature_invalid');
-  const key = createPublicKey({ key: bytes, format: 'der', type: 'spki' });
-  if (key.asymmetricKeyType !== 'ec' || key.asymmetricKeyDetails?.namedCurve !== 'prime256v1'
-      || !bytes.equals(key.export({ format: 'der', type: 'spki' }))
-      || !verifySignature('sha256', decoded.data, { key, dsaEncoding: 'ieee-p1363' }, decoded.signature)) throw new DeviceError('app_signature_invalid');
+  try { client = JSON.parse(Buffer.from(proof.response.clientDataJSON, 'base64url').toString('utf8')); } catch { throw new DeviceError('app_signature_invalid'); }
+  if (typeof client.challenge !== 'string' || !/^[A-Za-z0-9_-]{43}$/u.test(client.challenge)) throw new DeviceError('app_signature_invalid');
+  return client.challenge;
 }
 const normalizeError = error => {
   if (error instanceof DeviceError) return error;
@@ -76,20 +57,18 @@ export function createDeviceService(authenticated, request, repository = deviceR
   const list = async () => {
     const rows = await repository('list', { p_user_id: user });
     if (!Array.isArray(rows)) throw new DeviceError('device_backend_unavailable', 503);
-    // 기존 WebAuthn 승인 기록은 보존하지만 새 프로토콜의 승인으로 취급하지 않습니다.
-    return rows.filter(row => /^wc1_[a-f0-9]{64}$/u.test(row.credential_id));
+    return rows;
   };
   const put = async (challenge, purpose, intent = null) => {
     const ok = await repository('challenge_put', { p_nonce: challenge, p_user_id: user, p_session_hash: session, p_purpose: purpose, p_intent: intent });
     if (ok !== true) throw new DeviceError('device_request_limit', 429);
   };
   const take = async (proof, purpose) => {
-    const decoded = decodeProof(proof, purpose);
-    const { nonce } = decoded;
+    const nonce = decodeProof(proof);
     const row = await repository('challenge_take', { p_nonce: nonce, p_user_id: user, p_session_hash: session, p_purpose: purpose });
     if (!row || row.nonce !== nonce || row.user_id !== user || row.session_hash !== session || row.purpose !== purpose
         || !Number.isFinite(Date.parse(row.expires_at)) || Date.parse(row.expires_at) <= Date.now()) throw new DeviceError('app_challenge_invalid');
-    return { ...row, decoded };
+    return row;
   };
   const verify = async (proof, purpose, intent) => {
     try {
@@ -100,11 +79,13 @@ export function createDeviceService(authenticated, request, repository = deviceR
       }
       const credential = (await list()).find(row => row.credential_id === proof.id);
       if (!credential || credential.status !== 'approved') throw new DeviceError('device_not_registered');
-      if (Object.hasOwn(proof, 'publicKey')) throw new DeviceError('app_signature_invalid');
-      checkSignature(proof, challenge.decoded, credential.public_key);
-      if (!Number.isInteger(credential.counter) || credential.counter < 0 || credential.counter >= 4294967295) throw new DeviceError('device_not_registered');
-      // 승인 회수와 동시 요청을 비교·갱신으로 재확인합니다. 브라우저 카운터는 신뢰하지 않습니다.
-      const advanced = await repository('counter', { p_user_id: user, p_credential_id: credential.credential_id, p_previous: credential.counter, p_next: credential.counter + 1 });
+      const { verified, authenticationInfo: info } = await verifyAuthenticationResponse({
+        response: proof, expectedChallenge: challenge.nonce, expectedOrigin: origin, expectedRPID: rpID,
+        requireUserVerification: true,
+        credential: { id: credential.credential_id, publicKey: new Uint8Array(Buffer.from(credential.public_key, 'base64url')), counter: credential.counter },
+      });
+      if (!verified || info.credentialDeviceType !== 'singleDevice' || info.credentialBackedUp) throw new DeviceError('device_not_supported');
+      const advanced = await repository('counter', { p_user_id: user, p_credential_id: credential.credential_id, p_previous: credential.counter, p_next: info.newCounter });
       if (advanced !== true) throw new DeviceError('device_not_registered');
       return { approved: true, status: 'approved', deviceId: credential.device_id };
     } catch (error) { throw normalizeError(error); }
@@ -113,33 +94,30 @@ export function createDeviceService(authenticated, request, repository = deviceR
     async status() {
       const rows = await list();
       return { approved: false, status: rows.some(row => row.status === 'approved') ? 'verification_required'
-        : rows.some(row => row.status === 'pending') ? 'pending' : 'approval_required',
-        devices: rows.map(row => ({ id: row.credential_id, deviceId: row.device_id, status: row.status })) };
+        : rows.some(row => row.status === 'pending') ? 'pending' : 'approval_required' };
     },
     async registrationOptions() {
-      const options = { protocol, origin, challenge: randomBytes(32).toString('base64url') };
+      const rows = await list();
+      const options = await generateRegistrationOptions({ rpName: app.name, rpID,
+        userName: `user-${digest(user).slice(0, 12)}`, userDisplayName: '내 자료실 사용자',
+        userID: new Uint8Array(Buffer.from(digest(user), 'hex')), attestationType: 'none', supportedAlgorithmIDs: [-7],
+        excludeCredentials: rows.map(row => ({ id: row.credential_id })),
+        authenticatorSelection: { authenticatorAttachment: 'platform', residentKey: 'required', userVerification: 'required' },
+      });
       await put(options.challenge, 'registration');
       return options;
     },
     async register(proof) {
       try {
         const challenge = await take(proof, 'registration');
-        checkSignature(proof, challenge.decoded, proof.publicKey);
-        const previousRegistration = existing => {
-          if (existing.public_key !== proof.publicKey || !['approved', 'pending'].includes(existing.status)) throw new DeviceError('device_not_registered');
-          return { approved: false, status: existing.status === 'approved' ? 'verification_required' : 'pending', deviceId: existing.device_id };
-        };
-        const existing = (await list()).find(row => row.credential_id === proof.id);
-        if (existing) return previousRegistration(existing);
-        const deviceId = digest(proof.id).slice(0, 16);
-        const ok = await repository('register', { p_user_id: user, p_credential_id: proof.id,
-          p_device_id: deviceId, p_public_key: proof.publicKey, p_counter: 0 });
-        if (ok !== true) {
-          // 다른 탭이 동일 키를 먼저 등록한 경우에도 승인 상태를 초기화하지 않습니다.
-          const concurrent = (await list()).find(row => row.credential_id === proof.id);
-          if (concurrent) return previousRegistration(concurrent);
-          throw new DeviceError('device_registration_conflict', 409);
-        }
+        const { verified, registrationInfo: info } = await verifyRegistrationResponse({ response: proof,
+          expectedChallenge: challenge.nonce, expectedOrigin: origin, expectedRPID: rpID, requireUserVerification: true,
+          supportedAlgorithmIDs: [-7] });
+        if (!verified || info.credentialDeviceType !== 'singleDevice' || info.credentialBackedUp) throw new DeviceError('device_not_supported');
+        const deviceId = digest(info.credential.id).slice(0, 16);
+        const ok = await repository('register', { p_user_id: user, p_credential_id: info.credential.id,
+          p_device_id: deviceId, p_public_key: Buffer.from(info.credential.publicKey).toString('base64url'), p_counter: info.credential.counter });
+        if (ok !== true) throw new DeviceError('device_registration_conflict', 409);
         return { approved: false, status: 'pending', deviceId };
       } catch (error) { throw normalizeError(error); }
     },
@@ -150,7 +128,7 @@ export function createDeviceService(authenticated, request, repository = deviceR
           || intent.path.length > 1024 || !/^[a-f0-9]{64}$/u.test(intent.bodyHash))) throw new DeviceError('invalid_request', 400);
       const credentials = (await list()).filter(row => row.status === 'approved');
       if (!credentials.length) throw new DeviceError('device_not_registered');
-      const options = { protocol, origin, challenge: randomBytes(32).toString('base64url'), allowedIds: credentials.map(row => row.credential_id) };
+      const options = await generateAuthenticationOptions({ rpID, userVerification: 'required', allowCredentials: credentials.map(row => ({ id: row.credential_id })) });
       await put(options.challenge, purpose, purpose === 'request' ? intent : null);
       return options;
     },

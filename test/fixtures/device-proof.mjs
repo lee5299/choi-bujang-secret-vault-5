@@ -1,4 +1,5 @@
 import { generateKeyPairSync, sign, randomBytes } from 'node:crypto';
+import { encodeCBOR } from '@levischuck/tiny-cbor';
 import { canonicalBody, digest, requestIntent } from '../../src/device-proof.mjs';
 import config from '../../aleph.config.json' with { type: 'json' };
 
@@ -11,9 +12,9 @@ export function virtualDevices() {
   const keyFor = user => {
     if (!keys.has(user)) {
       const pair = generateKeyPairSync('ec', { namedCurve: 'prime256v1' });
-      const publicKeyBytes = pair.publicKey.export({ format: 'der', type: 'spki' });
-      const publicKey = publicKeyBytes.toString('base64url');
-      const id = `wc1_${digest(publicKeyBytes)}`;
+      const jwk = pair.publicKey.export({ format: 'jwk' });
+      const publicKey = Buffer.from(encodeCBOR(new Map([[1, 2], [3, -7], [-1, 1], [-2, Buffer.from(jwk.x, 'base64url')], [-3, Buffer.from(jwk.y, 'base64url')]]))).toString('base64url');
+      const id = randomBytes(32).toString('base64url');
       const record = { credential_id: id, device_id: digest(id).slice(0, 16), user_id: user, public_key: publicKey, counter: 0, status: 'approved' };
       devices.set(id, record); keys.set(user, { ...pair, record });
     }
@@ -46,12 +47,13 @@ export function virtualDevices() {
     }
     throw new Error('Unknown virtual device operation');
   };
-  const assertion = (user, challenge, { purpose = 'status', origin = config.publicAppUrl, challengeOverride, protocol = 'webcrypto-request-v1' } = {}) => {
+  const assertion = (user, challenge, { flags = 5, origin = config.publicAppUrl, challengeOverride } = {}) => {
     const { privateKey, record } = keyFor(user);
-    const clientData = Buffer.from(JSON.stringify({ protocol, type: purpose, challenge: challengeOverride ?? challenge, origin, id: record.credential_id }));
-    const signature = sign('sha256', clientData, { key: privateKey, dsaEncoding: 'ieee-p1363' });
-    return { id: record.credential_id, type: protocol,
-      response: { clientDataJSON: clientData.toString('base64url'), signature: signature.toString('base64url') } };
+    const clientData = Buffer.from(JSON.stringify({ type: 'webauthn.get', challenge: challengeOverride ?? challenge, origin, crossOrigin: false }));
+    const authData = Buffer.concat([Buffer.from(digest(new URL(config.publicAppUrl).hostname), 'hex'), Buffer.from([flags]), Buffer.alloc(4)]);
+    const signature = sign('sha256', Buffer.concat([authData, Buffer.from(digest(clientData), 'hex')]), privateKey);
+    return { id: record.credential_id, rawId: record.credential_id, type: 'public-key', clientExtensionResults: {}, authenticatorAttachment: 'platform',
+      response: { clientDataJSON: clientData.toString('base64url'), authenticatorData: authData.toString('base64url'), signature: signature.toString('base64url'), userHandle: null } };
   };
   const wrapFetch = fallback => async (input, options) => {
     const path = new URL(input instanceof Request ? input.url : input).pathname;
@@ -70,13 +72,18 @@ export function virtualDevices() {
     // 회귀의 정상 기기마다 유효한 서명·일회용 확인값을 생성합니다. 발급 한도 시험과 분리합니다.
     challenges.set(nonce, { nonce, user_id: claims.sub, session_hash: digest(request.headers.authorization),
       purpose: 'request', intent: requestIntent(request), expires_at: new Date(Date.now() + 120000).toISOString() });
-    const proof = assertion(claims.sub, nonce, { purpose: 'request' });
+    const proof = assertion(claims.sub, nonce);
     request.headers['x-vault-device-proof'] = Buffer.from(JSON.stringify(proof)).toString('base64url');
     return request;
   };
-  const registration = (user, challenge, options = {}) => {
+  const registration = (user, challenge, { flags = 0x45 } = {}) => {
     const { record } = keyFor(user);
-    return { ...assertion(user, challenge, { ...options, purpose: 'registration' }), publicKey: record.public_key };
+    const id = Buffer.from(record.credential_id, 'base64url');
+    const length = Buffer.alloc(2); length.writeUInt16BE(id.length);
+    const authData = Buffer.concat([Buffer.from(digest(new URL(config.publicAppUrl).hostname), 'hex'), Buffer.from([flags]), Buffer.alloc(4), Buffer.alloc(16), length, id, Buffer.from(record.public_key, 'base64url')]);
+    const attestation = encodeCBOR(new Map([['fmt', 'none'], ['attStmt', new Map()], ['authData', authData]]));
+    return { id: record.credential_id, rawId: record.credential_id, type: 'public-key', clientExtensionResults: {}, authenticatorAttachment: 'platform',
+      response: { attestationObject: Buffer.from(attestation).toString('base64url'), clientDataJSON: Buffer.from(JSON.stringify({ type: 'webauthn.create', challenge, origin: config.publicAppUrl, crossOrigin: false })).toString('base64url'), transports: ['internal'] } };
   };
   return { repository, keyFor, assertion, registration, wrapFetch, signRequest, challenges, devices, canonicalBody };
 }

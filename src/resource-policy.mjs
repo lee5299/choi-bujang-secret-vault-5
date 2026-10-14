@@ -12,6 +12,7 @@ const exactKeys = (value, keys) => value && typeof value === 'object' && !Array.
 //
 // 구역              | service        | 경로                                   | 허용            | 거부 사유
 // 메모              | notes          | /notes(/:id), /api/notes(/:id)         | 한 건 GET·PUT·DELETE, 추가 POST | note_zone_denied (전체 목록 GET 등)
+// 메모 한 건 복구   | notes          | /notes/:id/restore, /api/notes/:id/restore | POST         | note_restore_denied (GET·PUT·PATCH·DELETE)
 // 반 공지           | announcements  | /announcements(/:id), /api/announcements(/:id) | GET     | announcement_write_denied (POST·PUT·PATCH·DELETE)
 // 강사 자료         | materials      | /materials(/:id), /api/materials(/:id) | 없음            | instructor_material_denied (모든 요청)
 // 그 밖의 경로·기능 경로·쿼리 요청은 resource_scope_denied 입니다. 이 구역 규칙은 권한표가 있어도 먼저 적용합니다.
@@ -20,6 +21,10 @@ const ZONES = Object.freeze({
   announcements: Object.freeze({ item: ['GET'], collection: ['GET'], reasonCode: 'announcement_write_denied', ruleId: 'announcement_zone' }),
   materials: Object.freeze({ item: [], collection: [], reasonCode: 'instructor_material_denied', ruleId: 'instructor_material_zone' }),
 });
+// 10단계 복구 구역. 소유자·사본 대조는 판정기 계약에 없으므로 복구 API와 DB 함수가 수행합니다.
+const RESTORE = Object.freeze({ reasonCode: 'note_restore_denied', ruleId: 'note_restore_scope' });
+const RESTORE_PATH = /^(\/api)?\/notes\/([A-Za-z0-9_-]{1,128})\/restore$/u;
+const RESTORE_ROUTE = /^(GET|POST|PUT|PATCH|DELETE) (\/api)?\/notes\/:id\/restore$/u;
 const SCOPE_DENIED = Object.freeze({ allowed: false, reasonCode: 'resource_scope_denied', ruleId: 'resource_scope' });
 const FEATURE_SEGMENTS = new Set(['export', 'exports', 'all', 'list', 'search', 'bulk', 'batch', 'download',
   'dump', 'backup', 'admin', 'share', 'shared', 'public', 'import', 'sync', 'count', 'stats', 'everyone']);
@@ -62,12 +67,40 @@ export function inspectZone(request) {
   // 반 공지 구역: 읽기만 허용, 쓰기는 누구에게나 거부 (계약에 역할 없음).
   const announcementPath = /^(\/api)?\/announcements(\/|$)/u.test(path);
   if ((request?.service === 'announcements' || announcementPath) && method !== 'GET') return deny('announcements');
+  // 메모 복구 구역: 한 건 POST만 허용하고 다른 동작은 누구에게나 거부합니다.
+  const restorePath = RESTORE_PATH.exec(path);
+  if (restorePath || /\/restore$/u.test(path)) {
+    if (!restorePath) return SCOPE_DENIED;
+    if (method !== 'POST') return Object.freeze({ allowed: false, ...RESTORE });
+    const route = RESTORE_ROUTE.exec(typeof request.route === 'string' ? request.route : '');
+    if (!engineRequest(request) || request.service !== 'notes' || !route || route[1] !== method
+        || FEATURE_SEGMENTS.has(restorePath[2].toLowerCase())) return SCOPE_DENIED;
+    return Object.freeze({ allowed: true, reasonCode: 'approved', ruleId: RESTORE.ruleId });
+  }
   if (!engineRequest(request)) return SCOPE_DENIED;
   const zone = zoneOf(request);
   if (!zone) return SCOPE_DENIED;
   const rule = ZONES[zone.kind];
   if (!rule[zone.item ? 'item' : 'collection'].includes(zone.method)) return deny(zone.kind);
   return Object.freeze({ allowed: true, reasonCode: 'approved', ruleId: rule.ruleId });
+}
+
+// 권한표 한 개의 형식·만료·grant를 검사합니다. 판정기와 10단계 시험 정책 복원 도구가 같은 기준을 씁니다.
+// 'valid' | 'header_invalid'(형식·만료·거부 코드 오류) | 'grants_invalid'(grant 형식·경로 오류)
+export function checkResourcePolicy(policy, now = Date.now()) {
+  if (!exactKeys(policy, ['schema', ...fields, 'expiresAt', 'denyReasonCode', 'grants'])
+      || policy.schema !== 'aleph.resource-policy.v1'
+      || !['classId', 'projectId', 'service'].every(key => text(policy[key]))
+      || !Number.isSafeInteger(policy.policyRevision) || policy.policyRevision < 1
+      || typeof policy.expiresAt !== 'string' || !Number.isFinite(Date.parse(policy.expiresAt))
+      || Date.parse(policy.expiresAt) <= now
+      || !/^[a-z][a-z0-9_]{0,63}$/u.test(policy.denyReasonCode ?? '')
+      || ['approved', 'device_not_registered'].includes(policy.denyReasonCode)
+      || !Array.isArray(policy.grants) || policy.grants.length > 1000) return 'header_invalid';
+  if (!policy.grants.every(grant => exactKeys(grant, grantFields)
+      && text(grant.subjectId) && /^[a-f0-9]{16}$/u.test(grant.deviceId ?? '')
+      && resolveResource(grant.path, grant.method))) return 'grants_invalid';
+  return 'valid';
 }
 
 // 관리자가 공식 서버 설정에 넣은 권한표가 있으면 고정 구역 규칙을 통과한 요청에 한해 그 표를 추가로 따릅니다.
@@ -80,19 +113,10 @@ export function inspectResourcePolicy(request, raw = process.env.ALEPH_RESOURCE_
   const denied = { allowed: false, reasonCode: 'resource_policy_invalid', ruleId: 'resource_scope' };
   let policy;
   try { policy = typeof raw === 'string' && raw.length <= 256 * 1024 ? JSON.parse(raw) : null; } catch { return denied; }
-  if (!exactKeys(policy, ['schema', ...fields, 'expiresAt', 'denyReasonCode', 'grants'])
-      || policy.schema !== 'aleph.resource-policy.v1'
-      || !['classId', 'projectId', 'service'].every(key => text(policy[key]))
-      || !Number.isSafeInteger(policy.policyRevision) || policy.policyRevision < 1
-      || typeof policy.expiresAt !== 'string' || !Number.isFinite(Date.parse(policy.expiresAt))
-      || Date.parse(policy.expiresAt) <= Date.now()
-      || !/^[a-z][a-z0-9_]{0,63}$/u.test(policy.denyReasonCode ?? '')
-      || ['approved', 'device_not_registered'].includes(policy.denyReasonCode)
-      || !Array.isArray(policy.grants) || policy.grants.length > 1000) return denied;
+  const checked = checkResourcePolicy(policy);
+  if (checked === 'header_invalid') return denied;
   denied.reasonCode = policy.denyReasonCode;
-  if (!policy.grants.every(grant => exactKeys(grant, grantFields)
-      && text(grant.subjectId) && /^[a-f0-9]{16}$/u.test(grant.deviceId ?? '')
-      && resolveResource(grant.path, grant.method))) return denied;
+  if (checked !== 'valid') return denied;
   const resource = resolveResource(request.path, request.method);
   if (!resource || request.route !== resource.route
       || !fields.every(key => request[key] === policy[key])) return denied;

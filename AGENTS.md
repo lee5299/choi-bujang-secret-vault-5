@@ -28,10 +28,12 @@
 이전 단계 기록을 다시 조사해 절차나 형식을 추측하지 마세요. Claude도 같은 문서를 사용합니다.
 
 - 새 단계 시작(「폴더 N을 만들어주세요」·「이어받기」): `docs/workflows/stage-start.md`
+- 제작 전 요구사항 표 정리·교차 검토: `docs/workflows/requirements.md` (작성하지 않은 쪽이 검토, 검토자는 코드를 고치지 않음)
 - 「제작 k」 구현과 기록: `docs/workflows/stage-build.md`
-- 저장점·제출 전 작업·bundle: `docs/workflows/savepoint.md`
+- 저장점·배포·제출·채점 결과 대응: `docs/workflows/savepoint.md`
 - 보너스 XDR 모듈: `docs/workflows/xdr-module.md`
 - 단계 작업정리 문서: `docs/workflows/work-summary.md`
 
+판정기는 환경변수·권한표 없이도 요구사항 표의 판정이 나와야 하고, 막는 범주마다 구역·사유 코드·RULE_IDS 규칙을 두며, allowedRoutes는 판정기 허용 경로와 같아야 합니다.
 최종 총공세는 1~12단계에서 조치한 방어 전체가 한꺼번에 들어옵니다. 제작·저장점마다 `node --test test/*.test.mjs` 전체 회귀를 실행하고, 이전 단계 시험이 실패하면 완료로 보고하지 마세요.
 절차 문서와 이 파일이 다르면 이 파일이 우선합니다. 절차를 바꿔야 하면 사용자에게 먼저 알리고 `docs/workflows/` 문서만 고치세요.

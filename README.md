@@ -1,11 +1,11 @@
 # 가상 자료실
 
-현재 로컬 코드는 기존 자료실에 6단계 기기·7단계 복합 이상·8단계 자원 ID와 구역 권한 검사를 추가한 구현입니다.
-로컬 제출 설정은 9단계입니다. 8단계 접속 방어 기록은 [8단계 기록](8/README.md), 현재 탐지와 제출 준비는 [9단계 기록](9/README.md)에 있습니다.
+현재 로컬 코드는 기존 자료실에 6단계 기기·7단계 복합 이상·8단계 자원 ID와 구역 권한 검사, 10단계 메모 한 건 복구·시험 정책 복원을 추가한 구현입니다.
+로컬 제출 설정은 10단계입니다. 10단계 인수·제작·시험 기록은 [10단계 기록](10/README.md), 복구 서비스·경로와 재시험 순서는 아래 [10단계 절](#10단계-백업에서-자료실을-되살립니다)에 있습니다. 8단계 접속 방어 기록은 [8단계 기록](8/README.md), 현재 탐지와 제출 준비는 [9단계 기록](9/README.md)에 있습니다.
 현재 인수 기준 커밋은 `f07ac95`입니다. 8단계 기록에는 `bc765ee` 배포 뒤의 보완이 기록되어 있으며,
 9단계 코드 저장점은 `1242f4f`, 사용자 요청으로 합친 7단계 문서는 `c8345d7`입니다.
-사용자가 정확한 저장소 main 업로드·연결된 배포를 승인했고, 최초 공개 조회에서 step 9·결과 기록 커밋 d7dcdc5·허용 경로 일치를 확인했습니다.
-최종 JSON은 결과 기록 뒤 최신 배포 커밋과 맞춰 생성합니다. 실제 심판 접수·판정은 아직 미확인입니다.
+최종 제출 준비에서는 step 9·배포·제출 JSON의 커밋 `b2ea2a7`과 허용 경로 일치를 확인했습니다.
+2026-10-13 사용자가 「통과했습니다. 9번과제 끝입니다.」라고 보고하여 9단계를 완료로 기록했습니다. 판정 상세·점수는 제공되지 않았습니다.
 제출 전 원문 차이는 [확인 기록](9/제출전확인.md), 준비·업로드 차단 결과는 [9단계 기록](9/README.md)에 남깁니다.
 9단계 준비 기록은 [9/README.md](9/README.md), 클로드 교차 검토 대상은 [9/요구사항.md](9/요구사항.md)입니다.
 새 공지 DB·강사 지정·운영 엔진 권한표 적용 방법과 모호한 부분은 [8단계 권한 설정](8/권한설정.md)에 있습니다.
@@ -35,6 +35,7 @@ anon·authenticated의 테이블·열 직접 권한 회수는 적용 후 조회 
 | `7/` | 7단계 인수·제작·가상 시험 기록 |
 | `8/` | 8단계 인수·제작·권한 설정·가상 시험 기록 |
 | `9/` | 9단계 인수·요구사항 표·클로드 검토 요청 |
+| `10/` | 10단계 인수·요구사항 표와 교차 검토·제작 기록 |
 | `XDR-01/`, `XDR-02/` | 보너스 단계별 작업 기록·시험 결과로 가는 README |
 | `TODO.md` | 아직 구현하거나 확인하지 않은 작업 |
 | `local-only/` | 이전 사본·화면 등 로컬 보관 자료. Git 제외 |
@@ -84,7 +85,7 @@ anon·authenticated 권한은 모두 false, PUBLIC·열 ACL 결과는 없음, �
 소유자 변경 본문 400, 기존 ID 덮어쓰기 409. `/data.json`은 404여야 합니다.
 실제 DB 적용은 학생이 수행했고 전후 조회 화면을 확인했습니다. 배포 점검과 계정 시험 결과는 5단계 기록에 있습니다.
 
-로컬 설정은 9단계입니다. 기존 배포 주소·Supabase 발급자·원본 API·메모/공지 경로와 `nosniff` 헤더를 유지합니다.
+로컬 설정은 10단계입니다. 기존 배포 주소·Supabase 발급자·원본 API·메모/공지 경로와 `nosniff` 헤더를 유지합니다.
 7단계 저장점 `b346b2c` 업로드 뒤 `/aleph.json`의 단계 7·커밋 일치를 실제 HTTP로 확인했습니다.
 `originalApiUrl`은 원본 메모 테이블의 쿼리 없는 HTTPS 주소입니다. `judgeIssuer`는 운영 측 설정을 유지합니다.
 5단계 당시 배포된 `/aleph.json`의 단계·허용 경로·커밋과 첫 화면 보안 헤더를 실제 HTTP로 확인했습니다.
@@ -107,6 +108,7 @@ anon·authenticated 권한은 모두 false, PUBLIC·열 ACL 결과는 없음, �
 - [7단계 전체 문서 HTML](7/작업정리.html) · [수정용 Markdown·GitHub 본문](7/작업정리.md)
 - [8단계 인수·제작·가상 시험 기록](8/README.md) · [권한 설정 안내](8/권한설정.md)
 - [9단계 준비 기록](9/README.md) · [요구사항 표](9/요구사항.md) · [클로드 검토 요청](9/CLAUDE_REVIEW.md)
+- [10단계 인수·제작 기록](10/README.md) · [요구사항 표와 교차 검토](10/요구사항.md)
 - [XDR 전체 목차](xdr/README.md)
 - [보너스 XDR-01 작업 기록](xdr/brute-force/README.md)
 - [XDR-01 폴더 안내](XDR-01/README.md)
@@ -126,7 +128,8 @@ anon·authenticated 권한은 모두 false, PUBLIC·열 ACL 결과는 없음, �
 저장점 준비의 9단계 가상 시험 175개·전체 회귀 222개 통과·실패 0개, 앞선 detect:test 연습 6건 통과입니다.
 원문의 네트워크 결합·기기 한 개 지정과 실제 회수는 미구현·미확인입니다. 사용자는 현재 구현을 제출하고 심판 결과로 판단하기로 했습니다.
 실행·제출 설정은 step 9로 정리했으며 상세와 실제 실행 범위는 [9단계 기록](9/README.md)에 있습니다.
-10~16단계는 완료한 작업이 생길 때 폴더와 기록 파일을 만들고 이 목차에 추가합니다.
+10단계는 `b2ea2a7` 기준으로 인수했고 메모 한 건 복구 경로·시험 정책 복원 도구와 가상 시험을 구현했습니다. 상세는 [10단계 기록](10/README.md)에 있습니다.
+11~16단계는 완료한 작업이 생길 때 폴더와 기록 파일을 만들고 이 목차에 추가합니다.
 
 이전 단계의 실행 결과는 해당 기록에 보존합니다. 현재 기능이나 새 검증 결과로 간주하지 않습니다.
 
@@ -281,6 +284,72 @@ API의 소유자·강사 검사는 직접 API 우회에도 적용하며 판정�
 초기 8단계 코드 저장점은 `59ab5e6`이며 최신 보완 커밋은 `f07ac95`입니다. 이전 빌드·시험·bundle 결과는 당시 기록으로 보존합니다.
 8단계 최신 보완 기록의 전체 가상 시험은 198개 통과·실패 0입니다. 이번 준비에서는 시험·배포·bundle을 실행하지 않았습니다.
 `artifacts/submission.json`을 현재 코드와 배포가 일치하는 최종 제출물로 확인하지 않았습니다. 남은 확인은 [TODO.md](TODO.md)에서 관리합니다.
+
+## 10단계 백업에서 자료실을 되살립니다
+
+### 메모 한 건 복구: 서비스·경로
+
+| 항목 | 값 |
+| --- | --- |
+| 서비스 | `notes` |
+| 경로 | **`POST /api/notes/:id/restore`** (판정기 표기 `POST /notes/:id/restore`) |
+| 신고 위치 | `aleph.config.json`의 `restoreRoute`·allowedRoutes 7번째, 배포 `/aleph.json`의 `restoreRoute`, 제출 JSON의 `restoreRoute` |
+| 서버 함수 | [api/note-restore.js](api/note-restore.js) (`vercel.json`이 `/api/notes/:id/restore`를 연결) |
+| DB | [적용 SQL](docs/sql/stage10-note-restore-apply.sql) · [조회 SQL](docs/sql/stage10-note-restore-audit.sql) · [되돌리는 연습 SQL](docs/sql/stage10-note-restore-drill.sql) |
+| 판정기 규칙 | `note_restore_scope` (POST만 허용, 다른 동작은 `note_restore_denied`) |
+
+로그인한 본인이 자기 메모 ID로 호출합니다. 요청 본문은 읽지 않습니다. 메모가 처음 추가될 때 DB가 봉인 사본을 한 번만 저장하고,
+수정·삭제·같은 ID 재추가는 사본을 바꾸지 않습니다. 복구 때 사본 지문을 다시 계산해 대조하고, 복구한 메모를 다시 읽어 ID·소유자·내용 지문이 사본과 같은지 확인합니다.
+응답은 `{ id, resourceId, status: restored|recreated|already_matching, changed, verified: { id, owner, contentHash } }`이며 제목·본문·소유자 값은 담지 않습니다.
+거부: 무로그인 401, 사본 없음·타인 메모 404 `backup_not_found_or_not_owner`, 사본 검증 실패 503 `backup_integrity_failed`, 같은 ID의 다른 소유자 행 409 `restore_conflict`, 다른 동작 405.
+사본·감사 테이블은 추가 전용이며 서버 키도 직접 읽거나 쓰지 못합니다. 다른 메모와 기존 감사 기록은 바꾸지 않습니다.
+
+DB 적용 순서(학생이 직접 실행): Supabase **SQL Editor → New query**에서 조회 SQL을 실행해 결과를 보관 → 적용 SQL을 검토 후 전체 Run →
+연습 SQL 전체 Run(오류 메시지의 `DRILL_RESULT all_passed=t`가 통과, 블록 전체가 자동 취소되어 흔적 없음) → 조회 SQL을 다시 실행합니다.
+조회 기대값: 사본·감사 테이블 권한은 anon·authenticated·service_role 모두 false, 복구 함수 실행은 service_role만 true, `notes_without_backup = 0`, `invalid_backups = 0`.
+소유자가 비어 있는 옛 메모는 복구 대상이 아니며 `notes_null_owner`로 따로 셉니다.
+2026-10-14 실제 Supabase(ZTNA 프로젝트)에 적용했습니다. 결과는 [10단계 기록](10/README.md#supabase-적용-결과-2026-10-14)에 있습니다.
+**SQL을 먼저 적용한 뒤 배포합니다.** SQL 없이 배포하면 기존 메모 기능은 그대로이고 복구 요청만 503입니다.
+
+### 시험 정책 차이 표시·복원 (제작 1·2)
+
+시험 정책은 로컬 `local-only/policy-lab/test-policy.json`(Git 제외)에 서비스별 8단계 권한표로 둡니다. 운영 정책(Vercel `ALEPH_RESOURCE_POLICY_JSON`)은 도구가 읽거나 바꾸지 않습니다.
+
+```powershell
+npm.cmd run policy:restore -- backup --service notes                 # 침해 전 사전 백업(사본 + 별도 위치 신뢰 기준)
+npm.cmd run policy:restore -- diff --service notes                   # 복원 버전·변경 범위만 표시, 변경 0건
+npm.cmd run policy:restore -- apply --service notes --confirm <문구>  # diff가 보여 준 확인 문구로만 적용
+npm.cmd run policy:restore -- drill                                  # 임시 폴더 가상 연습
+```
+
+정상 결과: `diff`에 복원할 버전·현재 버전·추가/삭제/수정 건수·보존할 다른 서비스·확인 문구, `apply` 결과 `restored`, 다른 서비스 보존, `audit.jsonl` 한 줄 추가.
+거부되어야 할 결과: 사본 없음·지문 불일치·만료 사본은 중단, 확인 문구가 없거나 비교 뒤 정책이 바뀌면 적용 거부. drill에서 복원 뒤 B의 A 메모 요청은 `deny`, A 정상 요청은 `allow`입니다.
+실제 `local-only/policy-lab`에는 아직 시험 정책·사전 백업이 없습니다. 사용하려면 침해 전에 `backup`부터 실행해야 합니다.
+
+### 10단계 복구 뒤 재시험 순서
+
+복구(정책·메모)를 마친 직후 아래 순서로 1~9단계의 정상·금지 요청을 다시 실행합니다. 「실행 여부」는 2026-10-14 기록 기준이며, 실행하지 않은 시험은 미실행으로 둡니다.
+가상 시험·연습의 통과는 실제 배포·심판 판정이 아닙니다.
+
+| 순서 | 단계 | 요청 (누가 · 경로) | 기대 결과 | 방법 | 실행 여부 |
+| --- | --- | --- | --- | --- | --- |
+| 0 | 전체 | 로컬 전체 회귀 | fail 0 | `node --test test/*.test.mjs` | 실행: 작업 공간 246개 통과 |
+| 1 | 10 | 사본 검증 | `invalid_backups 0`, `notes_without_backup 0` | 조회 SQL | 실행: Supabase 적용 직후 invalid 0·소유자 있는 메모 사본 누락 0 |
+| 2 | 10 | 시험 정책 비교 → 복원 | 확인 문구 뒤 `restored`, B의 A 요청 deny·A allow | `policy:restore -- diff` → `apply` | 가상 drill만 실행. 실제 저장소 미실행 |
+| 3 | 10 | B 메모 변조 → `POST /api/notes/:id/restore` | 200 `restored`, 원래 제목·본문 | B 로그인 후 호출 / 연습 SQL | Supabase 연습 SQL 통과(DB 함수 수준). 배포 API·실제 계정 미실행 |
+| 4 | 10 | B 메모 삭제 → 같은 경로 | 200 `recreated`, 같은 ID | 같음 | Supabase 연습 SQL 통과(DB 함수 수준). 배포 API·실제 계정 미실행 |
+| 5 | 10 | A가 B 메모 복구, 복구 경로 GET·DELETE | 404, 405 | 같음 | 가상 시험만 실행 |
+| 6 | 1·4 | 무로그인 `/data.json` | 404 또는 메모 0건 | `npm.cmd run bundle` 자기 점검 | 미실행 |
+| 7 | 3·5 | 무로그인 `GET /api/notes`, `POST /api/notes/:id/restore` | 401 JSON | bundle 자기 점검 | 미실행 |
+| 8 | 5 | 첫 화면 보안 헤더·키 표식, `/aleph.json` 단계·경로·`restoreRoute` | nosniff, 미검출, step 10 일치 | bundle 자기 점검 | 미실행 |
+| 9 | 4·5 | A 본인 메모 추가·수정·삭제 | 성공 | 배포 화면 로그인 | 미실행 |
+| 10 | 4·5·8 | B의 A 메모 읽기·수정·삭제, 소유자 변경 본문, 기존 ID 덮어쓰기 | 404, 400, 409 | 배포 화면·API | 미실행(가상 `notes.test` 통과) |
+| 11 | 5 | 원본 API 공개 키 직접 조회·수정 | 401·403 | 5단계 기록의 방법 | 미실행 |
+| 12 | 6 | 미등록 기기 | deny `device_not_registered` | `npm.cmd run decider:test` | 실행(가상) |
+| 13 | 7 | 복합 이상 / 재확인 뒤 | step_up / allow | `npm.cmd run fixture:7` | 실행(가상) |
+| 14 | 8 | 메모 목록, 공지 쓰기, 강사 자료, 기능 경로 | deny 구역별 사유, 학생 공지 쓰기 API 403 | `npm.cmd run test:stage8` / 배포 화면 | 가상 실행. 실제 API 미실행 |
+| 15 | 9 | 같은 사용자 10분 GET 121건 | `propose_revocation` | `npm.cmd run detect:test` | 실행(가상) |
+| 16 | 전체 | 심판 재전송(1~9단계 대표 공격) | 기존 거부 유지 | 제출 후 심판 | 미실행 |
 
 ## 보너스 XDR-02
 

@@ -12,6 +12,8 @@
     "fixture:7": "node scripts/fixture-7.mjs",
     "test:stage8": "node --test test/decider-stage8.test.mjs test/announcements.test.mjs test/notes.test.mjs test/decider-stage7.test.mjs test/r8.test.mjs",
     "test:stage9": "node --test test/detect-stage9.test.mjs test/r9-requirements.test.mjs test/decider-stage8.test.mjs test/announcements.test.mjs test/notes.test.mjs test/decider-stage7.test.mjs test/r8.test.mjs",
+    "test:stage10": "node --test test/r10-requirements.test.mjs test/note-restore.test.mjs test/policy-restore.test.mjs test/detect-stage9.test.mjs test/r9-requirements.test.mjs test/decider-stage8.test.mjs test/announcements.test.mjs test/notes.test.mjs test/decider-stage7.test.mjs test/r8.test.mjs",
+    "policy:restore": "node scripts/policy-restore.mjs",
     "xdr:run": "node scripts/xdr-run.mjs"
   },
   "engines": {

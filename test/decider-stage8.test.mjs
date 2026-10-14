@@ -14,7 +14,8 @@ test('8단계 사용자·기기·동작·정확한 경로와 이전 판정 규�
   policy.grants.push({ subjectId: 'instructor_fixture', deviceId: 'b'.repeat(16), method: 'PUT',
     path: `/announcements/${fixtureAnnouncementId}` });
   process.env.ALEPH_RESOURCE_POLICY_JSON = JSON.stringify(policy);
-  assert.deepEqual(RULE_IDS, ['device_registered', 'step_up_required', 'resource_scope', 'announcement_zone', 'instructor_material_zone']);
+  assert.deepEqual(RULE_IDS, ['device_registered', 'step_up_required', 'resource_scope', 'announcement_zone', 'instructor_material_zone',
+    'note_restore_scope']);
   const check = async (request, expected, reason) => {
     const copy = structuredClone(request);
     const result = await decide(request);

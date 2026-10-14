@@ -35,5 +35,7 @@ export function deploymentIdentity(env, config) {
     publicAppUrl: `https://${host.toLowerCase()}`,
     judgeIssuer: config.judgeIssuer,
     ...(config.step >= 5 ? { allowedRoutes: [...(config.allowedRoutes ?? [])], originalApiUrl: config.originalApiUrl } : {}),
+    // 10단계부터 학생이 제출한 메모 한 건 복구 경로를 배포 식별 JSON에도 함께 공개합니다.
+    ...(config.step >= 10 ? { restoreRoute: config.restoreRoute ?? null } : {}),
   };
 }

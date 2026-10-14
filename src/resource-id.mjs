@@ -10,6 +10,14 @@ export function resourceId(kind, id = null) {
 // raw path를 정규화/디코딩해서 다른 경로를 허용 경로로 바꾸지 않습니다.
 export function resolveResource(path, method) {
   if (typeof path !== 'string' || typeof method !== 'string') return null;
+  // 10단계 메모 한 건 복구 경로: POST만 같은 메모 자원으로 연결합니다.
+  const restore = /^(\/api)?\/notes\/([^/]+)\/restore$/u.exec(path);
+  if (restore) {
+    const [, prefix = '', id] = restore;
+    if (method !== 'POST' || !resourceId('notes', id)) return null;
+    return Object.freeze({ kind: 'notes', id: id.toLowerCase(), action: 'restore',
+      resourceId: resourceId('notes', id), route: `POST ${prefix}/notes/:id/restore` });
+  }
   const match = /^(\/api)?\/(notes|announcements)(?:\/([^/]+))?$/u.exec(path);
   if (!match) return null;
   const [, prefix = '', kind, id] = match;

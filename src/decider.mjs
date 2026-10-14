@@ -1,11 +1,11 @@
 // ALEPH SDP 엔진이 신원과 경로를 확인한 요청만 받는 학생 판정기입니다.
 // 6단계 기기 규칙 유지. 7단계 복합 이상은 추가 확인을 요청합니다.
-// 8단계 구역 규칙(메모·반 공지·강사 자료)은 src/resource-policy.mjs에 있으며 거부 사유 코드를 구역별로 돌려줍니다.
+// 8단계 구역 규칙(메모·반 공지·강사 자료)과 10단계 메모 복구 구역은 src/resource-policy.mjs에 있으며 거부 사유 코드를 구역별로 돌려줍니다.
 // 요청 본문의 userId, role, 기기 키, 토큰을 별도로 믿거나 저장하지 마세요.
 import { inspectResourcePolicy } from './resource-policy.mjs';
 
 export const RULE_IDS = Object.freeze(['device_registered', 'step_up_required', 'resource_scope',
-  'announcement_zone', 'instructor_material_zone']);
+  'announcement_zone', 'instructor_material_zone', 'note_restore_scope']);
 
 const isObject = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const hasKeys = (value, keys) => isObject(value)
@@ -44,7 +44,7 @@ export async function decide(request) {
   const ruleIds = [RULE_IDS[0]];
   if (registered) {
     const access = inspectResourcePolicy(request);
-    // 구역 규칙 이름: 메모·기타 resource_scope, 반 공지 announcement_zone, 강사 자료 instructor_material_zone.
+    // 구역 규칙 이름: 메모·기타 resource_scope, 반 공지 announcement_zone, 강사 자료 instructor_material_zone, 메모 복구 note_restore_scope.
     ruleIds.push(RULE_IDS.includes(access.ruleId) ? access.ruleId : 'resource_scope');
     if (!access.allowed) {
       return { schema: 'aleph.decision.v1', requestId: request.requestId,

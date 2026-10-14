@@ -156,3 +156,11 @@
 대상 아님(보존): `docs/workflows/work-summary.md`, `.claude/skills/work-summary/SKILL.md`(이번 작업 전부터 있던 다른 미커밋 수정), `XDR-01/xdr-1.txt`, `XDR-01/xdr-2.txt`, `docs/PROJECT_PAGE.md`, `bundle-notes.json`, `artifacts/`, `local-only/`.
 
 남은 순서: 저장점 커밋 → 새 복제본 `npm install`·전체 회귀·빌드·bundle(자기 점검은 배포 주소에 요청하므로 push·배포 전에는 11단계 배포 결과가 나옵니다) → 제출 직전 push·배포 → `/aleph.json` 단계 12·커밋 확인 → bundle 재생성·`regression:table -- --probe` → 제출.
+
+## 저장점 커밋·새 복제본 bundle 결과 (2026-10-14)
+
+- 사용자가 PC에서 `local-only\stage12-savepoint.ps1`을 실행했습니다(18:41). 대상 33개 비밀값 패턴 0건, 33개 파일만 스테이징, **커밋 `f90d283` 「12단계 저장점」**. push는 하지 않았습니다.
+- 같은 스크립트가 `local-only/stage12-submit-20261014-184148` 새 복제본에서 `npm install`·전체 회귀·`build --local`·`npm run bundle`을 오류 없이 마쳤습니다(각 단계 실패 시 중단하는 스크립트). PowerShell 기록에는 npm·node 출력이 남지 않아 회귀 개수는 이 실행에서 기록하지 못했습니다. 같은 코드의 클라우드 전체 회귀는 289개 통과입니다.
+- 18:47 두 번째 실행의 「git commit 실패」는 이미 커밋되어 스테이징할 변경이 0개였기 때문입니다. 저장소 변경은 없습니다.
+- 제출 묶음 `artifacts/submission.json`: 단계 12 · 커밋 `f90d283` · 바뀐 파일 33개 · 규칙 6개 · allowedRoutes 7개 · 직접 점검 12개. 사본 `local-only/submission-records/stage12-f90d283-submission.json`.
+- 직접 점검(배포 주소 실제 요청, **현재 배포는 push 전 11단계**): 무로그인 메모·공지·복구·기기 상태 401, `/data.json` 404, 첫 화면 200·보안 헤더·키 미검출, 공개 연결 선언·manifest 확인. `deployment_identity`는 「현재 단계 식별 JSON 불일치」(배포 step 11), `anonymous_operations_summary`는 404(작전실 API 미배포)입니다. 제출 직전 push·배포 뒤 bundle을 다시 만들어 두 항목을 확인합니다.

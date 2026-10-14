@@ -9,7 +9,8 @@
 - [ ] 제작 1 배포 실측: 배포 후 승인 기기의 작전실 요약 200·무로그인 401과 화면 요청 ID ↔ Vercel Logs `vault_api_result` 대조. 로컬 가상 시험만 완료입니다.
 - [ ] 저장점 전에 `package/baseline-functions.json`·`test/package-starter.test.mjs`의 허용 API 목록 변경(작전실 API 추가)을 사용자가 확인.
 - [ ] 제작 2 배포 실측: 배포 후 `npm.cmd run regression:table -- --probe`와 계정 A·B 화면 내보내기 `--import`로 시험 기록표의 배포 API 행을 실제 결과로 채웁니다. M1a→M1b, N2→M3a→M3b→N3 연속 순서는 같은 배포에서 확인합니다.
-- [ ] 제작 3 마무리: 저장점 코드 커밋 해시를 README 「검사 기준 커밋」과 12단계 기록에 적습니다.
+- [ ] 기록 커밋: `12/README.md`·`README.md`·`TODO.md`의 저장점 결과 기록(검사 기준 커밋 `f90d283` 포함)을 push 전에 커밋합니다.
+- [ ] 제출 직전: push → 배포 `/aleph.json` 단계 12·커밋 확인 → bundle 재생성(deployment_identity·anonymous_operations_summary 401 확인) → 제출.
 - [ ] 제작마다 전체 회귀를 실행합니다. (step 12·allowedRoutes 7개 유지는 제작 1에서 확인)
 - [ ] 저장점 요청 시 새 복제본 설치·최종 제출 커밋/배포/bundle 대조·제출 묶음 생성. 실제 심판 결과와 자기 점검은 구분합니다.
 

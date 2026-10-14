@@ -1,6 +1,6 @@
-// WebAuthn 개인키는 인증기가 관리합니다. 이 코드는 키·토큰·기기 상태를 브라우저 저장소에 쓰지 않습니다.
+// 개인키는 내보낼 수 없는 CryptoKey로 IndexedDB에만 저장합니다. 토큰·승인 상태는 저장하지 않습니다.
 (() => {
-  const decode = value => Uint8Array.from(atob(value.replaceAll('-', '+').replaceAll('_', '/')), char => char.charCodeAt(0));
+  const protocol = 'webcrypto-request-v1';
   const encode = buffer => btoa(String.fromCharCode(...new Uint8Array(buffer))).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/u, '');
   const canonical = value => value == null ? 'null' : Array.isArray(value)
     ? `[${value.map(canonical).join(',')}]` : typeof value === 'object'
@@ -12,21 +12,37 @@
     const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
     return [...new Uint8Array(hash)].map(byte => byte.toString(16).padStart(2, '0')).join('');
   };
-  const serialize = credential => {
-    const response = { clientDataJSON: encode(credential.response.clientDataJSON) };
-    for (const key of ['attestationObject', 'authenticatorData', 'signature']) {
-      if (credential.response[key]) response[key] = encode(credential.response[key]);
-    }
-    response.userHandle = credential.response.userHandle ? encode(credential.response.userHandle) : null;
-    if (credential.response.getTransports) response.transports = credential.response.getTransports();
-    return { id: credential.id, rawId: encode(credential.rawId), type: credential.type,
-      response, clientExtensionResults: credential.getClientExtensionResults(), authenticatorAttachment: credential.authenticatorAttachment };
-  };
-  const publicKey = options => ({ ...options, challenge: decode(options.challenge),
-    ...(options.user ? { user: { ...options.user, id: decode(options.user.id) } } : {}),
-    ...(options.excludeCredentials ? { excludeCredentials: options.excludeCredentials.map(item => ({ ...item, id: decode(item.id) })) } : {}),
-    ...(options.allowCredentials ? { allowCredentials: options.allowCredentials.map(item => ({ ...item, id: decode(item.id) })) } : {}),
+  const hexHash = async bytes => [...new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))].map(byte => byte.toString(16).padStart(2, '0')).join('');
+  const storage = (account, value) => new Promise((resolve, reject) => {
+    if (!globalThis.indexedDB || !crypto?.subtle) return reject(new Error('device_not_supported'));
+    const opening = indexedDB.open('vault-browser-keys-v1', 1);
+    opening.onupgradeneeded = () => opening.result.createObjectStore('keys');
+    opening.onerror = opening.onblocked = () => reject(new Error('device_storage_unavailable'));
+    opening.onsuccess = () => {
+      const db = opening.result;
+      db.onversionchange = () => db.close();
+      try {
+        const transaction = db.transaction('keys', value ? 'readwrite' : 'readonly');
+        const store = transaction.objectStore('keys');
+        // add을 사용해 두 탭의 동시 등록이 이미 저장된 키를 덮어쓰지 않게 합니다.
+        const request = value ? store.add(value, account) : store.get(account);
+        transaction.oncomplete = () => { db.close(); resolve(value ?? request.result ?? null); };
+        transaction.onabort = () => {
+          db.close(); reject(new Error(transaction.error?.name === 'ConstraintError' ? 'device_key_exists' : 'device_storage_unavailable'));
+        };
+      } catch { db.close(); reject(new Error('device_storage_unavailable')); }
+    };
+  }).catch(error => {
+    if (['device_key_exists', 'device_not_supported', 'device_storage_unavailable'].includes(error.message)) throw error;
+    throw new Error('device_storage_unavailable');
   });
+  const validKey = key => {
+    if (key && (key.privateKey?.type !== 'private' || key.privateKey.extractable !== false
+        || key.privateKey.algorithm?.name !== 'ECDSA' || key.privateKey.algorithm?.namedCurve !== 'P-256'
+        || key.privateKey.usages?.join(',') !== 'sign' || !/^wc1_[a-f0-9]{64}$/u.test(key.id)
+        || typeof key.publicKey !== 'string')) throw new Error('device_storage_unavailable');
+    return key;
+  };
   globalThis.VaultDeviceClient = {
     create({ getSession, onState }) {
       let state = { approved: false, status: 'signed_out' };
@@ -52,32 +68,61 @@
         queue = pending.catch(() => {});
         return pending;
       };
+      const browserKey = async (token, generation, create = false) => {
+        ensure(token, generation);
+        const user = getSession()?.user?.id;
+        if (typeof user !== 'string' || !user) throw new Error('device_session_changed');
+        if (!globalThis.indexedDB || !crypto?.subtle) throw new Error('device_not_supported');
+        // DB의 저장 식별자에는 계정 ID 원문을 남기지 않습니다.
+        const account = await hexHash(new TextEncoder().encode(user));
+        ensure(token, generation);
+        let key = validKey(await storage(account));
+        if (!key && create) {
+          const pair = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign', 'verify']);
+          const bytes = await crypto.subtle.exportKey('spki', pair.publicKey);
+          const candidate = { id: `wc1_${await hexHash(bytes)}`, publicKey: encode(bytes), privateKey: pair.privateKey };
+          ensure(token, generation);
+          try { key = await storage(account, candidate); }
+          catch (error) { if (error.message !== 'device_key_exists') throw error; key = validKey(await storage(account)); }
+        }
+        ensure(token, generation);
+        return key;
+      };
+      const sign = async (key, options, purpose, token, generation) => {
+        if (options.protocol !== protocol || options.origin !== location.origin || !/^[A-Za-z0-9_-]{43}$/u.test(options.challenge)) throw new Error('invalid_device_response');
+        const data = new TextEncoder().encode(JSON.stringify({ protocol, type: purpose, challenge: options.challenge, origin: location.origin, id: key.id }));
+        const signature = await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, key.privateKey, data);
+        ensure(token, generation);
+        return { id: key.id, type: protocol, response: { clientDataJSON: encode(data), signature: encode(signature) } };
+      };
       const assertion = async (purpose, intent, token, generation) => {
+        const key = await browserKey(token, generation);
+        if (!key) throw new Error('device_not_registered');
         const options = await json('authentication-options', 'POST', { purpose, ...(intent ? { intent } : {}) }, token);
         ensure(token, generation);
-        if (!navigator.credentials?.get) throw new Error('device_not_supported');
-        const credential = await navigator.credentials.get({ publicKey: publicKey(options) });
-        ensure(token, generation);
-        if (!credential) throw new Error('device_verification_cancelled');
-        return serialize(credential);
+        if (!Array.isArray(options.allowedIds) || !options.allowedIds.includes(key.id)) throw new Error('device_not_registered');
+        return sign(key, options, purpose, token, generation);
       };
       return {
         getState: () => ({ ...state }),
         clear() { epoch++; report({ approved: false, status: 'signed_out' }); },
         status: () => run(async (token, generation) => {
           const result = await json('status', 'GET', null, token); ensure(token, generation);
+          const key = await browserKey(token, generation);
+          const record = key && result.devices?.find(item => item.id === key.id);
           // GET 응답만으로 이 기기의 개인키 소유를 확인할 수 없습니다.
-          report({ approved: false, status: ['pending', 'approval_required', 'verification_required'].includes(result.status) ? result.status : 'unavailable' });
+          report({ approved: false, status: record?.status === 'approved' ? 'verification_required'
+            : record?.status === 'pending' ? 'pending' : record?.status === 'revoked' ? 'device_not_registered' : 'approval_required',
+            ...(record ? { deviceId: record.deviceId } : {}) });
           return { ...state };
         }),
         register: () => run(async (token, generation) => {
+          const key = await browserKey(token, generation, true);
           const options = await json('registration-options', 'POST', {}, token); ensure(token, generation);
-          if (!navigator.credentials?.create) throw new Error('device_not_supported');
-          const credential = await navigator.credentials.create({ publicKey: publicKey(options) }); ensure(token, generation);
-          if (!credential) throw new Error('device_verification_cancelled');
-          const result = await json('registration-verify', 'POST', serialize(credential), token); ensure(token, generation);
-          if (result.status !== 'pending' || result.approved !== false) throw new Error('invalid_device_response');
-          report({ approved: false, status: 'pending', deviceId: result.deviceId });
+          const proof = await sign(key, options, 'registration', token, generation);
+          const result = await json('registration-verify', 'POST', { ...proof, publicKey: key.publicKey }, token); ensure(token, generation);
+          if (!['pending', 'verification_required'].includes(result.status) || result.approved !== false) throw new Error('invalid_device_response');
+          report({ approved: false, status: result.status, deviceId: result.deviceId });
           return { ...state };
         }),
         verify: () => run(async (token, generation) => {

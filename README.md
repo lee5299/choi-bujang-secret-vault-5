@@ -38,6 +38,7 @@ anon·authenticated의 테이블·열 직접 권한 회수는 적용 후 조회 
 | `9/` | 9단계 인수·요구사항 표·클로드 검토 요청 |
 | `10/` | 10단계 인수·요구사항 표와 교차 검토·제작 기록 |
 | `11/` | 11단계 요구사항·Jev 정리·제작 1·2 기록·최종 검토 요청 |
+| `12/` | 12단계 요구사항·검토·제작 1~3 기록·시험 기록표 |
 | `XDR-01/`, `XDR-02/` | 보너스 단계별 작업 기록·시험 결과로 가는 README |
 | `TODO.md` | 아직 구현하거나 확인하지 않은 작업 |
 | `local-only/` | 이전 사본·화면 등 로컬 보관 자료. Git 제외 |
@@ -376,3 +377,54 @@ npm.cmd run policy:restore -- drill                                  # 임시 �
 ## 11단계 완료 (2026-10-14)
 
 사용자가 11단계 100점 통과를 보고하여 종료했습니다. 직전 제출 준비 기준 6210ec6, 코드 저장점 deb41b0. [11단계 통과 기록](11/README.md)과 [공격 유형별 재시험](docs/공격유형별-재시험.md)의 C10~C12·T31~T38에 결과·시험 방법을 보관합니다. 실제 기기 학생 시험의 미실행 범위는 보존합니다. 다음은 요청을 받은 뒤 12단계를 시작합니다.
+
+## 12단계 탈환 작전실과 재현 안내
+
+12단계 제작 1~3의 상세 결과는 [12단계 기록](12/README.md), 정상·금지 요청 한 표는 [시험 기록표](12/시험기록표.md)에 있습니다.
+
+### 검사 기준 커밋
+
+- 이 안내의 **검사 기준 커밋은 「12단계 저장점」 코드 커밋**입니다. 아직 만들지 않았습니다. 현재 작업 기준은 `7ebbf67` + 미커밋 변경이며, 이 상태의 로컬 전체 회귀 결과만 12단계 기록에 있습니다.
+- 저장점 커밋 뒤 그 해시를 이 줄과 12단계 기록에 적습니다. README·기록만 바꾸는 기록 커밋은 코드 검사 기준을 바꾸지 않지만, 최종 제출 커밋·배포 `/aleph.json` 커밋·bundle 커밋이 같은지는 따로 대조합니다.
+
+### 제공 엔진과 학생 작업의 출처
+
+| 구분 | 담당 | 위치 |
+| --- | --- | --- |
+| 제공 엔진 | **ALEPH SDP 엔진 사용.** 신원·기기·경로 확인, `aleph.decision.v1` 판정 요청 전달, 운영 탐지 사건 전달·회수 집행, 심판 요청 | 이 저장소에 엔진 코드는 없습니다. 계약만 [판정 요청](docs/DECIDER_REQUEST.md)·[탐지 사건](docs/DETECT_EVENTS.md)에 있습니다 |
+| 학생 판정기 | 엔진이 보낸 18개 항목만 읽고 allow·deny·step_up 판단, 규칙 6개 | `src/decider.mjs`, `src/resource-policy.mjs` |
+| 학생 탐지 규칙 | 사용자별 10분 GET 120건 초과 시 회수 **제안**(가상 사건) | `src/detect.mjs` |
+| 학생 접속 앱 | 설치 manifest, WebAuthn 기기 등록·관리자 승인·매 요청 서명 | `public/device-client.js`, `api/device.js`, `src/device-proof.mjs`, `access-app.config.json` |
+| 학생 자료실 | 로그인·메모·공지·메모 한 건 복구·작전실 요약 API와 화면, 요청 ID | `api/`, `src/resource-auth.mjs`, `src/request-trace.mjs`, `src/operations-summary.mjs`, `public/index.html` |
+
+엔진의 판정·회수 결과를 자료실에서 조회하는 공식 연결은 없습니다. 작전실은 이 영역을 「미연결」로 표시합니다.
+
+### 구성 요소별 설치·실행·중지·복구
+
+| 구성 요소 | 설치 | 실행 | 중지 | 복구 |
+| --- | --- | --- | --- | --- |
+| 학생 판정기 | 검사 커밋 새 복제본에서 `npm.cmd install` | 실제 판정은 제공 엔진이 `decide()`를 호출합니다. 로컬 가상 연습: `npm.cmd run decider:test`, `npm.cmd run fixture:7` | 학생 쪽 상주 프로세스는 없습니다. 판정기 코드를 되돌릴 때는 이전 커밋으로 되돌린 새 커밋을 배포합니다 | 시험 정책은 `npm.cmd run policy:restore -- backup/diff/apply` (학생 PC 실습 저장소) |
+| 학생 탐지 규칙 | 위와 같음 | 로컬 가상 연습 `npm.cmd run detect:test`. 운영 사건 전달·회수 집행은 제공 엔진 영역(미연결) | 상주 프로세스 없음 | 코드 되돌림 후 배포 |
+| 학생 접속 앱 | 배포 화면에서 앱 설치 → 로그인 → 「기기 승인 요청」 → 관리자가 SQL Editor에서 승인([절차](docs/ACCESS_APP_CONTRACT.md#db-적용관리자-승인), 사용자 직접) | 로그인 → 「승인된 기기 확인」 → 보호 요청마다 서명 | **세션 종료**: 로그아웃(메모리 세션 삭제). **기기 접근 중지**: 관리자 승인 취소(`library_device_review(..., false)`, 사용자 직접) | 새 기기 등록 후 관리자 재승인 |
+| 학생 자료실 | Vercel 비밀 입력란에 `SUPABASE_URL`·`SUPABASE_SECRET_KEY`, 필요한 `docs/sql` 적용(사용자 직접) | main 배포 후 화면 사용. 작전실: 「작전실 요약 불러오기」 | **세션 종료**: 로그아웃. **운영 접속 중지**: Vercel에서 이전 배포로 되돌리거나 프로젝트를 일시 중지(사용자 직접). 둘은 다른 조치입니다 | 메모 한 건: `POST /api/notes/:id/restore`. 배포: 이전 정상 배포로 되돌림 |
+
+### 재현 순서
+
+```powershell
+git clone https://github.com/lee5299/choi-bujang-secret-vault-5 vault-check
+cd vault-check
+git checkout <검사 기준 커밋>
+npm.cmd install
+node --test test/*.test.mjs
+npm.cmd run build -- --local
+npm.cmd run regression:table -- --local
+```
+
+1. 위 명령으로 설치·전체 회귀·빌드·로컬 가상 시험 표를 만듭니다. 결과는 「로컬 통과(가상)」로만 기록됩니다.
+2. 배포 `/aleph.json`의 단계 12·커밋이 검사 기준과 같은지 확인한 뒤 `npm.cmd run regression:table -- --probe`로 무로그인 요청을 실제로 보냅니다.
+3. 계정 A·B로 화면에서 시험 요청을 보내고 「실제 결과 내보내기(JSON)」 → `npm.cmd run regression:table -- --import <파일> --case <시험 ID> --account <A 또는 B>`.
+4. 표의 요청 ID를 Vercel **Logs**에서 `vault_api_result`로 찾아 상태를 대조합니다.
+
+### 비밀값
+
+비밀값은 Vercel 환경변수 비밀 입력란에만 둡니다. `.env`, `bundle-notes.json`, `artifacts/`, `local-only/`는 Git과 제출 묶음에서 제외합니다. 시험 기록표·내보내기 파일·서버 기록에는 토큰·키·메모 본문·실제 사용자 ID를 넣지 않습니다. `npm.cmd run bundle`은 비밀값 패턴을 검사합니다.

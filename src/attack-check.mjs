@@ -1,7 +1,8 @@
 // The student changes this check as each stage adds an attack to the same app.
 // Never return tokens, private keys, real names, or note bodies.
 export async function runAttackChecks(config) {
-  if (![1, 3, 4, 5, 6, 7, 8, 9, 10, 11].includes(config.step)) throw new Error('이 단계의 공격 점검을 src/attack-check.mjs에 구현해 주세요.');
+  if (![1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].includes(config.step)) throw new Error('이 단계의 공격 점검을 src/attack-check.mjs에 구현해 주세요.');
+  // 12단계는 무로그인 작전실 요약 GET 한 건을 더 보냅니다. 로그인·승인 기기·서명 뒤의 정상 요약은 여기서 확인하지 않습니다.
   // 11단계는 공개 앱 선언·manifest·무로그인 기기 상태를 점검합니다. 실제 승인·서명 공격은 별도 시험입니다.
   // 9단계도 기존 공개 HTTP 경로만 점검합니다. 이 결과로 탐지·회수·심판 통과를 주장하지 않습니다.
   // 10단계는 무로그인 메모 복구 POST 한 건을 더 보냅니다. 로그인한 B의 복구 성공은 여기서 확인하지 않습니다.
@@ -34,6 +35,9 @@ export async function runAttackChecks(config) {
         ['/manifest.webmanifest', 'app_manifest', '앱 manifest는 HTTP 200이며 이름·루트 경로·아이콘 포함'],
         ['/api/device?route=status', 'anonymous_device_status', '무로그인 기기 상태 확인은 401 JSON 오류'],
       ] : []),
+      ...(config.step >= 12 ? [
+        ['/api/operations-summary', 'anonymous_operations_summary', '무로그인 작전실 요약은 401 JSON 오류이며 요약 항목 없음'],
+      ] : []),
     ];
     for (const [path, attackId, expected, method = 'GET'] of targets) {
       let observed;
@@ -58,10 +62,12 @@ export async function runAttackChecks(config) {
           if (jsonType) {
             try { data = await result.json(); } catch { /* 본문이나 원본 오류를 기록하지 않습니다. */ }
           }
-          if (path === '/api/notes' || path.startsWith('/api/announcements') || path.startsWith('/api/device') || path.endsWith('/restore')) {
+          if (path === '/api/notes' || path.startsWith('/api/announcements') || path.startsWith('/api/device') || path.endsWith('/restore')
+              || path === '/api/operations-summary') {
             const jsonError = data && !Array.isArray(data)
               && [data.message, data.error].some(value => typeof value === 'string' && value.trim());
             observed = `HTTP ${result.status} · JSON 오류 ${jsonError ? '확인' : '없음'}`;
+            if (path === '/api/operations-summary') observed += ` · 요약 항목 ${data && Object.hasOwn(data, 'areas') ? '노출' : '없음'}`;
           } else if (path === '/access-app.json') {
             const valid = data?.schema === 'vault.access-app.v1' && data.origin === app.origin
               && data.protocol === 'webauthn-request-v1' && !Object.hasOwn(data, 'approved');

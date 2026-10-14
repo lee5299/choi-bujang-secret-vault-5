@@ -13,7 +13,7 @@
    - `judgeIssuer`는 운영 측 값입니다. **바꾸지 않습니다.**
    - `src/decider.mjs`의 `RULE_IDS` = 실제 구현 규칙.
    - `allowedRoutes` = 판정기가 허용하는 경로와 **정확히 같은 목록** (요구사항 표의 allowedRoutes 후보).
-3. `src/attack-check.mjs`: 이번 단계 공개 HTTP 자기 점검으로 갱신. 실제로 보낸 요청 결과만, 1~20개, 미실행은 미실행.
+3. `src/attack-check.mjs`: 이번 단계 지원과 공개 HTTP 자기 점검이 제작에서 끝났는지 **확인**합니다(갱신은 stage-build 3번). 실제로 보낸 요청 결과만, 1~20개, 미실행은 미실행.
 4. 시험: `npm.cmd run test:stageN`, 전체 회귀 `node --test test/*.test.mjs`. 통과·실패 개수를 기록합니다.
 5. `bundle-notes.json` (Git 제외): `explanation`에 이번 단계에서 한 일·규칙·가상/미실행 범위를 세 줄로.
    이전 notes·submission은 `local-only/submission-records/before-stageN-YYYYMMDD-HHMMSS-*.json`으로 보관합니다.

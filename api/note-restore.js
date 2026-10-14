@@ -1,6 +1,7 @@
 import { authenticateResource, databaseEndpoint } from '../src/resource-auth.mjs';
 import { requestPath, resourceId, UUID } from '../src/resource-id.mjs';
 import { noteContentSha256, SHA256_HEX } from '../src/note-backup.mjs';
+import { traceRequest } from '../src/request-trace.mjs';
 
 // 10단계 메모 한 건 복구: service=notes, POST /api/notes/:id/restore (vercel.json에서 이 함수로 연결).
 // 검증된 로그인 사용자의 봉인 사본 한 건만 복구합니다. 요청 본문은 읽지 않습니다.
@@ -22,6 +23,7 @@ const DENIED = Object.freeze({
 
 export default async function handler(request, response) {
   response.setHeader('Cache-Control', 'no-store');
+  traceRequest(request, response, 'note_restore');
   const authenticated = await authenticateResource(request, response, unavailable);
   if (!authenticated) return response;
   const { identity, databaseUrl, secretKey } = authenticated;

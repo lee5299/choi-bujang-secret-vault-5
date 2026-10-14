@@ -4,8 +4,8 @@
 
 ## 순서
 
-0. `N/요구사항.md`의 교차 검토가 끝났는지 확인합니다. 없으면 [requirements.md](requirements.md)부터 합니다.
-1. **한 요청 = 한 변경.** 손댈 파일과 이유를 한 줄로 먼저 알립니다. 변경이 요구사항 표의 어느 행을 위한 것인지 적습니다.
+0. `N/요구사항.md`에 검토와 작성자 반영 기록이 있는지 확인합니다. 없으면 [requirements.md](requirements.md)부터 합니다.
+1. 손댈 파일과 이유를 한 줄로 먼저 알립니다. 변경이 요구사항 표의 어느 행을 위한 것인지 적습니다.
 2. 계약 확인
    - `src/decider.mjs` → `docs/DECIDER_REQUEST.md`. 계약에 있는 필드만 사용. `decide(request)`와 응답 다섯 항목 유지.
    - `src/detect.mjs` → `docs/DETECT_EVENTS.md`.
@@ -18,14 +18,15 @@
    - 자료 ID 형식(UUID 등)을 판정기에서 강제하지 않습니다. 주인·역할처럼 계약에 없는 판단은 자료 API가 합니다.
    - 경로를 추가·삭제하면 `aleph.config.json`의 allowedRoutes를 판정기 허용 경로와 같게 맞춥니다.
    자료 API 원칙: 거부 응답(4xx)은 `{ error: <짧은 코드>, message }`, 자료 필드 없음. 다른 사람 자료와 없는 자료는 같은 응답.
+   단계 전환: 이 단계의 첫 제작에서 `aleph.config.json`의 `step`을 N으로 올리고, `src/attack-check.mjs`에 N단계 지원과 자기 점검 요청을 추가합니다. 저장점에서는 확인만 합니다.
 4. 시험
    - 새 시험 파일: `test/rN.test.mjs` 또는 `test/<기능>-stageN.test.mjs`.
-   - `package.json`에 `test:stageN` 추가 (직전 단계 판정기·API 시험 포함, `test:stage8` 형식).
+   - `package.json`에 `test:stageN` 추가 (이번 요구사항과 이전 단계 판정기·API 시험 포함).
    - 요구사항 표의 행을 `test/rN-requirements.test.mjs`로 옮깁니다 (행 번호를 시험 이름에).
    - **심판 조건**으로 시험합니다: `ALEPH_RESOURCE_POLICY_JSON` 없음, UUID가 아닌 ID, `/api` 있는·없는 경로, service 값.
-     가상 권한표를 넣은 시험만으로 완료하지 않습니다. 연습 스크립트(`fixture:7`, `decider:test`)는 두 상태를 모두 돕니다.
+     가상 권한표를 넣은 시험만으로 완료하지 않습니다. 연습 스크립트(`decider:test` 등)도 권한표 있음·없음 두 상태로 확인합니다.
    - **전체 회귀** `node --test test/*.test.mjs`. 이전 단계 시험이 하나라도 실패하면 완료가 아닙니다 (총공세 대비).
-     이전 단계 시험의 기대값을 바꿔야 하면 멈추고 사용자에게 알립니다 (예: 7단계 메모 추가·삭제 allow).
+     이전 단계 시험의 기대값을 바꿔야 하면 멈추고 사용자에게 알립니다.
    - 오류가 나면 첫 오류와 이번에 바뀐 파일을 근거로 한 가지만 고칩니다.
 5. 기록: `N/README.md`에 추가
    ```markdown

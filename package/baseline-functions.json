@@ -11,6 +11,7 @@
     "api/note-restore.js",
     "api/notes.js",
     "api/notes/[id].js",
+    "api/operations-summary.js",
     "api/threat-intel.js"
   ]
 }

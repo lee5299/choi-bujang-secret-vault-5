@@ -1,0 +1,826 @@
+{
+  "schema": "vault.regression-cases.v1",
+  "note": "1~11단계 T01~T38(docs/공격유형별-재시험.md)과 12단계 요구사항 행입니다. 공식 41종 목록이 아니며 41종 매핑은 미확정입니다. :id 자리는 시험용 가상 자료 ID입니다.",
+  "placeholderId": "00000000-0000-4000-8000-000000000012",
+  "cases": [
+    {
+      "id": "T01",
+      "stage": 2,
+      "title": "로그인 없이 공개 메모 파일 읽기",
+      "source": "deployed_api",
+      "expected": "404, 메모 미반환. 첫 화면 /는 열려도 개인 메모는 나오지 않아야 합니다.",
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/data.json",
+          "account": "무로그인",
+          "expectStatus": 404,
+          "auto": true
+        }
+      ]
+    },
+    {
+      "id": "T02",
+      "stage": 2,
+      "title": "HTML·브라우저 파일·설정에서 메모와 키 찾기",
+      "source": "browser_manual",
+      "expected": "검사 대상에서 미검출, 첫 화면 Response Headers에 nosniff 유지.",
+      "how": "DevTools Network·Sources 검사(T02 절차)"
+    },
+    {
+      "id": "T03",
+      "stage": 2,
+      "title": "공개 Git의 과거 커밋으로 삭제된 메모 파일 읽기",
+      "source": "git_static",
+      "expected": "두 명령의 출력 없음. 정리된 공개 이력에 해당 데이터 파일이 없어야 합니다.",
+      "how": "git log --all -- data.json public/data.json / git ls-files -- data.json public/data.json"
+    },
+    {
+      "id": "T04",
+      "stage": 3,
+      "title": "무로그인으로 메모·공지 API 직접 호출",
+      "source": "deployed_api",
+      "expected": "401·login_required, 자료 미반환·DB 쓰기 없음. 로그인한 본인 정상 요청은 성공.",
+      "tests": [
+        "test/auth.test.mjs",
+        "test/notes.test.mjs",
+        "test/notes-ui.test.mjs",
+        "test/r5.test.mjs"
+      ],
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/api/notes",
+          "account": "무로그인",
+          "expectStatus": 401,
+          "expectError": "login_required",
+          "auto": true
+        },
+        {
+          "method": "GET",
+          "path": "/api/notes/:id",
+          "account": "무로그인",
+          "expectStatus": 401,
+          "expectError": "login_required",
+          "auto": true
+        },
+        {
+          "method": "GET",
+          "path": "/api/announcements",
+          "account": "무로그인",
+          "expectStatus": 401,
+          "expectError": "login_required",
+          "auto": true
+        },
+        {
+          "method": "GET",
+          "path": "/api/announcements/:id",
+          "account": "무로그인",
+          "expectStatus": 401,
+          "expectError": "login_required",
+          "auto": true
+        },
+        {
+          "method": "GET",
+          "path": "/api/notes",
+          "account": "A",
+          "expectStatus": 200
+        }
+      ]
+    },
+    {
+      "id": "T05",
+      "stage": 3,
+      "title": "서명·만료·발급자·대상·역할을 바꾼 토큰",
+      "source": "local_test",
+      "expected": "401, DB 접근 전 거부. 유효한 정상 토큰의 본인 요청은 성공.",
+      "tests": [
+        "test/auth.test.mjs",
+        "test/notes.test.mjs",
+        "test/notes-ui.test.mjs",
+        "test/r5.test.mjs"
+      ]
+    },
+    {
+      "id": "T06",
+      "stage": 3,
+      "title": "로그아웃·세션 종료 뒤 옛 토큰 재사용",
+      "source": "local_test",
+      "expected": "종료 세션은 401, 새 정상 세션은 허용, 메모 보존.",
+      "tests": [
+        "test/auth.test.mjs",
+        "test/notes.test.mjs",
+        "test/notes-ui.test.mjs",
+        "test/r5.test.mjs"
+      ]
+    },
+    {
+      "id": "T07",
+      "stage": 4,
+      "title": "메모 ID만 바꿔 타인 자료 접근",
+      "source": "deployed_api",
+      "expected": "본인 POST 201, GET·PUT·DELETE 200. 타인 GET·PUT·DELETE 404·not_found_or_not_owner.",
+      "tests": [
+        "test/auth.test.mjs",
+        "test/notes.test.mjs",
+        "test/notes-ui.test.mjs",
+        "test/r5.test.mjs"
+      ],
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/api/notes/:id",
+          "account": "A",
+          "expectStatus": 200
+        },
+        {
+          "method": "PUT",
+          "path": "/api/notes/:id",
+          "account": "A",
+          "expectStatus": 200
+        },
+        {
+          "method": "GET",
+          "path": "/api/notes/:id",
+          "account": "B",
+          "expectStatus": 404,
+          "expectError": "not_found_or_not_owner"
+        },
+        {
+          "method": "PUT",
+          "path": "/api/notes/:id",
+          "account": "B",
+          "expectStatus": 404,
+          "expectError": "not_found_or_not_owner"
+        },
+        {
+          "method": "DELETE",
+          "path": "/api/notes/:id",
+          "account": "B",
+          "expectStatus": 404,
+          "expectError": "not_found_or_not_owner"
+        }
+      ]
+    },
+    {
+      "id": "T08",
+      "stage": 4,
+      "title": "본문·쿼리의 소유자·역할·사용자 번호 위조",
+      "source": "local_test",
+      "expected": "금지 본문 항목은 400·field_not_allowed. 쿼리는 인증된 소유자 조건을 바꾸지 못함.",
+      "tests": [
+        "test/auth.test.mjs",
+        "test/notes.test.mjs",
+        "test/notes-ui.test.mjs",
+        "test/r5.test.mjs"
+      ]
+    },
+    {
+      "id": "T09",
+      "stage": 4,
+      "title": "타인 메모의 기존 ID로 새 메모 추가",
+      "source": "local_test",
+      "expected": "409·id_conflict, 기존 메모·소유자 보존. 사용하지 않은 정상 ID의 추가는 201.",
+      "tests": [
+        "test/auth.test.mjs",
+        "test/notes.test.mjs",
+        "test/notes-ui.test.mjs",
+        "test/r5.test.mjs"
+      ]
+    },
+    {
+      "id": "T10",
+      "stage": 5,
+      "title": "공개 키 또는 공개 키+로그인 토큰으로 원본 DB 직접 요청",
+      "source": "browser_manual",
+      "expected": "직접 조회·수정 거부, 메모 미반환·변경 없음. 서버 API의 본인 CRUD는 정상.",
+      "how": "T10 절차: 원본 DB 직접 요청은 학생 PC에서 별도 확인"
+    },
+    {
+      "id": "T11",
+      "stage": 5,
+      "title": "X-Original-URL·X-Rewrite-URL로 인증 경로 우회",
+      "source": "deployed_api",
+      "expected": "/는 HTML 200 유지, 보호 API·Auth 사용자 조회는 401. 헤더로 자료 처리나 인증을 선택하지 못함.",
+      "tests": [
+        "test/r5.test.mjs"
+      ],
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/",
+          "account": "무로그인",
+          "expectStatus": 200,
+          "auto": true,
+          "headers": {
+            "X-Original-URL": "/api/notes"
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/api/notes",
+          "account": "무로그인",
+          "expectStatus": 401,
+          "expectError": "login_required",
+          "auto": true,
+          "headers": {
+            "X-Rewrite-URL": "/"
+          }
+        }
+      ]
+    },
+    {
+      "id": "T12",
+      "stage": 6,
+      "title": "미등록·누락·잘못된 기기 등록 값",
+      "source": "local_test",
+      "expected": "deny·device_not_registered. 정상 등록 요청은 allow·approved.",
+      "how": "npm.cmd run decider:test",
+      "tests": [
+        "test/r6.test.mjs"
+      ]
+    },
+    {
+      "id": "T13",
+      "stage": 6,
+      "title": "인증서 없음·미등록 인증서·다른 사용자 토큰과 기기 조합",
+      "source": "operations",
+      "expected": "정상 조합만 통과하고 비정상 조합은 메모 처리 전에 거부.",
+      "how": "공식 기기 검증 통로(운영 연결 미확인)"
+    },
+    {
+      "id": "T14",
+      "stage": 7,
+      "title": "낯선 네트워크+새벽+급격한 자료 조회·수정",
+      "source": "local_test",
+      "expected": "복합 이상은 step_up·step_up_required. 정상은 allow.",
+      "how": "npm.cmd run fixture:7",
+      "tests": [
+        "test/r7.test.mjs",
+        "test/decider-stage7.test.mjs"
+      ]
+    },
+    {
+      "id": "T15",
+      "stage": 7,
+      "title": "헤더·누락 신호로 정상 접속 또는 재확인 완료를 위장",
+      "source": "local_test",
+      "expected": "클라이언트 값이 신뢰 신호로 승격되지 않음. 불명확한 신호는 step_up.",
+      "tests": [
+        "test/decider-stage7.test.mjs"
+      ]
+    },
+    {
+      "id": "T16",
+      "stage": 8,
+      "title": "학생이 강사로 위장해 공지 등록·수정·삭제",
+      "source": "deployed_api",
+      "expected": "학생 쓰기 API 403·instructor_required. role 등 금지 본문 필드는 400.",
+      "tests": [
+        "test/decider-stage8.test.mjs",
+        "test/announcements.test.mjs",
+        "test/r8.test.mjs",
+        "test/auth-instructor.test.mjs",
+        "test/announcements-ui.test.mjs"
+      ],
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/api/announcements",
+          "account": "학생",
+          "expectStatus": 403,
+          "expectError": "instructor_required"
+        },
+        {
+          "method": "GET",
+          "path": "/api/announcements",
+          "account": "학생",
+          "expectStatus": 200
+        }
+      ]
+    },
+    {
+      "id": "T17",
+      "stage": 8,
+      "title": "다른 강사의 공지 변경·강사 권한 회수 뒤 쓰기",
+      "source": "deployed_api",
+      "expected": "다른 강사 404·not_found_or_not_owner, 비활성 강사 403. 기존 공지 보존.",
+      "tests": [
+        "test/decider-stage8.test.mjs",
+        "test/announcements.test.mjs",
+        "test/r8.test.mjs",
+        "test/auth-instructor.test.mjs",
+        "test/announcements-ui.test.mjs"
+      ],
+      "requests": [
+        {
+          "method": "PUT",
+          "path": "/api/announcements/:id",
+          "account": "강사2",
+          "expectStatus": 404,
+          "expectError": "not_found_or_not_owner"
+        },
+        {
+          "method": "DELETE",
+          "path": "/api/announcements/:id",
+          "account": "강사2",
+          "expectStatus": 404,
+          "expectError": "not_found_or_not_owner"
+        },
+        {
+          "method": "PUT",
+          "path": "/api/announcements/:id",
+          "account": "강사1",
+          "expectStatus": 200
+        }
+      ]
+    },
+    {
+      "id": "T18",
+      "stage": 8,
+      "title": "강사 자료 구역 진입",
+      "source": "local_test",
+      "expected": "모든 동작 deny·instructor_material_denied, instructor_material_zone 규칙 포함.",
+      "tests": [
+        "test/decider-stage8.test.mjs",
+        "test/announcements.test.mjs",
+        "test/r8.test.mjs",
+        "test/auth-instructor.test.mjs",
+        "test/announcements-ui.test.mjs"
+      ]
+    },
+    {
+      "id": "T19",
+      "stage": 8,
+      "title": "전체 목록·export·쿼리 기능·인코딩 경로·자원 종류 바꿔 우회",
+      "source": "local_test",
+      "expected": "판정기 전체 메모 목록은 note_zone_denied, 그 밖의 금지 경로는 resource_scope_denied.",
+      "tests": [
+        "test/decider-stage8.test.mjs",
+        "test/announcements.test.mjs",
+        "test/r8.test.mjs",
+        "test/auth-instructor.test.mjs",
+        "test/announcements-ui.test.mjs"
+      ]
+    },
+    {
+      "id": "T20",
+      "stage": 8,
+      "title": "권한표 누락·변조·만료와 재확인으로 구역 거부 우회",
+      "source": "local_test",
+      "expected": "권한표가 없어도 정상·기기·복합 이상·구역 판단 유지.",
+      "tests": [
+        "test/decider-stage8.test.mjs",
+        "test/announcements.test.mjs",
+        "test/r8.test.mjs",
+        "test/auth-instructor.test.mjs",
+        "test/announcements-ui.test.mjs"
+      ]
+    },
+    {
+      "id": "T21",
+      "stage": 9,
+      "title": "짧은 시간의 대량 자료 조회와 다른 사용자 합산",
+      "source": "local_test",
+      "expected": "120건까지 observe, 121건 이상 propose_revocation·burst_read·subject.",
+      "how": "npm.cmd run detect:test",
+      "tests": [
+        "test/detect-stage9.test.mjs",
+        "test/r9-requirements.test.mjs"
+      ]
+    },
+    {
+      "id": "T22",
+      "stage": 9,
+      "title": "회수된 신원·남은 탈취 세션으로 재접속·다른 자원 이동",
+      "source": "operations",
+      "expected": "회수 대상 재접속·자료 이동은 거부되고 정상 대상은 유지. 제안·집행·다음 거부 시각을 별도로 기록.",
+      "how": "운영 회수 제안→집행→재접속 거부(운영 연결 미확인)"
+    },
+    {
+      "id": "T23",
+      "stage": 10,
+      "title": "사본이 없거나 변조된 사본·만료 정책으로 복원 강행",
+      "source": "local_test",
+      "expected": "정책은 backup_missing·backup_integrity_failed·backup_target_mismatch·backup_invalid·trust_invalid로 중단, 변경 0건.",
+      "tests": [
+        "test/policy-restore.test.mjs"
+      ]
+    },
+    {
+      "id": "T24",
+      "stage": 10,
+      "title": "시험 정책 변조(B에게 A 메모 grant 추가) → 확인 없이 복원·확인 뒤 대상 변경",
+      "source": "local_test",
+      "expected": "diff는 복원 버전·현재 버전·추가/삭제/수정 건수·보존할 다른 서비스만 표시하고 변경 0건.",
+      "tests": [
+        "test/policy-restore.test.mjs"
+      ]
+    },
+    {
+      "id": "T25",
+      "stage": 10,
+      "title": "B 메모 변조 뒤 복구 경로 호출 (심판 괴물 1)",
+      "source": "deployed_api",
+      "expected": "200·status restored·changed 1·verified id/owner/contentHash 모두 true, 다시 읽으면 원래 제목·본문.",
+      "tests": [
+        "test/note-restore.test.mjs"
+      ],
+      "requests": [
+        {
+          "method": "PUT",
+          "path": "/api/notes/:id",
+          "account": "B",
+          "expectStatus": 200
+        },
+        {
+          "method": "POST",
+          "path": "/api/notes/:id/restore",
+          "account": "B",
+          "expectStatus": 200
+        },
+        {
+          "method": "GET",
+          "path": "/api/notes/:id",
+          "account": "B",
+          "expectStatus": 200
+        }
+      ]
+    },
+    {
+      "id": "T26",
+      "stage": 10,
+      "title": "B 메모 삭제 뒤 복구, 같은 ID로 다시 만들어 사본 덮어쓰기 (심판 괴물 2)",
+      "source": "deployed_api",
+      "expected": "200·recreated, 같은 ID·소유자·원래 내용. 재추가한 변조 내용은 사본을 바꾸지 못하고 restore가 원래 내용으로 되돌림(restored).",
+      "tests": [
+        "test/note-restore.test.mjs"
+      ],
+      "requests": [
+        {
+          "method": "DELETE",
+          "path": "/api/notes/:id",
+          "account": "B",
+          "expectStatus": 200
+        },
+        {
+          "method": "GET",
+          "path": "/api/notes/:id",
+          "account": "B",
+          "expectStatus": 404,
+          "expectError": "not_found_or_not_owner"
+        },
+        {
+          "method": "POST",
+          "path": "/api/notes/:id/restore",
+          "account": "B",
+          "expectStatus": 200
+        }
+      ]
+    },
+    {
+      "id": "T27",
+      "stage": 10,
+      "title": "무로그인·타인·없는 사본 복구, 다른 소유자가 같은 ID를 차지한 경우",
+      "source": "deployed_api",
+      "expected": "무로그인 401·DB 접근 없음, 타인·사본 없음 모두 404·backup_not_found_or_not_owner(존재 여부 구분 불가), UUID 아님 400,",
+      "tests": [
+        "test/note-restore.test.mjs"
+      ],
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/api/notes/:id/restore",
+          "account": "무로그인",
+          "expectStatus": 401,
+          "expectError": "login_required",
+          "auto": true
+        },
+        {
+          "method": "POST",
+          "path": "/api/notes/:id/restore",
+          "account": "A",
+          "expectStatus": 404,
+          "expectError": "backup_not_found_or_not_owner"
+        }
+      ]
+    },
+    {
+      "id": "T28",
+      "stage": 10,
+      "title": "복구 경로의 다른 동작·모양 변형·기능 이름 (판정기와 API)",
+      "source": "local_test",
+      "expected": "판정기 다른 동작 deny·note_restore_denied(note_restore_scope), 모양 변형 resource_scope_denied, 미등록 기기 device_not_registered,",
+      "tests": [
+        "test/r10-requirements.test.mjs",
+        "test/note-restore.test.mjs"
+      ]
+    },
+    {
+      "id": "T29",
+      "stage": 10,
+      "title": "사본·감사 기록을 직접 읽기·변조·삭제",
+      "source": "sql",
+      "expected": "세 역할 모두 테이블 권한 false, 복구 함수 실행은 service_role만 true. 사본·감사 수정·삭제는 append_only_table로 거부.",
+      "how": "docs/sql/stage10-note-restore-audit.sql (읽기 전용)"
+    },
+    {
+      "id": "T30",
+      "stage": 10,
+      "title": "복구 직후 1~9단계 대표 공격 재전송 (심판 괴물 3)",
+      "source": "sequence",
+      "expected": "복구가 기존 방어를 바꾸지 않음. 무로그인 401, 타인 메모 404, 미등록 기기 deny, 복합 이상 step_up,",
+      "how": "복구 직후 T04·T07·T12·T14·T16·T19·T21 순서 재실행"
+    },
+    {
+      "id": "T31",
+      "stage": 11,
+      "title": "앱 서명 없이 보호 API 직접 호출 (심판 괴물 1)",
+      "source": "local_test",
+      "expected": "무서명 403·app_signature_required, 자료 DB 접근·자료 반환 없음. 무로그인은 기존 401·login_required. 학생·심판 신원 모두 기기 검증 적용.",
+      "tests": [
+        "test/device-stage11.test.mjs",
+        "test/device-ui-stage11.test.mjs",
+        "test/r11-requirements.test.mjs"
+      ]
+    },
+    {
+      "id": "T32",
+      "stage": 11,
+      "title": "서명 뒤 정상 요청 경로·동작·쿼리 변경 (심판 괴물 2)",
+      "source": "local_test",
+      "expected": "403·app_signature_path_mismatch, 자료 접근·변경 없음. 서버에 저장한 method·pathname+search와 실제 요청이 일치해야 함.",
+      "tests": [
+        "test/device-stage11.test.mjs",
+        "test/device-ui-stage11.test.mjs",
+        "test/r11-requirements.test.mjs"
+      ]
+    },
+    {
+      "id": "T33",
+      "stage": 11,
+      "title": "서명 뒤 유효한 수정 본문 값 변경 (심판 괴물 3)",
+      "source": "local_test",
+      "expected": "값·배열 순서 변경 403·app_signature_body_mismatch, 변경 없음. 공백·객체 키 순서는 sha256-canonical-json-v1로 같은 의미의 지문. 형식 오류·소유자 거부로 대체하지 않음.",
+      "tests": [
+        "test/device-stage11.test.mjs",
+        "test/device-ui-stage11.test.mjs",
+        "test/r11-requirements.test.mjs"
+      ]
+    },
+    {
+      "id": "T34",
+      "stage": 11,
+      "title": "설치·로그인·승인 버튼·설정 파일로 승인 위장",
+      "source": "local_test",
+      "expected": "설치·로그인·등록 성공은 승인 아님, 보호 요청·표시 없음. 등록은 202 pending, GET status는 approved:false. 공개 access-app.json/aleph.json의 연결 정보는 DB 승인·개인키 증명을 대신하지 않음.",
+      "tests": [
+        "test/device-stage11.test.mjs",
+        "test/device-ui-stage11.test.mjs",
+        "test/r11-requirements.test.mjs"
+      ],
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/api/device?route=status",
+          "account": "무로그인",
+          "expectStatus": 401,
+          "expectError": "login_required",
+          "auto": true
+        }
+      ]
+    },
+    {
+      "id": "T35",
+      "stage": 11,
+      "title": "브라우저 저장 토큰·기기 키·오프라인 보호 자료 재사용",
+      "source": "local_test",
+      "expected": "세션은 메모리에만, 기기 개인키는 운영체제 인증기 관리. localStorage/sessionStorage/IndexedDB/Cache Storage에 키·토큰·보호 응답 없음. 오프라인에서 보호 자료 표시 없음.",
+      "tests": [
+        "test/device-stage11.test.mjs",
+        "test/device-ui-stage11.test.mjs",
+        "test/r11-requirements.test.mjs"
+      ]
+    },
+    {
+      "id": "T36",
+      "stage": 11,
+      "title": "일회용 증명 재전송·만료·다른 사용자/세션·위조 인증기",
+      "source": "local_test",
+      "expected": "403·app_challenge_invalid/app_signature_invalid/device_not_supported, 자료 없음. 확인값은 사용자·세션·목적에 결합하고 120초 만료·원자적 1회 소비. 로그아웃 뒤 늦은 승인 응답으로 화면 재개방 없음.",
+      "tests": [
+        "test/device-stage11.test.mjs",
+        "test/device-ui-stage11.test.mjs",
+        "test/r11-requirements.test.mjs"
+      ]
+    },
+    {
+      "id": "T37",
+      "stage": 11,
+      "title": "승인 DB 직접 조작·승인 회수 경합·확인값 발급 제한 우회",
+      "source": "sql",
+      "expected": "anon/authenticated/service_role 모두 직접 테이블 접근·승인 실행 false; 서버용 RPC 5개만 service_role 허용. RLS true, 회수된 기기 403·device_not_registered, 발급 한도 초과 429·device_request_limit.",
+      "how": "docs/sql/stage11-devices-verify.sql (읽기 전용)",
+      "tests": [
+        "test/device-stage11.test.mjs"
+      ]
+    },
+    {
+      "id": "T38",
+      "stage": 11,
+      "title": "앱 추가 후 기존 권한·판정 계약·설치·공개 선언 회귀",
+      "source": "local_test",
+      "expected": "기존 API 정상·거부 결과 유지, decide 계약과 RULE_IDS 6개·allowedRoutes 7개 일치, step 11, 정적 파일 200·무로그인 보호 API 401·data.json 404, 비밀 표식 미검출.",
+      "tests": [
+        "test/device-stage11.test.mjs",
+        "test/device-ui-stage11.test.mjs",
+        "test/r11-requirements.test.mjs",
+        "test/package-starter.test.mjs"
+      ]
+    },
+    {
+      "id": "M1a",
+      "stage": 12,
+      "title": "무인증 조회 (괴물 1 전반)",
+      "source": "deployed_api",
+      "expected": "401 login_required, 자료 없음",
+      "tests": [
+        "test/r12-requirements.test.mjs"
+      ],
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/api/notes/:id",
+          "account": "무로그인",
+          "expectStatus": 401,
+          "expectError": "login_required",
+          "auto": true
+        }
+      ]
+    },
+    {
+      "id": "M1b",
+      "stage": 12,
+      "title": "같은 제출본에서 이어지는 타인 메모 조회 (괴물 1 후반)",
+      "source": "deployed_api",
+      "expected": "404 not_found_or_not_owner, A 자료 없음",
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/api/notes/:id",
+          "account": "B",
+          "expectStatus": 404,
+          "expectError": "not_found_or_not_owner"
+        }
+      ]
+    },
+    {
+      "id": "M2",
+      "stage": 12,
+      "title": "미등록 기기 요청 뒤 회수된 신원 재전송 (괴물 2)",
+      "source": "operations",
+      "expected": "미등록 기기 deny·device_not_registered(가상), 회수 신원 재접속 거부는 운영 확인 필요",
+      "how": "운영 회수 집행 연결 미확인",
+      "tests": [
+        "test/r6.test.mjs",
+        "test/device-stage11.test.mjs"
+      ]
+    },
+    {
+      "id": "M3a",
+      "stage": 12,
+      "title": "복구 뒤 서명 없는 변경 요청 (괴물 3 전반)",
+      "source": "local_test",
+      "expected": "403 app_signature_required, 변경 없음",
+      "tests": [
+        "test/device-stage11.test.mjs"
+      ]
+    },
+    {
+      "id": "M3b",
+      "stage": 12,
+      "title": "복구 뒤 구역 밖 조회 (괴물 3 후반)",
+      "source": "deployed_api",
+      "expected": "엔진 판정 deny·instructor_material_denied(가상), 자료실 직접 호출은 404",
+      "tests": [
+        "test/decider-stage8.test.mjs"
+      ],
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/api/materials/:id",
+          "account": "무로그인",
+          "expectStatus": 404,
+          "auto": true
+        }
+      ]
+    },
+    {
+      "id": "M3d",
+      "stage": 12,
+      "title": "작전실 요약을 엔진 경로로 요청",
+      "source": "local_test",
+      "expected": "deny·resource_scope_denied",
+      "tests": [
+        "test/r12-requirements.test.mjs"
+      ]
+    },
+    {
+      "id": "N1",
+      "stage": 12,
+      "title": "승인 기기 A의 본인 메모 조회 (정상 대조)",
+      "source": "deployed_api",
+      "expected": "200, 화면 요청 ID와 서버 기록 일치",
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/api/notes/:id",
+          "account": "A",
+          "expectStatus": 200
+        }
+      ]
+    },
+    {
+      "id": "N2",
+      "stage": 12,
+      "title": "A의 메모 한 건 복구 (정상 대조)",
+      "source": "deployed_api",
+      "expected": "200, verified 모두 true",
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/api/notes/:id/restore",
+          "account": "A",
+          "expectStatus": 200
+        }
+      ]
+    },
+    {
+      "id": "N3",
+      "stage": 12,
+      "title": "복구 뒤 A의 정상 조회·수정 유지",
+      "source": "deployed_api",
+      "expected": "200",
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/api/notes/:id",
+          "account": "A",
+          "expectStatus": 200
+        },
+        {
+          "method": "PUT",
+          "path": "/api/notes/:id",
+          "account": "A",
+          "expectStatus": 200
+        }
+      ]
+    },
+    {
+      "id": "N7",
+      "stage": 12,
+      "title": "B의 공격 뒤 A가 회수 제안 대상이 되지 않음",
+      "source": "local_test",
+      "expected": "B만 propose_revocation, A observe",
+      "tests": [
+        "test/r12-requirements.test.mjs"
+      ]
+    },
+    {
+      "id": "N8",
+      "stage": 12,
+      "title": "작전실 요약 직접 API",
+      "source": "deployed_api",
+      "expected": "무로그인 401, 승인 기기 200·본인 범위",
+      "tests": [
+        "test/r12-requirements.test.mjs"
+      ],
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/api/operations-summary",
+          "account": "무로그인",
+          "expectStatus": 401,
+          "expectError": "login_required",
+          "auto": true
+        },
+        {
+          "method": "GET",
+          "path": "/api/operations-summary",
+          "account": "A",
+          "expectStatus": 200
+        }
+      ]
+    },
+    {
+      "id": "N9",
+      "stage": 12,
+      "title": "판정기가 계약 이름만 읽고 형식이 맞는 응답 (추가 10점 B)",
+      "source": "local_test",
+      "expected": "계약 밖 속성 접근 없음, 응답 5항목·RULE_IDS 부분집합",
+      "tests": [
+        "test/r12-requirements.test.mjs"
+      ]
+    }
+  ]
+}

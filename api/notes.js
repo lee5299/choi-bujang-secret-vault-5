@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { authenticateResource, databaseEndpoint } from '../src/resource-auth.mjs';
 import { resourceId, requestPath, resolveResource } from '../src/resource-id.mjs';
+import { traceRequest } from '../src/request-trace.mjs';
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
 function unavailable(response, status, reason, upstreamStatus) {
@@ -17,6 +18,7 @@ export default function handler(request, response) {
 
 export async function handleNotes(request, response, noteId = null) {
   response.setHeader('Cache-Control', 'no-store');
+  traceRequest(request, response, 'notes');
   const authenticated = await authenticateResource(request, response, unavailable);
   if (!authenticated) return response;
   const { identity, databaseUrl, secretKey } = authenticated;

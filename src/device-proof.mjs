@@ -6,6 +6,8 @@ import { deviceRepository } from './device-repository.mjs';
 
 const origin = new URL(config.publicAppUrl).origin;
 const rpID = new URL(origin).hostname;
+// 요청 서명을 발급하는 보호 API: 메모·공지와 12단계 작전실 요약(쿼리·하위 경로 없는 정확한 경로만).
+export const SIGNED_PATH = /^\/api\/(?:(?:notes|announcements)(?:\/|\?|$)|operations-summary$)/u;
 export const digest = value => createHash('sha256').update(value).digest('hex');
 const sessionHash = request => digest(request.headers.authorization);
 export class DeviceError extends Error {
@@ -122,7 +124,7 @@ export function createDeviceService(authenticated, request, repository = deviceR
     async authenticationOptions(purpose, intent = null) {
       if (!['status', 'request'].includes(purpose)) throw new DeviceError('invalid_request', 400);
       if (purpose === 'request' && (!intent || !['GET', 'POST', 'PUT', 'PATCH', 'DELETE'].includes(intent.method)
-          || typeof intent.path !== 'string' || !/^\/api\/(notes|announcements)(?:\/|\?|$)/u.test(intent.path)
+          || typeof intent.path !== 'string' || !SIGNED_PATH.test(intent.path)
           || intent.path.length > 1024 || !/^[a-f0-9]{64}$/u.test(intent.bodyHash))) throw new DeviceError('invalid_request', 400);
       const credentials = (await list()).filter(row => row.status === 'approved');
       if (!credentials.length) throw new DeviceError('device_not_registered');

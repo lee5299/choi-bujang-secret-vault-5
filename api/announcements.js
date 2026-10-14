@@ -1,5 +1,6 @@
 import { authenticateResource, databaseEndpoint } from '../src/resource-auth.mjs';
 import { requestPath, resolveResource, resourceId, UUID } from '../src/resource-id.mjs';
+import { traceRequest } from '../src/request-trace.mjs';
 
 function unavailable(response, status, reason) {
   console.error('announcements_api_failure', { reason });
@@ -10,6 +11,7 @@ export default function handler(request, response) { return handleAnnouncements(
 
 export async function handleAnnouncements(request, response, detail = false) {
   response.setHeader('Cache-Control', 'no-store');
+  traceRequest(request, response, 'announcements');
   const authenticated = await authenticateResource(request, response, unavailable);
   if (!authenticated) return response;
   const { identity, databaseUrl, secretKey } = authenticated;

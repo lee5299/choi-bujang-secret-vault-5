@@ -184,3 +184,29 @@ Claude에게 전달할 [최종 검토 요청서](최종검토요청.md)를 준�
 
 사용자 「제출할 수 있도록 작업」 요청으로 저장점·일반 push·배포·깨끗한 Git 복제본 설치·bundle 준비를 진행합니다. 공식 접수 버튼은 이 요청에서 누르지 않습니다. 파일 목록과 검사 범위는 [제출 전 확인](제출전확인.md)에 기록합니다. 이전 XDR 원문 2개·PROJECT_PAGE는 별도 변경으로 보존하며 이번 커밋에 넣지 않습니다. 두 절차 문서의 기존 강화 수정과 현재 ARCHITECTURE는 기존 결정대로 포함합니다.
 현재 다시 실행한 전체 회귀 269개·단계 시험 234개 통과. 로컬 step 11·RULE_IDS 6개·allowedRoutes 7개·원본 API·judgeIssuer 유지. 커밋·push·배포 결과는 실행 후 추가합니다.
+
+## 저장점 업로드·배포·제출 묶음 생성 결과 (2026-10-14)
+
+- 코드 저장점: `deb41b0d6904f477e01d4a61642a33bffeeaac48` 「11단계 저장점」. 사용자 승인 후 확인된 50개 경로만 커밋, GitHub main에 일반 push 완료. 다른 작업은 미추적 원문 3개로 보존.
+- 단계 11·저장점 커밋·허용 경로 7개·복구 경로·judgeIssuer·accessApp 선언을 실제 배포 /aleph.json에서 확인했습니다.
+- 커밋된 소스만 담은 깨끗한 로컬 Git 복제본(local-only/stage11-submit-20261014)에서 npm.cmd install 성공(32개), 전체 회귀 269개·실패 0, 정적 빌드 성공, git status 변경 없음.
+- npm.cmd run bundle 성공: step 11, 규칙 6개, 실제 공개 HTTP 자기 점검 11개. 심판 판정이 아닙니다. 제출 JSON은 Git에서 제외합니다.
+- In-app Browser 실제 화면: BYTE BACK 11단계·설치 안내·로그인 전 기기 버튼 비활성·보호 자료 표시 없음 확인. 브라우저 설치·로그인 기기 인증은 미실행.
+
+| 공개 경로 | 실제 결과 |
+| --- | --- |
+| /aleph.json | HTTP 200 |
+| / | HTTP 200 · nosniff 확인 |
+| /manifest.webmanifest | HTTP 200 |
+| /icons/vault-192.png | HTTP 200 |
+| /icons/vault-512.png | HTTP 200 |
+| /access-app.json | HTTP 200 |
+| /api/device?route=status | HTTP 401 · login_required |
+| /api/notes | HTTP 401 · login_required |
+| /api/announcements | HTTP 401 · login_required |
+| /api/notes/00000000-0000-4000-8000-000000000008/restore | HTTP 401 · login_required |
+| /data.json | HTTP 404 |
+
+실제 Supabase 적용·권한/RLS는 앞 절의 완료 기록을 따릅니다. 실제 승인 기기의 조회·수정·복구 및 Vercel 재작성 뒤 경로 결합(F1), Windows Hello, 앱 설치와 오프라인 전환은 미실행입니다. Q-A의 심판 신원 서명 요구 유지와 운영 호환 확인 제외 결정은 보존합니다.
+
+공식 접수는 미실행입니다. 제출 화면에는 Vercel 배포 주소와 GitHub 저장소 주소를 넣습니다. 결과 기록 커밋을 업로드한 뒤 최종 /aleph.json·GitHub main·submission.json 커밋을 다시 대조하고 JSON을 재생성합니다. 해당 최종 검증의 실제 값은 Git 제외 local-only/stage11-final-submission-summary.json에 보관합니다. 채점 중 main에 추가 push하지 않습니다.

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { virtualDevices } from './fixtures/device-proof.mjs';
 import { test } from 'node:test';
 import { generateKeyPair, exportJWK, SignJWT } from 'jose';
 import { randomUUID } from 'node:crypto';
@@ -9,6 +10,7 @@ import { resourceId } from '../src/resource-id.mjs';
 
 test('최종 공지 API: 검증 사용자·저장 강사 권한·소유자 재대조', async t => {
   const originalFetch = globalThis.fetch;
+  const devices = virtualDevices();
   const savedUrl = process.env.SUPABASE_URL;
   const savedKey = process.env.SUPABASE_SECRET_KEY;
   const originalError = console.error;
@@ -19,7 +21,10 @@ test('최종 공지 API: 검증 사용자·저장 강사 권한·소유자 재�
       if (value === undefined) delete process.env[key]; else process.env[key] = value;
     }
   });
-  console.error = (...args) => logs.push(args);
+  console.error = (...args) => {
+    if (typeof args[0] === 'string' && /^\(node:\d+\) ExperimentalWarning:/.test(args[0])) return originalError(...args);
+    logs.push(args);
+  };
   const student = '00000000-0000-4000-8000-000000000001';
   const teacher = '00000000-0000-4000-8000-000000000002';
   const otherTeacher = '00000000-0000-4000-8000-000000000003';
@@ -46,7 +51,7 @@ test('최종 공지 API: 검증 사용자·저장 강사 권한·소유자 재�
   const rows = new Map();
   process.env.SUPABASE_URL = new URL(config.identityProvider.issuer).origin;
   process.env.SUPABASE_SECRET_KEY = 'test-placeholder';
-  globalThis.fetch = async (input, options) => {
+  globalThis.fetch = devices.wrapFetch(async (input, options) => {
     const url = new URL(input instanceof Request ? input.url : input);
     if (url.href === config.identityProvider.jwksUrl) return Response.json({ keys: [jwk] });
     if (url.href === `${config.identityProvider.issuer}/user`) {
@@ -71,12 +76,13 @@ test('최종 공지 API: 검증 사용자·저장 강사 권한·소유자 재�
     if (method === 'PUT') Object.assign(matches[0], { title, content });
     if (method === 'DELETE') rows.delete(id);
     return Response.json({ status: 200, rows: matches });
-  };
+  });
   const request = async (authorization, method = 'GET', { id, body, path, query = {} } = {}) => {
     const response = { headers: {}, setHeader(key, value) { this.headers[key] = value; },
       status(code) { this.code = code; return this; }, json(value) { this.body = value; return this; } };
     const req = { method, body, query, url: path ?? `/api/announcements${id ? `/${id}` : ''}`,
       headers: { ...(authorization ? { authorization } : {}), ...(body ? { 'content-type': 'application/json' } : {}) } };
+    await devices.signRequest(req);
     await (id ? detailHandler : handler)(req, response); return response;
   };
   const body = { title: 'Virtual announcement', body: '' };

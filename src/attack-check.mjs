@@ -1,7 +1,8 @@
 // The student changes this check as each stage adds an attack to the same app.
 // Never return tokens, private keys, real names, or note bodies.
 export async function runAttackChecks(config) {
-  if (![1, 3, 4, 5, 6, 7, 8, 9, 10].includes(config.step)) throw new Error('이 단계의 공격 점검을 src/attack-check.mjs에 구현해 주세요.');
+  if (![1, 3, 4, 5, 6, 7, 8, 9, 10, 11].includes(config.step)) throw new Error('이 단계의 공격 점검을 src/attack-check.mjs에 구현해 주세요.');
+  // 11단계는 공개 앱 선언·manifest·무로그인 기기 상태를 점검합니다. 실제 승인·서명 공격은 별도 시험입니다.
   // 9단계도 기존 공개 HTTP 경로만 점검합니다. 이 결과로 탐지·회수·심판 통과를 주장하지 않습니다.
   // 10단계는 무로그인 메모 복구 POST 한 건을 더 보냅니다. 로그인한 B의 복구 성공은 여기서 확인하지 않습니다.
   let app;
@@ -28,6 +29,11 @@ export async function runAttackChecks(config) {
       ...(config.step >= 10 ? [
         ['/api/notes/00000000-0000-4000-8000-000000000008/restore', 'anonymous_note_restore', '무로그인 메모 복구 POST는 401 또는 403 JSON 오류', 'POST'],
       ] : []),
+      ...(config.step >= 11 ? [
+        ['/access-app.json', 'access_app_contract', '공개 앱 연결 선언은 HTTP 200이며 승인 플래그·비밀값 없음'],
+        ['/manifest.webmanifest', 'app_manifest', '앱 manifest는 HTTP 200이며 이름·루트 경로·아이콘 포함'],
+        ['/api/device?route=status', 'anonymous_device_status', '무로그인 기기 상태 확인은 401 JSON 오류'],
+      ] : []),
     ];
     for (const [path, attackId, expected, method = 'GET'] of targets) {
       let observed;
@@ -48,14 +54,22 @@ export async function runAttackChecks(config) {
           }
         } else {
           let data;
-          const jsonType = /^application\/json(?:\s*;|$)/iu.test(result.headers.get('content-type') ?? '');
+          const jsonType = /^application\/(json|manifest\+json)(?:\s*;|$)/iu.test(result.headers.get('content-type') ?? '');
           if (jsonType) {
             try { data = await result.json(); } catch { /* 본문이나 원본 오류를 기록하지 않습니다. */ }
           }
-          if (path === '/api/notes' || path.startsWith('/api/announcements') || path.endsWith('/restore')) {
+          if (path === '/api/notes' || path.startsWith('/api/announcements') || path.startsWith('/api/device') || path.endsWith('/restore')) {
             const jsonError = data && !Array.isArray(data)
               && [data.message, data.error].some(value => typeof value === 'string' && value.trim());
             observed = `HTTP ${result.status} · JSON 오류 ${jsonError ? '확인' : '없음'}`;
+          } else if (path === '/access-app.json') {
+            const valid = data?.schema === 'vault.access-app.v1' && data.origin === app.origin
+              && data.protocol === 'webauthn-request-v1' && !Object.hasOwn(data, 'approved');
+            const exposed = /sb_secret_[A-Za-z0-9_-]+|-----BEGIN [A-Z ]*PRIVATE KEY-----|eyJ[A-Za-z0-9_-]{12,}\.eyJ[A-Za-z0-9_-]{12,}\./u.test(JSON.stringify(data ?? null));
+            observed = `HTTP ${result.status} · 공개 연결 선언 ${valid ? '확인' : '불일치 또는 없음'} · 비밀값 표식 ${exposed ? '검출' : '미검출'}`;
+          } else if (path === '/manifest.webmanifest') {
+            const valid = typeof data?.name === 'string' && data.start_url === '/' && data.scope === '/' && Array.isArray(data.icons) && data.icons.length > 0;
+            observed = `HTTP ${result.status} · 설치 manifest ${valid ? '확인' : '없음 또는 불일치'}`;
           } else if (path === '/aleph.json') {
             const valid = data?.schema === 'aleph.defense.deployment.v1' && data.step === config.step
               && data.judgeIssuer === config.judgeIssuer && data.repoUrl === config.repoUrl

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { virtualDevices } from './fixtures/device-proof.mjs';
 import { randomUUID } from 'node:crypto';
 import { test } from 'node:test';
 import { exportJWK, generateKeyPair, SignJWT } from 'jose';
@@ -12,6 +13,7 @@ test('authenticated owner-scoped virtual memo CRUD and rejection contracts', asy
   const savedUrl = process.env.SUPABASE_URL;
   const savedKey = process.env.SUPABASE_SECRET_KEY;
   const originalFetch = globalThis.fetch;
+  const devices = virtualDevices();
   const originalConsoleError = console.error;
   const diagnostics = [];
   const trusted = await generateKeyPair('ES256');
@@ -52,12 +54,13 @@ test('authenticated owner-scoped virtual memo CRUD and rejection contracts', asy
       query: { ...(id !== undefined ? { id } : {}), ...query },
       headers: { ...(authorization !== undefined ? { authorization } : {}),
         ...(body !== undefined ? { 'content-type': 'application/json' } : {}), ...headers } };
+    await devices.signRequest(req);
     await (id === undefined ? handler : detailHandler)(req, result);
     return result;
   };
   try {
     console.error = (...args) => diagnostics.push(args);
-    globalThis.fetch = async (input, options) => {
+    globalThis.fetch = devices.wrapFetch(async (input, options) => {
       const url = new URL(typeof input === 'string' || input instanceof URL ? input : input.url);
       if (url.href === config.identityProvider.jwksUrl || url.href === `${config.judgeIssuer}/.well-known/jwks.json`) {
         return new Response(JSON.stringify({ keys: [publicJwk] }), { headers: { 'Content-Type': 'application/json' } });
@@ -105,7 +108,7 @@ test('authenticated owner-scoped virtual memo CRUD and rejection contracts', asy
         matches.forEach(row => rows.delete(row.id));
       }
       return new Response(JSON.stringify(matches));
-    };
+    });
 
     await t.test('anonymous requests to every route return JSON 401 before DB access', async () => {
       delete process.env.SUPABASE_URL;

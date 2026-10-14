@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { approvedDeviceUi } from './fixtures/device-ui.mjs';
 import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
 
@@ -61,8 +62,8 @@ test('memo UI CRUD uses authenticated requests and clears pending results on log
     if (options.method === 'DELETE') { notes = []; return Response.json({ id: memoId }); }
     return Response.json(url === '/api/notes' ? notes : notes[0]);
   };
-  const run = new Function('document', 'fetch', 'AbortController', 'sdk', `return (async () => { ${script} })();`);
-  await run(document, fetch, AbortController, sdk);
+  const run = new Function('document', 'fetch', 'AbortController', 'sdk', 'globalThis', `return (async () => { ${script} })();`);
+  await run(document, fetch, AbortController, sdk, { VaultDeviceClient: approvedDeviceUi(fetch) });
   assert.equal(requests.length, 0);
   assert.equal(el('memo-editor').hidden, true);
   authChanged('SIGNED_IN', session);

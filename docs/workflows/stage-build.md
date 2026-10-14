@@ -4,17 +4,28 @@
 
 ## 순서
 
-1. **한 요청 = 한 변경.** 손댈 파일과 이유를 한 줄로 먼저 알립니다.
+0. `N/요구사항.md`의 교차 검토가 끝났는지 확인합니다. 없으면 [requirements.md](requirements.md)부터 합니다.
+1. **한 요청 = 한 변경.** 손댈 파일과 이유를 한 줄로 먼저 알립니다. 변경이 요구사항 표의 어느 행을 위한 것인지 적습니다.
 2. 계약 확인
    - `src/decider.mjs` → `docs/DECIDER_REQUEST.md`. 계약에 있는 필드만 사용. `decide(request)`와 응답 다섯 항목 유지.
    - `src/detect.mjs` → `docs/DETECT_EVENTS.md`.
    - 계약 밖의 값이 필요하면 구현하지 말고 TODO에 「공식 계약 필요」로 남깁니다.
 3. 구현: 실행 코드는 루트 `api/`, `src/`, `public/`, `scripts/`. 단계 폴더에는 기록만 둡니다.
    `RULE_IDS`에는 실제 구현한 규칙만 둡니다. 화면 메뉴 등 요청 밖 변경은 하지 않습니다.
+   판정기 원칙:
+   - 환경변수·권한표·외부 설정 없이도 요구사항 표의 판정이 나와야 합니다. 설정은 추가로 좁히는 용도로만 씁니다.
+   - 막는 범주마다 이름 붙은 구역, 전용 사유 코드, RULE_IDS 규칙 이름을 둡니다 (`src/resource-policy.mjs`의 구역 표 형식).
+   - 자료 ID 형식(UUID 등)을 판정기에서 강제하지 않습니다. 주인·역할처럼 계약에 없는 판단은 자료 API가 합니다.
+   - 경로를 추가·삭제하면 `aleph.config.json`의 allowedRoutes를 판정기 허용 경로와 같게 맞춥니다.
+   자료 API 원칙: 거부 응답(4xx)은 `{ error: <짧은 코드>, message }`, 자료 필드 없음. 다른 사람 자료와 없는 자료는 같은 응답.
 4. 시험
    - 새 시험 파일: `test/rN.test.mjs` 또는 `test/<기능>-stageN.test.mjs`.
    - `package.json`에 `test:stageN` 추가 (직전 단계 판정기·API 시험 포함, `test:stage8` 형식).
+   - 요구사항 표의 행을 `test/rN-requirements.test.mjs`로 옮깁니다 (행 번호를 시험 이름에).
+   - **심판 조건**으로 시험합니다: `ALEPH_RESOURCE_POLICY_JSON` 없음, UUID가 아닌 ID, `/api` 있는·없는 경로, service 값.
+     가상 권한표를 넣은 시험만으로 완료하지 않습니다. 연습 스크립트(`fixture:7`, `decider:test`)는 두 상태를 모두 돕니다.
    - **전체 회귀** `node --test test/*.test.mjs`. 이전 단계 시험이 하나라도 실패하면 완료가 아닙니다 (총공세 대비).
+     이전 단계 시험의 기대값을 바꿔야 하면 멈추고 사용자에게 알립니다 (예: 7단계 메모 추가·삭제 allow).
    - 오류가 나면 첫 오류와 이번에 바뀐 파일을 근거로 한 가지만 고칩니다.
 5. 기록: `N/README.md`에 추가
    ```markdown

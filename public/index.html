@@ -4,6 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>BYTE BACK | 내 자료실</title>
+  <meta name="theme-color" content="#101a28">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icons/vault-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="/icons/vault-192.png">
+  <script src="/app-status.js" defer></script>
+  <script src="/device-client.js" defer></script>
   <style>
     :root { color-scheme: dark; font-family: system-ui, sans-serif; }
     body { margin: 0; min-height: 100vh; background: #101a28; color: #ecf4ff; }
@@ -30,13 +36,31 @@
     input:focus-visible, textarea:focus-visible, button:focus-visible { outline: 3px solid #8ad8df; outline-offset: 3px; }
     #auth-error { color: #ffc5ce; }
     [hidden] { display: none !important; }
+    html[data-offline="true"] #memo-editor,
+    html[data-offline="true"] #notes,
+    html[data-offline="true"] #notice-board { display: none !important; }
   </style>
 </head>
 <body>
   <main>
-    <div class="eyebrow">BYTE BACK · 5단계</div>
+    <div class="eyebrow">BYTE BACK · 11단계</div>
     <h1>내 자료실</h1>
     <p>아래 기록은 모두 실습을 위해 만든 가상 자료입니다.</p>
+    <section class="auth" aria-labelledby="app-heading">
+      <h2 id="app-heading">BYTE BACK 내 자료실 앱</h2>
+      <p id="install-status" role="status">브라우저에서 설치 가능 여부를 확인하고 있습니다.</p>
+      <button id="install-button" type="button" hidden>자료실 앱 설치</button>
+      <p id="device-status" role="status">로그인 후 이 기기의 승인을 확인하세요.</p>
+      <div class="actions">
+        <button id="device-register" type="button" disabled>기기 승인 요청</button>
+        <button id="device-verify" type="button" disabled>승인된 기기 확인</button>
+        <button id="device-refresh" type="button" disabled>승인 상태 새로고침</button>
+      </div>
+      <p>승인 요청 후 관리자가 이 기기를 확인해야 합니다. 자료를 읽거나 바꿀 때도 기기 인증 화면이 열립니다.</p>
+      <p>앱 설치와 로그인은 기기 승인을 뜻하지 않습니다. 기기 승인 여부는 서버와 판정기가 확인합니다.</p>
+      <p id="connection-status" role="status">인터넷 연결 상태를 확인하고 있습니다.</p>
+      <p id="offline-notice" role="alert" hidden>오프라인에서는 보호 자료를 표시하지 않습니다. 인터넷에 다시 연결해 주세요. 이 앱은 보호 자료를 오프라인 저장하지 않습니다.</p>
+    </section>
     <section class="auth" aria-labelledby="auth-heading">
       <h2 id="auth-heading">로그인</h2>
       <p id="auth-status" role="status">로그인 상태를 확인하는 중입니다.</p>
@@ -144,7 +168,56 @@
     let noticeBusy = false;
     let noticeAbort;
     let noticeVersion = 0;
-
+    const deviceStatus = document.querySelector('#device-status');
+    const deviceRegister = document.querySelector('#device-register');
+    const deviceVerify = document.querySelector('#device-verify');
+    const deviceRefresh = document.querySelector('#device-refresh');
+    let deviceApproved = false;
+    let deviceBusy = false;
+    const deviceClient = globalThis.VaultDeviceClient.create({ getSession: () => currentSession,
+      onState: state => {
+        const wasApproved = deviceApproved;
+        deviceApproved = state.approved === true && signedIn;
+        const messages = { signed_out: '로그인 후 이 기기의 승인을 확인하세요.',
+          approval_required: '등록된 기기가 없습니다. 기기 승인 요청을 눌러 주세요.',
+          pending: '승인 대기 중입니다. 관리자가 기기를 확인한 뒤 승인 상태를 새로고침하세요.',
+          verification_required: '승인된 기기가 있습니다. 이 기기의 인증으로 확인해 주세요.',
+          approved: '서버가 이 기기의 승인과 서명을 확인했습니다.' };
+        deviceStatus.textContent = (messages[state.status] ?? '기기 확인이 필요합니다. 다시 확인해 주세요.')
+          + (state.deviceId ? ` 기기 번호: ${state.deviceId}` : '');
+        if (!deviceApproved) {
+          if (wasApproved) sessionVersion++;
+          memoAbort?.abort(); notesAbort?.abort(); noticeAbort?.abort();
+          notesVersion++; noticeVersion++;
+          memoBusy = false; noticeBusy = false;
+          instructorHint = false;
+          showNoticeRole();
+          resetEditor(); resetNotice();
+          memoStatus.textContent = ''; noticeStatus.textContent = '';
+          noticesList.replaceChildren();
+          showNotesMessage(signedIn ? '기기 승인 확인 뒤 자료를 열 수 있습니다.' : '로그인 후 자료를 확인할 수 있습니다.');
+        }
+        memoEditor.hidden = !deviceApproved; noticeBoard.hidden = !deviceApproved; notesList.hidden = !deviceApproved;
+        updateControls();
+        if (deviceApproved && !wasApproved) { void loadNotes(currentSession); void loadNoticeBoard(currentSession); }
+      } });
+    const protectedFetch = (url, options) => deviceClient.protectedFetch(url, options);
+    async function deviceAction(action) {
+      if (!ready || !signedIn || busy || deviceBusy) return;
+      deviceBusy = true; deviceStatus.textContent = '기기를 확인하고 있습니다.'; updateControls();
+      try { await deviceClient[action](); }
+      catch (error) {
+        deviceClient.clear();
+        deviceStatus.textContent = error.message === 'device_backend_unavailable'
+          ? '기기 확인 서버 설정이 필요합니다. 관리자에게 문의하세요.'
+          : error.message === 'device_not_supported' ? '이 기기의 인증 방식은 지원되지 않습니다. 동기화하지 않는 기기 인증이 필요합니다.'
+            : error.message === 'device_not_registered' ? '승인된 기기를 확인하지 못했습니다. 관리자 승인 후 다시 확인해 주세요.'
+              : '기기 확인을 마치지 못했습니다. 인증 취소 또는 연결 상태를 확인하고 다시 시도하세요.';
+      } finally { deviceBusy = false; updateControls(); }
+    }
+    deviceRegister.addEventListener('click', () => deviceAction('register'));
+    deviceVerify.addEventListener('click', () => deviceAction('verify'));
+    deviceRefresh.addEventListener('click', () => deviceAction('status'));
     function resetEditor() {
       editId = null;
       memoForm.reset();
@@ -162,7 +235,7 @@
     }
 
     async function noteAction(method, id, payload, onSuccess) {
-      if (!ready || busy || memoBusy || !currentSession?.access_token) return;
+      if (!ready || busy || memoBusy || !deviceApproved || !currentSession?.access_token) return;
       const session = currentSession;
       const version = sessionVersion;
       const controller = new AbortController();
@@ -171,7 +244,7 @@
       memoStatus.textContent = '메모 요청을 처리하는 중입니다.';
       updateControls();
       try {
-        const response = await fetch(id ? `/api/notes/${encodeURIComponent(id)}` : '/api/notes', {
+        const response = await protectedFetch(id ? `/api/notes/${encodeURIComponent(id)}` : '/api/notes', {
           method, cache: 'no-store', signal: controller.signal,
           headers: {
             Authorization: `Bearer ${session.access_token}`, Accept: 'application/json',
@@ -235,7 +308,7 @@
       noticeAbort?.abort();
       noticeAbort = new AbortController();
       try {
-        const response = await fetch('/api/announcements', {
+        const response = await protectedFetch('/api/announcements', {
           cache: 'no-store', signal: noticeAbort.signal,
           headers: { Authorization: `Bearer ${session.access_token}`, Accept: 'application/json' },
         });
@@ -325,14 +398,14 @@
     }
 
     async function noticeAction(method, id, payload, onSuccess) {
-      if (!ready || busy || noticeBusy || !currentSession?.access_token) return;
+      if (!ready || busy || noticeBusy || !deviceApproved || !currentSession?.access_token) return;
       const session = currentSession;
       const version = sessionVersion;
       noticeBusy = true;
       noticeStatus.textContent = '공지 요청을 처리하는 중입니다.';
       updateControls();
       try {
-        const response = await fetch(id ? `/api/announcements/${encodeURIComponent(id)}` : '/api/announcements', {
+        const response = await protectedFetch(id ? `/api/announcements/${encodeURIComponent(id)}` : '/api/announcements', {
           method, cache: 'no-store',
           headers: {
             Authorization: `Bearer ${session.access_token}`, Accept: 'application/json',
@@ -407,7 +480,7 @@
       notesAbort = new AbortController();
       showNotesMessage('가상 자료를 불러오는 중입니다.');
       try {
-        const response = await fetch('/api/notes', {
+        const response = await protectedFetch('/api/notes', {
           cache: 'no-store', signal: notesAbort.signal,
           headers: { Authorization: `Bearer ${session.access_token}`, Accept: 'application/json' },
         });
@@ -480,14 +553,17 @@
       loginFields.disabled = !ready || busy;
       logoutButton.disabled = !ready || busy;
       loginForm.setAttribute('aria-busy', String(busy));
-      memoFields.disabled = !ready || !signedIn || busy || memoBusy;
+      memoFields.disabled = !ready || !signedIn || !deviceApproved || busy || memoBusy;
       memoRefresh.disabled = memoFields.disabled;
       memoForm.setAttribute('aria-busy', String(memoBusy));
       notesList.querySelectorAll('button').forEach(button => { button.disabled = memoFields.disabled; });
-      noticeFields.disabled = !ready || !signedIn || busy || noticeBusy;
+      noticeFields.disabled = !ready || !signedIn || !deviceApproved || busy || noticeBusy;
       noticeRefresh.disabled = noticeFields.disabled;
       noticeForm.setAttribute('aria-busy', String(noticeBusy));
       noticesList.querySelectorAll('button').forEach(button => { button.disabled = noticeFields.disabled; });
+      deviceRegister.disabled = !ready || !signedIn || busy || deviceBusy || deviceApproved;
+      deviceVerify.disabled = !ready || !signedIn || busy || deviceBusy;
+      deviceRefresh.disabled = !ready || !signedIn || busy || deviceBusy;
     }
 
     function showSession(session) {
@@ -495,8 +571,8 @@
       currentSession = session;
       loginForm.hidden = signedIn;
       logoutButton.hidden = !signedIn;
-      memoEditor.hidden = !signedIn;
-      noticeBoard.hidden = !signedIn;
+      memoEditor.hidden = !deviceApproved;
+      noticeBoard.hidden = !deviceApproved;
       authStatus.textContent = signedIn ? '로그인되었습니다.' : '로그인하지 않은 상태입니다.';
       if (signedIn) passwordInput.value = '';
       updateControls();
@@ -512,9 +588,8 @@
         noticeBusy = false;
         resetNotice();
         noticeStatus.textContent = '';
-        // 콜백 안에서 SDK 메서드를 다시 호출하지 않습니다.
-        void loadNotes(session);
-        void loadNoticeBoard(session);
+        deviceClient.clear();
+        if (session) void deviceAction('status');
       }
     }
 
@@ -535,9 +610,15 @@
     }
 
     try {
+      // 이전 버전의 세션 항목만 삭제합니다. 값을 읽거나 기록하지 않습니다.
+      for (const storage of [globalThis.localStorage, globalThis.sessionStorage]) {
+        for (const key of ['vault-server-auth', 'vault-server-auth-code-verifier', 'vault-server-auth-user']) {
+          storage?.removeItem(key);
+        }
+      }
       const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/+esm');
       const authClient = createClient(globalThis.location?.origin ?? 'https://local.invalid', 'server-auth-proxy', {
-        auth: { storageKey: 'vault-server-auth', detectSessionInUrl: false },
+        auth: { storageKey: 'vault-server-auth', persistSession: false, detectSessionInUrl: false },
         global: { fetch: async (input, options = {}) => {
           const endpoint = new URL(typeof input === 'string' ? input : input.url ?? String(input));
           const route = endpoint.pathname.replace(/^\/auth\/v1\//, '');
@@ -550,7 +631,7 @@
           return fetch(`/api/auth?${query}`, { ...options, headers, cache: 'no-store', redirect: 'error' });
         } },
       });
-      // 세션 저장과 갱신은 공식 SDK에 맡기며 토큰을 화면이나 로그에 출력하지 않습니다.
+      // 세션은 메모리에만 두며 갱신은 SDK에 맡깁니다. 새로고침하면 다시 로그인합니다.
       authClient.auth.onAuthStateChange((event, session) => {
         showSession(session);
         if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') authError.textContent = '';
@@ -581,6 +662,7 @@
           passwordInput.value = '';
           busy = false;
           updateControls();
+          if (signedIn && !deviceApproved) void deviceAction('status');
         }
       });
 

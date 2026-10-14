@@ -1,6 +1,7 @@
 import config from '../aleph.config.json' with { type: 'json' };
 import { createLoginVerifier } from './verify-login.mjs';
 import { createClient } from '@supabase/supabase-js';
+import { requireDeviceProof } from './device-proof.mjs';
 
 let verifier;
 let verifierKey;
@@ -15,7 +16,7 @@ function issuerKind(authorization) {
   } catch { return 'unreadable'; }
 }
 
-export async function authenticateResource(request, response, unavailable) {
+export async function authenticateResource(request, response, unavailable, { deviceProofRequired = true } = {}) {
   // 거부 사유: 응답에는 짧은 코드, 서버 로그에는 원인 분류만 남깁니다.
   const unauthorized = (reason, issuer = 'none') => {
     console.warn('resource_api_unauthorized', { reason, issuer });
@@ -51,7 +52,11 @@ export async function authenticateResource(request, response, unavailable) {
       if (error || data?.user?.id !== identity.userId) { unauthorized('SESSION_REJECTED', 'student'); return null; }
     } catch { unavailable(response, 503, 'AUTH_SERVICE_UNAVAILABLE'); return null; }
   }
-  return { identity, databaseUrl, secretKey };
+  const authenticated = { identity, databaseUrl, secretKey };
+  try { databaseEndpoint(databaseUrl, '/'); }
+  catch { unavailable(response, 503, 'PROJECT_URL_INVALID'); return null; }
+  if (deviceProofRequired && !await requireDeviceProof(request, response, authenticated)) return null;
+  return authenticated;
 }
 
 export function databaseEndpoint(databaseUrl, path) {

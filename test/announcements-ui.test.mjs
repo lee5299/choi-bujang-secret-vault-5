@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { approvedDeviceUi } from './fixtures/device-ui.mjs';
 import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
 
@@ -52,8 +53,8 @@ async function mountPage({ instructorHint, serverAllowsWrite }) {
     }
     return new Response('{}', { status: 500 });
   };
-  const run = new Function('document', 'fetch', 'AbortController', 'sdk', `return (async () => { ${script} })();`);
-  await run(document, fetch, AbortController, sdk);
+  const run = new Function('document', 'fetch', 'AbortController', 'sdk', 'globalThis', `return (async () => { ${script} })();`);
+  await run(document, fetch, AbortController, sdk, { VaultDeviceClient: approvedDeviceUi(fetch) });
   return { el, requests, authChanged: (...args) => authChanged(...args), session, getNotices: () => notices, noticeId };
 }
 

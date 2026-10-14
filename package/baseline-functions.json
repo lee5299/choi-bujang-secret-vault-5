@@ -2,5 +2,15 @@
   "version": 1,
   "starter": "ChoiTimo/aleph-defense-starter",
   "functions": [],
-  "allowedNew": ["api/ai.js", "api/announcements.js", "api/announcements/[id].js", "api/auth.js", "api/note-restore.js", "api/notes.js", "api/notes/[id].js", "api/threat-intel.js"]
+  "allowedNew": [
+    "api/ai.js",
+    "api/announcements.js",
+    "api/announcements/[id].js",
+    "api/auth.js",
+    "api/device.js",
+    "api/note-restore.js",
+    "api/notes.js",
+    "api/notes/[id].js",
+    "api/threat-intel.js"
+  ]
 }

@@ -1,0 +1,16 @@
+{
+  "schema": "vault.access-app.v1",
+  "name": "BYTE BACK 내 자료실",
+  "manifestPath": "/manifest.webmanifest",
+  "contractPath": "/access-app.json",
+  "deviceApiPath": "/api/device",
+  "protocol": "webauthn-request-v1",
+  "proofHeader": "x-vault-device-proof",
+  "challengeLifetimeSeconds": 120,
+  "userVerification": "required",
+  "credentialPolicy": "single-device-no-backup",
+  "approvalAuthority": "database-administrator",
+  "bodyBinding": "sha256-canonical-json-v1",
+  "implementation": "server-contract",
+  "operatorJudgeCompatibility": "unconfirmed"
+}

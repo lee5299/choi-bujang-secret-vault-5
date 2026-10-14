@@ -1,11 +1,13 @@
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { deploymentIdentity } from './deployment-identity.mjs';
+import { accessAppMetadata } from './access-app-metadata.mjs';
 
 const root = resolve(import.meta.dirname, '..');
 const output = resolve(root, 'public', 'data.json');
 const config = JSON.parse(await readFile(resolve(root, 'aleph.config.json'), 'utf8'));
 await mkdir(resolve(root, 'public'), { recursive: true });
+await writeFile(resolve(root, 'public', 'access-app.json'), `${JSON.stringify(accessAppMetadata(config), null, 2)}\n`, 'utf8');
 await rm(output, { force: true });
 console.log('공개 data.json을 제외했습니다. 이전 빌드 파일도 제거합니다.');
 if (!process.argv.includes('--local')) {

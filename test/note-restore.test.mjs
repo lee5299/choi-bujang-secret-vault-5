@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { virtualDevices } from './fixtures/device-proof.mjs';
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
@@ -41,6 +42,7 @@ test('POST /api/notes/:id/restore 메모 한 건 복구 계약', async t => {
   const savedUrl = process.env.SUPABASE_URL;
   const savedKey = process.env.SUPABASE_SECRET_KEY;
   const originalFetch = globalThis.fetch;
+  const devices = virtualDevices();
   const originalError = console.error;
   const originalWarn = console.warn;
   const logs = [];
@@ -104,8 +106,10 @@ test('POST /api/notes/:id/restore 메모 한 건 복구 계약', async t => {
       status(code) { this.code = code; return this; },
       json(value) { this.body = value; return this; },
     };
-    await handler({ method, url, body, query: {}, headers: {
-      ...(authorization ? { authorization } : {}), ...(body !== undefined ? { 'content-type': 'application/json' } : {}) } }, result);
+    const request = { method, url, body, query: {}, headers: {
+      ...(authorization ? { authorization } : {}), ...(body !== undefined ? { 'content-type': 'application/json' } : {}) } };
+    await devices.signRequest(request);
+    await handler(request, result);
     return result;
   };
   const restore = (authorization, id, method = 'POST', body) => call(restoreHandler, authorization, method,
@@ -116,7 +120,7 @@ test('POST /api/notes/:id/restore 메모 한 건 복구 계약', async t => {
   try {
     console.error = (...args) => logs.push(args);
     console.warn = (...args) => logs.push(args);
-    globalThis.fetch = async (input, options) => {
+    globalThis.fetch = devices.wrapFetch(async (input, options) => {
       const url = new URL(typeof input === 'string' || input instanceof URL ? input : input.url);
       if (url.href === `${config.judgeIssuer}/.well-known/jwks.json` || url.href === config.identityProvider.jwksUrl) {
         return Response.json({ keys: [publicJwk] });
@@ -150,7 +154,7 @@ test('POST /api/notes/:id/restore 메모 한 건 복구 계약', async t => {
         matches.forEach(row => notes.delete(row.id)); // 삭제도 사본을 바꾸지 않습니다.
       }
       return Response.json(matches.map(row => ({ ...row })));
-    };
+    });
     process.env.SUPABASE_URL = new URL(config.identityProvider.issuer).origin;
     process.env.SUPABASE_SECRET_KEY = 'test-placeholder';
 

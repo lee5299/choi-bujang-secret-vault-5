@@ -1,3 +1,5 @@
+import { accessAppMetadata } from './access-app-metadata.mjs';
+
 const OWNER = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/u;
 const REPO = /^[A-Za-z0-9._-]{1,100}$/u;
 const SHA = /^[a-f0-9]{40}$/iu;
@@ -37,5 +39,7 @@ export function deploymentIdentity(env, config) {
     ...(config.step >= 5 ? { allowedRoutes: [...(config.allowedRoutes ?? [])], originalApiUrl: config.originalApiUrl } : {}),
     // 10단계부터 학생이 제출한 메모 한 건 복구 경로를 배포 식별 JSON에도 함께 공개합니다.
     ...(config.step >= 10 ? { restoreRoute: config.restoreRoute ?? null } : {}),
+    // 학생 서버의 공개 연결 선언입니다. 운영 심판이 추가 필드를 소비하는지는 미확인입니다.
+    ...(config.step >= 11 ? { accessApp: accessAppMetadata(config) } : {}),
   };
 }

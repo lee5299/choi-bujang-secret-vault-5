@@ -123,7 +123,7 @@ export async function replayFixture(alerts, store) {
   return summary;
 }
 
-export async function applyRun({ root, alerts, result, jevStats }) {
+export async function applyRun({ root, alerts, result }) {
   const dir = join(root, 'xdr', 'brute-force');
   await mkdir(dir, { recursive: true });
   const store = buildFixtureRules(alerts, result.decisions);
@@ -143,9 +143,7 @@ export async function applyRun({ root, alerts, result, jevStats }) {
     normalBlocked: normalIndices.filter(({ index }) => result.decisions[index].action === 'block').length,
     normalAddressBlocked: normalIndices.filter(({ e }) =>
       matchDenyRule(store, e.sourceIp, e.timestamp, { mode: 'fixture' })).length,
-    denyRuleCount: store.rules.length, jevConnected: (jevStats?.succeeded ?? 0) > 0,
-    jevCalls: jevStats?.attempted ?? 0, jevReplies: jevStats?.succeeded ?? 0,
-    jevFailures: jevStats?.failed ?? 0, liveZtnaConnected: false,
+    denyRuleCount: store.rules.length, liveZtnaConnected: false,
     fixtureReplay: await replayFixture(alerts, store),
   };
   await writeFile(join(dir, 'check.json'), `${JSON.stringify(check, null, 2)}\n`);

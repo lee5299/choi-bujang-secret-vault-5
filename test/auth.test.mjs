@@ -62,7 +62,10 @@ test('real Auth SDK uses server proxy for password, refresh, user and local logo
         user:{id:'fixture-user',email:'hidden',user_metadata:{private:'hidden'}}});
     };
     const build=new Function('createClient','fetch',`${proxyCode}\nreturn authClient;`);
-    client=build((url,key,options)=>createClient(url,key,{...options,auth:{...options.auth,persistSession:false,autoRefreshToken:false}}),browserFetch);
+    client=build((url,key,options)=>{
+      assert.equal(options.auth.persistSession,false);
+      return createClient(url,key,{...options,auth:{...options.auth,autoRefreshToken:false}});
+    },browserFetch);
     const signed=await client.auth.signInWithPassword({email:'fixture',password:'synthetic-password'});
     assert.equal(signed.error,null); assert.equal(signed.data.user.id,'fixture-user'); assert.equal(signed.data.user.email,undefined);
     assert.equal((await client.auth.refreshSession()).error,null);

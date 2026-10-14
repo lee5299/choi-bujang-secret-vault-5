@@ -100,7 +100,7 @@ export function createDeviceService(authenticated, request, repository = deviceR
       const rows = await list();
       const options = await generateRegistrationOptions({ rpName: app.name, rpID,
         userName: `user-${digest(user).slice(0, 12)}`, userDisplayName: '내 자료실 사용자',
-        userID: new Uint8Array(Buffer.from(digest(user), 'hex')), attestationType: 'none', supportedAlgorithmIDs: [-7],
+        userID: new Uint8Array(Buffer.from(digest(user), 'hex')), attestationType: 'none', supportedAlgorithmIDs: [-7, -257],
         excludeCredentials: rows.map(row => ({ id: row.credential_id })),
         authenticatorSelection: { authenticatorAttachment: 'platform', residentKey: 'required', userVerification: 'required' },
       });
@@ -112,7 +112,7 @@ export function createDeviceService(authenticated, request, repository = deviceR
         const challenge = await take(proof, 'registration');
         const { verified, registrationInfo: info } = await verifyRegistrationResponse({ response: proof,
           expectedChallenge: challenge.nonce, expectedOrigin: origin, expectedRPID: rpID, requireUserVerification: true,
-          supportedAlgorithmIDs: [-7] });
+          supportedAlgorithmIDs: [-7, -257] });
         if (!verified || info.credentialDeviceType !== 'singleDevice' || info.credentialBackedUp) throw new DeviceError('device_not_supported');
         const deviceId = digest(info.credential.id).slice(0, 16);
         const ok = await repository('register', { p_user_id: user, p_credential_id: info.credential.id,

@@ -16,7 +16,7 @@
 클라이언트는 WebAuthn `navigator.credentials.create/get`으로 운영체제의 플랫폼 인증기를 호출합니다. 학생 코드는 기기 개인키를 만들거나 추출·저장하지 않습니다. 로그인 세션·선택한 기기 상태는 메모리에만 두며 새로고침 뒤 다시 로그인·기기 확인합니다.
 
 - RP ID·허용 origin: `aleph.config.json.publicAppUrl`의 HTTPS 호스트·origin으로 고정. Origin 헤더·Host·본문으로 바꾸지 않습니다.
-- 등록과 인증 모두 사용자 확인(UV)을 요구합니다. ES256 등록만 요청하고 검증합니다.
+- 등록과 인증 모두 사용자 확인(UV)을 요구합니다. ES256과 RS256(Windows Hello 호환) 등록만 요청하고 검증합니다.
 - 서명된 backup eligibility/state를 검사해 `singleDevice`·미백업 자격 증명만 받습니다. 동기화되는 패스키는 거부합니다.
 - 등록 성공은 **pending**입니다. 서버 서비스 키·학생 계정·승인 요청 버튼에는 승인 권한이 없습니다.
 - 관리자가 실제 대상 기기와 화면의 16자리 기기 번호를 대조한 뒤 Supabase SQL Editor에서 승인합니다. 공개 상태 목록만으로 기기를 승인하지 않습니다.

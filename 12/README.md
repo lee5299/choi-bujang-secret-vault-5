@@ -1,5 +1,53 @@
 # 12단계: 탈환 작전실을 완성합니다 — 제작 기록
 
+## 순차 재작업 저장점 준비 (2026-10-15)
+
+사용자는 README의 현재 단계 12와 관리자 A/공개 B 구분을 요청했고, 앞서 직접 삭제한 파일 내보내기·가져오기 안내 삭제도 보존했습니다. 이어 수정본의 커밋·GitHub main push·Vercel 배포를 승인했습니다. 공식 심판 제출과 100점 통과는 별도 미확인입니다.
+
+저장점 포함 파일: `.gitignore`, `AGENTS.md`, `CLAUDE.md`, `README.md`, `TODO.md`, `12/README.md`, `12/요구사항.md`, `docs/workflows/savepoint.md`, `docs/workflows/stage-build.md`, `docs/regression-evidence.json`, `package.json`, `public/index.html`, `public/operations-public.html`, `public/operations-public.mjs`, `public/operations.css`, `public/operations-regression.mjs`, `public/regression-evidence.mjs`, `public/response-recorder.js`, `scripts/build-public.mjs`, `scripts/public-regression.mjs`, `test/operations-public-stage12.test.mjs`, `test/r12-requirements.test.mjs`, `test/operations-regression-stage12.test.mjs`입니다. 앞서 사용자가 요청한 작업 규칙 변경·만들기 1·2와 이번 README 수정만 포함합니다. `bundle-notes.json`·`artifacts/`·`local-only/`·환경 비밀값은 포함하지 않습니다.
+
+설정 대조: step 12·allowedRoutes 7개·RULE_IDS 6개를 유지합니다. `aleph.config.json`·`vercel.json`·판정기·탐지 규칙·관리자 A 보호 API는 이번 저장점에서 변경하지 않았습니다. 이번 요청에 제출 묶음 생성은 없으므로 bundle은 실행하지 않습니다.
+
+## 순차 재작업 만들기 2: B의 통합 시험 표 (2026-10-15)
+
+구현 범위: B에 하나의 시험 표를 추가했습니다. 1~11단계 T01~T38과 첫 화면 기본 대조 S01의 **56행**을 단계·정상/금지·계정 별칭·요청·기대·실제 응답·요청 ID·확인 정보·실행 상태 열로 제공합니다. 공식 41종과 별개의 보조 재시험 목록이며 41종은 **0/41 미실행**입니다. 가상·SQL·운영·수동 행은 실제 API 결과가 없으면 미실행입니다.
+
+- `public/regression-evidence.mjs`: 알려진 행과 실제 상태·고정 오류 코드·요청 ID·시각·출처 주소·커밋만 남깁니다. 다른 환경을 합산하지 않고 최신 실패도 덮어 숨기지 않습니다. 보호 API의 ID 누락과 5xx·연결 실패는 확인 미완료입니다.
+- `public/operations-regression.mjs`·`operations-public.html`·`operations.css`: 한 표·단계/상태/환경 필터·별도 정상/거부 실측 수·조건 미충족 표시를 제공합니다. 공개 첫 화면 200을 보호 API 정상 접근 실측으로 세지 않습니다.
+- `public/response-recorder.js`·`public/index.html`: B에서 선택한 행을 같은 출처의 자료실 새 창과 연결합니다. 직접 로그인·기기 확인 후 실제로 받은 메모·공지 응답의 method·마스킹 경로·상태·짧은 오류·요청 ID·시각만 UUID 기반 BroadcastChannel로 보냅니다. 성공 본문·토큰·서명·실제 자료 ID를 넘기지 않습니다. 로그아웃·기기 승인 상실 시 지연 수집을 무효화합니다. B는 한 행의 일치하는 다음 응답을 받은 뒤 연결을 닫습니다.
+- 사용자의 지적에 따라 이번 새 흐름의 파일 내보내기·가져오기 UI를 제거했습니다. 화면 연결 결과는 현재 B 페이지 메모리에만 남으며 서버 보관이나 로그 대조 완료가 아닙니다. 계정·시험대상·연속 순서도 자동으로 검증한 것으로 표시하지 않습니다.
+- `scripts/public-regression.mjs`·`scripts/build-public.mjs`·`docs/regression-evidence.json`: 인증 없는 실제 GET 결과의 안전한 메타데이터를 내부 기록에 남기고 빌드 시 B가 읽는 `public/regression-report.json`을 생성합니다(생성 파일은 Git 제외). 이는 사용자에게 요구하는 다운로드 파일이나 제출 묶음이 아닙니다. `package.json`에 `regression:public`과 신규 시험을 연결했습니다.
+- `test/operations-regression-stage12.test.mjs`: 빈 실측·주소/행 분리·실패 보존·고정 GET·본문 미열람·선택 행 연결·지연 응답·41종 미실행을 검사합니다. A의 구현과 이전 단계 시험은 변경하지 않았습니다.
+
+검증: Node.js v24.21.0, 전체 회귀 **319개 통과·실패 0**, `npm.cmd run test:stage12` **284개 통과·실패 0**, `npm.cmd run build -- --local` 성공. 독립 보안 검토에서 조치가 필요한 취약점 없음. 단위·연결 시험의 가상 응답은 실측 표에 넣지 않았습니다.
+
+실제 배포 주소에 `npm.cmd run regression:public -- --probe` 실행: 첫 제한 환경의 GET 9건은 응답 없음으로 남겼고, 네트워크 접근 허용 후 다시 보낸 **GET 9건은 실제 HTTP 응답**을 받았습니다. 공개 첫 화면 200 두 행, 공개 메모 파일 404, 무로그인 메모/공지 목록·상세 및 우회 헤더의 메모 조회 401, 기기 상태 401입니다. 기기 상태 응답에는 요청 ID가 없어 확인 미완료입니다. B의 최신 결과는 **정상 허용 2행(보호 API 0행)·금지 거부 6행·확인 미완료 1행·미실행 47행**이며 실측 조건 미충족입니다. 요청 ID·커밋·시각은 내부 안전 기록에 있습니다. Vercel 로그 대조·심판 결과는 별도 미확인입니다.
+
+사용자는 실제 인증 시점에 직접 로그인·기기 확인을 하겠다고 했고 테스트 계정의 자료 변경을 허용했습니다. 현재는 로컬 수정본이므로 승인 후 배포 → 사용자 로그인·기기 확인 → 보호 정상 요청 실측을 이어가야 합니다. 파일 작업을 사용자에게 요구하지 않습니다. 보호 정상 허용·금지 거부의 전체 실측 조건을 충족했다고 보고하지 않습니다.
+
+다시 확인: `npm.cmd run test:stage12`. B의 「1~11단계 정상·금지 요청 시험 표」에서 환경·단계·상태를 선택합니다. 실제 배포의 보호 정상 실측은 해당 B에서 요청 행을 선택 → 「선택한 요청을 자료실에서 확인」 → 직접 로그인·기기 확인 → 요청 실행 순서입니다. 실측 결과가 없는 행과 공식 41종은 미실행이어야 합니다. 커밋·push·이번 수정본 배포·bundle·공식 제출·A 반영은 미실행입니다.
+
+## 순차 재작업 만들기 1: 공개 작전실 B (2026-10-15)
+
+사용자는 요구사항부터 전체 제작을 한 번에 맡겼을 때의 누락을 보완하기 위해 만들기별 순차 진행을 요청했습니다. 이번에는 공개 작전실 B의 만들기 1만 수행했습니다. A는 관리자·기기 확인을 유지하며, 100점 통과 보고 후 최종 결과를 반영합니다. 아래 과거 완료 기록과 현재 수정본의 배포 상태를 혼동하지 않습니다.
+
+실제 변경:
+
+- `public/operations-public.html`·`public/operations-public.mjs`: 네 영역 요약 / 실제 API 응답 기록 / 미실행·미연결·미제공 결과를 분리했습니다. 규칙은 한글 설명과 코드 이름을 함께 표시하고 가상 판정·탐지 상세는 접어 둡니다. 운영 사건·회수 집행·복구 버전을 임의로 채우지 않습니다.
+- 공개 요약을 받은 HTTP 응답과, 「무로그인 조회 거부 확인」 버튼이 보낸 `GET /api/notes`·`GET /api/operations-summary`의 상태·고정 오류 코드·요청 ID·브라우저 확인 시각만 현재 페이지 메모리에 최대 12건 보관합니다. 인증·쿠키·기기 서명을 보내지 않으며 예상 밖 200 본문은 읽지 않습니다. 응답 없음·5xx·요청 ID 누락은 확인 미완료입니다. 가상 연습은 실제 HTTP 기록으로 넣지 않습니다.
+- `public/index.html`: 로그인 전에도 보이는 공개 링크를 `BYTE BACK · 12단계 · 탈환 작전실`에 붙였습니다. 관리자 링크는 종전 권한 조건으로 표시합니다.
+- `public/operations.css`: B에서만 요약 두 열·좁은 화면 한 열 배치를 적용했습니다. A의 화면·로그인·보호 API 구현은 바꾸지 않았습니다.
+- `test/operations-public-stage12.test.mjs`: 출처 분리·오류·누락 ID·깨진 요약·중복 클릭·인증 정보 미전송·성공 본문 미열람 시험을 추가했습니다. `test/r12-requirements.test.mjs`는 사용자 요청에 맞춘 공개 링크 문구 기대값만 수정했습니다. 이전 단계 시험은 수정하지 않았습니다.
+- 요구사항 보강은 [요구사항](요구사항.md#사용자-순차-재작업-만들기-1-2026-10-15), 배포·A 반영의 미완료 항목은 [TODO](../TODO.md)에 있습니다. 앞선 작업 규칙 수정 3개 파일의 변경도 보존했습니다.
+
+검증(사용자 PC, Node.js v24.21.0): 전체 회귀 `node --test test/*.test.mjs` **312개 통과·실패 0**, `npm.cmd run test:stage12` **277개 통과·실패 0**, `npm.cmd run build -- --local` 성공. 단위·API 함수 시험은 로컬 가상 시험입니다.
+
+로컬 브라우저에서 실제 HTTP로 공개 요약 **200**, 버튼의 무로그인 메모·관리자 요약 **401 `login_required`** 두 건과 요청 ID·시각 표시를 확인했습니다. 로컬 서버의 가린 기록과 응답 요청 ID·상태도 대조했습니다. 이는 로컬 HTTP 확인이며 Vercel 배포 실측·운영 엔진 결과·심판 판정이 아닙니다. 메모 DB는 조회하지 않았습니다.
+
+`review-security` 지침을 따른 독립 보안 검토: 조치가 필요한 취약점 없음. 공개 요청의 인증 정보 제외·고정 GET 경로·예상 밖 200 본문 미열람·텍스트 렌더링·실측 출처 구분·A의 인증 경계 유지를 검토했습니다. 코드 검토 결과이며 실제 운영 보안이나 심판 통과를 보장하지 않습니다.
+
+다시 확인하기: `npm.cmd run test:stage12`. 수정본 배포 후 자료실 상단 「BYTE BACK · 12단계 · 탈환 작전실」 → 네 영역 요약 → 「무로그인 조회 거부 확인」. 정상은 요약 200, 거부는 보호 API 401 두 건입니다. 실제 응답·가상 연습·미실행이 다른 위치에 표시되어야 합니다. 커밋·push·배포·bundle·공식 제출과 A 반영은 미실행입니다.
+
 안내 원문은 [12단계 요청 자료](../docs/requests/stage12.txt), 요구사항 표와 검토·반영은 [요구사항](요구사항.md)에 있습니다.
 후속 목표와 미완료 작업은 [루트 TODO](../TODO.md)에서 관리합니다.
 커밋·push·배포·bundle·심판 제출은 실행하지 않았습니다. 2026-10-14 사용자 요청으로 제작 1~3과 시험까지 진행했습니다.

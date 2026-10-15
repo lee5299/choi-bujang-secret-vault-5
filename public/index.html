@@ -10,11 +10,14 @@
   <link rel="apple-touch-icon" href="/icons/vault-192.png">
   <script src="/app-status.js" defer></script>
   <script src="/device-client.js" defer></script>
+  <script src="/response-recorder.js" defer></script>
   <style>
     :root { color-scheme: dark; font-family: system-ui, sans-serif; }
     body { margin: 0; min-height: 100vh; background: #101a28; color: #ecf4ff; }
     main { max-width: 760px; margin: 0 auto; padding: 44px 22px 64px; }
     .eyebrow { color: #8ad8df; font-size: 14px; font-weight: 700; letter-spacing: .08em; }
+    .eyebrow a { color: inherit; text-underline-offset: 4px; }
+    .eyebrow a:focus-visible { outline: 3px solid #8ad8df; outline-offset: 3px; }
     h1 { margin: 16px 0; font-size: clamp(30px, 7vw, 48px); line-height: 1.2; }
     p { font-size: 17px; line-height: 1.7; color: #bfd0e5; }
     .notice { margin: 26px 0; padding: 18px; border: 1px solid #d07384; border-radius: 14px; color: #ffe3e8; background: #612a3544; }
@@ -44,9 +47,9 @@
 </head>
 <body>
   <main>
-    <div class="eyebrow">BYTE BACK · 12단계</div>
+    <div class="eyebrow">BYTE BACK · 12단계 · <a id="ops-public-menu" href="/operations-public.html">탈환 작전실</a></div>
     <h1>내 자료실</h1>
-    <nav aria-label="상단 메뉴"><a id="ops-public-menu" href="/operations-public.html">공개 작전실 요약</a> <a id="ops-menu" href="/operations-room" hidden>탈환 작전실</a></nav>
+    <nav aria-label="관리자 메뉴"><a id="ops-menu" href="/operations-room" hidden>관리자 작전실</a></nav>
     <p>아래 기록은 모두 실습을 위해 만든 가상 자료입니다.</p>
     <section class="auth" aria-labelledby="app-heading">
       <h2 id="app-heading">BYTE BACK 내 자료실 앱</h2>
@@ -122,6 +125,10 @@
       <p id="notice-status" role="status"></p>
       <ul id="notices" aria-live="polite"></ul>
     </section>
+    <section id="evidence-tools" class="auth" hidden>
+      <h2>작전실 시험 표 실측 연결</h2>
+      <p>작전실 B에서 요청 행을 선택해 연 자료실에서는, 해당 요청의 실제 응답 메타데이터가 B 표에 바로 연결됩니다. 제목·본문·자료 ID·계정 정보·토큰을 전달하지 않습니다. 파일을 만들 필요가 없습니다.</p>
+    </section>
   </main>
   <script type="module">
     const loginForm = document.querySelector('#login-form');
@@ -150,6 +157,8 @@
     let notesAbort;
     let currentSession;
     let sessionVersion = 0;
+    const responseRecorder = globalThis.VaultResponseRecorder?.create();
+    const evidencePanel = document.querySelector('#evidence-tools');
     let editId = null;
     let memoBusy = false;
     let memoAbort;
@@ -190,6 +199,7 @@
         deviceStatus.textContent = (messages[state.status] ?? '기기 확인이 필요합니다. 다시 확인해 주세요.')
           + (state.deviceId ? ` 기기 번호: ${state.deviceId}` : '');
         if (!deviceApproved) {
+          responseRecorder?.clear();
           if (wasApproved) sessionVersion++;
           memoAbort?.abort(); notesAbort?.abort(); noticeAbort?.abort();
           notesVersion++; noticeVersion++;
@@ -203,11 +213,20 @@
           resetOps();
         }
         memoEditor.hidden = !deviceApproved; noticeBoard.hidden = !deviceApproved; notesList.hidden = !deviceApproved;
+        if (evidencePanel) evidencePanel.hidden = !deviceApproved || !responseRecorder?.active;
         showOpsAccess();
         updateControls();
         if (deviceApproved && !wasApproved) { void loadNotes(currentSession); void loadNoticeBoard(currentSession); }
       } });
-    const protectedFetch = (url, options) => deviceClient.protectedFetch(url, options);
+    const protectedFetch = async (url, options = {}) => {
+      const version = sessionVersion;
+      const response = await deviceClient.protectedFetch(url, options);
+      if (version === sessionVersion && signedIn && deviceApproved) {
+        try { await responseRecorder?.capture(url, options.method ?? 'GET', response); }
+        catch { /* 메타데이터 수집 실패로 원래 자료 요청을 바꾸지 않습니다. */ }
+      }
+      return response;
+    };
     function showOpsAccess() {
       opsMenu.hidden = !(signedIn && deviceApproved && administratorHint);
     }

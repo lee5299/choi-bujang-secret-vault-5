@@ -22,3 +22,27 @@ li span { display: block; white-space: pre-wrap; overflow-wrap: anywhere; color:
 [hidden] { display: none !important; }
 html[data-offline="true"] #ops-room { display: none !important; }
 button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid #8ad8df; outline-offset: 3px; }
+
+/* 공개 작전실 B의 요약만 두 열로 배치합니다. 관리자 작전실 A의 배치는 유지합니다. */
+#ops-public h2 { margin-top: 0; font-size: 21px; }
+#ops-public .eyebrow { margin-top: 28px; font-size: 14px; font-weight: 700; }
+#ops-public .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+#ops-public .summary-grid > li:nth-child(n+5) { grid-column: 1 / -1; }
+#ops-public details { margin-top: 16px; }
+#ops-public summary { color: #8ad8df; cursor: pointer; line-height: 1.6; }
+#ops-public details span { margin-top: 12px; font-size: 14px; }
+#ops-public summary:focus-visible { outline: 3px solid #8ad8df; outline-offset: 3px; }
+#ops-public .regression-controls { display: flex; flex-wrap: wrap; gap: 12px; }
+#ops-public select { max-width: 100%; padding: 10px; background: #101a28; color: #ecf4ff; border: 1px solid #71869b; border-radius: 8px; font: inherit; }
+#ops-public .table-scroll { max-height: 680px; overflow: auto; border: 1px solid #51667c; border-radius: 10px; }
+#ops-public table { width: 100%; min-width: 1450px; border-collapse: collapse; font-size: 14px; }
+#ops-public caption { text-align: left; padding: 14px; }
+#ops-public th, #ops-public td { padding: 12px; text-align: left; vertical-align: top; border: 1px solid #51667c; white-space: pre-line; overflow-wrap: anywhere; }
+#ops-public th { position: sticky; top: 0; background: #273e57; z-index: 1; }
+#ops-public td:nth-child(2), #ops-public td:nth-child(9) { min-width: 200px; }
+#ops-public .table-scroll:focus-visible, #ops-public select:focus-visible { outline: 3px solid #8ad8df; }
+@media (max-width: 640px) {
+  #ops-public .summary-grid { grid-template-columns: 1fr; }
+  #ops-public nav { align-items: flex-start; flex-wrap: wrap; }
+  #ops-public .auth { padding: 18px; }
+}

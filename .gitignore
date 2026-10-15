@@ -5,6 +5,7 @@ bundle-notes.json
 node_modules/
 public/aleph.json
 public/access-app.json
+public/regression-report.json
 local-only/
 5/cap/
 /data.json

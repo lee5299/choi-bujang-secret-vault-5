@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import { deploymentIdentity } from './deployment-identity.mjs';
 import { accessAppMetadata } from './access-app-metadata.mjs';
 import { buildPublicRegression } from './public-regression.mjs';
+import { publishStatic } from './publish-static.mjs';
 
 const root = resolve(import.meta.dirname, '..');
 const output = resolve(root, 'public', 'data.json');
@@ -18,3 +19,5 @@ if (!process.argv.includes('--local')) {
     `${JSON.stringify(identity, null, 2)}\n`, 'utf8');
   console.log('배포 저장소·커밋·주소를 public/aleph.json에 기록했습니다.');
 }
+await publishStatic(root);
+console.log('배포 정적 파일을 dist/에 생성했습니다. 관리자 A 화면·주석 원본은 배포하지 않습니다.');

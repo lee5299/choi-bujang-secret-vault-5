@@ -249,9 +249,9 @@ test('N7: 사건은 요청자 기준으로 집계하고 A의 정상 120건은 B�
   assert.deepEqual(detect(events('learner_a', 120)), { action: 'observe' });
 });
 
-test('자료실은 관리자 전용 작전실 링크만 표시하고 작전실 UI·요약 API를 포함하지 않음', async () => {
-  const html = await readFile(new URL('../public/index.html', import.meta.url), 'utf8');
-  assert.match(html, /id="ops-menu" href="\/operations-room" hidden/u);
+test('자료실은 공개 B만 표시하고 관리자 A 메뉴·UI·요약 API를 실행하지 않음', async () => {
+  const html = (await readFile(new URL('../public/index.html', import.meta.url), 'utf8')).replace(/<!--[\s\S]*?-->/gu, '');
+  assert.doesNotMatch(html, /id="ops-menu"/u);
   // 공개 작전실 요약은 로그인 전에도 보이는 일반 이동 링크입니다(관리자 작전실 링크와 별개).
   assert.match(html, /BYTE BACK · 12단계 · <a id="ops-public-menu" href="\/operations-public\.html">탈환 작전실<\/a>/u);
   assert.doesNotMatch(html.match(/<a id="ops-public-menu"[^>]*>/u)[0], /hidden/u);
@@ -280,15 +280,14 @@ test('자료실은 관리자 전용 작전실 링크만 표시하고 작전실 U
   await flush();
   assert.equal(elements.get('ops-public-menu').hidden, false); // 로그인 전
   authChanged('SIGNED_IN', session); await flush();
-  assert.equal(elements.get('ops-menu').hidden, true);
+  assert.equal(elements.has('ops-menu'), false);
   assert.equal(elements.get('ops-public-menu').hidden, false);
   authChanged('SIGNED_OUT', null); await flush(); administrator = true;
   authChanged('SIGNED_IN', session); await flush();
-  assert.equal(elements.get('ops-menu').hidden, false);
-  assert.equal(elements.get('ops-menu').listeners.click, undefined); // 실제 문서 이동 링크
+  assert.equal(elements.has('ops-menu'), false);
   assert.equal(calls.some(url => url.includes('operations')), false);
   authChanged('SIGNED_OUT', null); await flush();
-  assert.equal(elements.get('ops-menu').hidden, true);
+  assert.equal(elements.has('ops-menu'), false);
   assert.equal(elements.get('ops-public-menu').hidden, false); // 로그아웃 뒤에도 공개 요약 링크 유지
 });
 

@@ -49,7 +49,9 @@
   <main>
     <div class="eyebrow">BYTE BACK · 12단계 · <a id="ops-public-menu" href="/operations-public.html">탈환 작전실</a></div>
     <h1>내 자료실</h1>
+    <!-- 관리자 A 화면 사용 중지. 재사용할 때 메뉴와 아래 opsMenu 코드를 함께 복원합니다.
     <nav aria-label="관리자 메뉴"><a id="ops-menu" href="/operations-room" hidden>관리자 작전실</a></nav>
+    -->
     <p>아래 기록은 모두 실습을 위해 만든 가상 자료입니다.</p>
     <section class="auth" aria-labelledby="app-heading">
       <h2 id="app-heading">BYTE BACK 내 자료실 앱</h2>
@@ -179,7 +181,7 @@
     let noticeBusy = false;
     let noticeAbort;
     let noticeVersion = 0;
-    const opsMenu = document.querySelector('#ops-menu');
+    // const opsMenu = document.querySelector('#ops-menu'); // 관리자 A 화면 사용 중지
     let administratorHint = false;
     const deviceStatus = document.querySelector('#device-status');
     const deviceRegister = document.querySelector('#device-register');
@@ -228,7 +230,7 @@
       return response;
     };
     function showOpsAccess() {
-      opsMenu.hidden = !(signedIn && deviceApproved && administratorHint);
+      // opsMenu.hidden = !(signedIn && deviceApproved && administratorHint); // 관리자 A 화면 사용 중지
     }
     function resetOps() {
       administratorHint = false;

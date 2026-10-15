@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { readFile } from 'node:fs/promises';
+import { readFile, mkdtemp, mkdir, writeFile, access, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { publishStatic } from '../scripts/publish-static.mjs';
 import { runInNewContext } from 'node:vm';
 import { regressionCases, cleanEvidence, mergeEvidence, assessEvidence, probePublicRows, REPORT_SCHEMA } from '../public/regression-evidence.mjs';
 import { initializeRegression } from '../public/operations-regression.mjs';
@@ -11,6 +14,32 @@ const origin = 'https://fixture.vercel.app';
 const id = '12345678-1234-4123-8123-123456789abc';
 const at = '2026-10-15T12:00:00.000Z';
 const record = (key, overrides = {}) => ({ key, origin, source: 'live_http', at, status: 200, requestId: id, ...overrides });
+
+test('A 화면 중지: 원본을 보존하되 배포에서 A 전용 파일·주석 메뉴를 제외하고 B를 유지한다', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'vault-static-stage12-'));
+  try {
+    await mkdir(join(root, 'public'));
+    for (const name of ['operations-login.html', 'operations-entry.mjs', 'operations-controller.mjs', 'operations-page.mjs']) {
+      await writeFile(join(root, 'public', name), 'DISABLED_A_SOURCE');
+    }
+    await writeFile(join(root, 'public', 'index.html'), '<!-- DISABLED_A_SOURCE --><a href="/operations-public.html">B</a>\n// const opsMenu = disabled; // 관리자 A 화면 사용 중지\n');
+    await writeFile(join(root, 'public', 'operations-public.html'), '<table id="regression-table"></table>');
+    await publishStatic(root);
+    await assert.rejects(access(join(root, 'dist', 'operations-login.html')));
+    for (const name of ['operations-entry.mjs', 'operations-controller.mjs', 'operations-page.mjs']) {
+      await assert.rejects(access(join(root, 'dist', name)));
+      assert.equal(await readFile(join(root, 'public', name), 'utf8'), 'DISABLED_A_SOURCE');
+    }
+    const published = await readFile(join(root, 'dist', 'index.html'), 'utf8');
+    assert.doesNotMatch(published, /DISABLED_A_SOURCE|opsMenu/u);
+    assert.match(published, /operations-public\.html/u);
+    assert.match(await readFile(join(root, 'dist', 'operations-public.html'), 'utf8'), /regression-table/u);
+    // 기존 배포 폴더에 남은 파일도 다음 빌드에서는 제거해야 함.
+    await writeFile(join(root, 'dist', 'operations-login.html'), 'STALE_A');
+    await publishStatic(root);
+    await assert.rejects(access(join(root, 'dist', 'operations-login.html')));
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
 
 test('B 만들기2: 1~11단계 정상·금지·별도 확인을 한 목록으로 만들고 실측 없으면 전부 미실행', () => {
   for (let stage = 1; stage <= 11; stage++) assert.ok(rows.some(row => row.stage === stage));

@@ -48,7 +48,8 @@ test('P1·P2·B3: manifest·배포 아이콘·앱 이름, 기존 허용 경로 7
   const html = await read('public/index.html');
   assert.match(html, /rel="manifest" href="\/manifest.webmanifest"/u);
   assert.doesNotMatch(html, /\/api\/ai|xdr-test|serviceWorker/u);
-  assert.equal(JSON.parse(await read('vercel.json')).outputDirectory, 'public');
+  // 원본 public/에서 A 화면·주석을 제외한 배포 전용 폴더입니다.
+  assert.equal(JSON.parse(await read('vercel.json')).outputDirectory, 'dist');
   assert.ok(config.step >= 11); assert.equal(config.allowedRoutes.length, 7);
   assert.ok(config.allowedRoutes.includes(config.restoreRoute));
 });

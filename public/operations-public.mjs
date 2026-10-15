@@ -1,6 +1,6 @@
 // 공개 작전실 화면: 로그인·토큰 없이 서버 공개 요약 응답만 그대로 표시합니다. 성공 문구를 미리 넣지 않습니다.
 const STATUS = { not_connected: '미연결', not_executed: '미실행', not_run: '미실행', not_stored: '서버 보관 안 함',
-  not_provided: '미제공', login_required: '로그인 필요(관리자 작전실에서 확인)' };
+  not_provided: '미제공', login_required: '로그인 필요(관리자 화면 사용 중지)' };
 const text = code => STATUS[code] ?? '확인 미완료';
 const SCHEMA = 'vault.operations-public.v1';
 const RULE_LABELS = { device_registered: '등록 기기 확인', step_up_required: '복합 이상 시 추가 인증',

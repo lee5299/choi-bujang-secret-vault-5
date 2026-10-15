@@ -1,4 +1,5 @@
 artifacts/
+dist/
 bundle-notes.json
 .env
 .env.*

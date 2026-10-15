@@ -252,6 +252,9 @@ test('N7: 사건은 요청자 기준으로 집계하고 A의 정상 120건은 B�
 test('자료실은 관리자 전용 작전실 링크만 표시하고 작전실 UI·요약 API를 포함하지 않음', async () => {
   const html = await readFile(new URL('../public/index.html', import.meta.url), 'utf8');
   assert.match(html, /id="ops-menu" href="\/operations-room" hidden/u);
+  // 공개 작전실 요약은 로그인 전에도 보이는 일반 이동 링크입니다(관리자 작전실 링크와 별개).
+  assert.match(html, /<a id="ops-public-menu" href="\/operations-public\.html">공개 작전실 요약<\/a>/u);
+  assert.doesNotMatch(html.match(/<a id="ops-public-menu"[^>]*>/u)[0], /hidden/u);
   assert.doesNotMatch(html, /id="ops-room"|id="ops-refresh"|id="ops-areas"|id="ops-log"|\/api\/operations-summary/u);
   class Element {
     children = []; listeners = {}; value = ''; textContent = ''; hidden = false; disabled = false;
@@ -274,8 +277,11 @@ test('자료실은 관리자 전용 작전실 링크만 표시하고 작전실 U
     (document, async url => { assert.equal(url, '/api/auth?route=user'); return Response.json({ instructor: true, administrator }); },
       AbortController, sdk, { VaultDeviceClient: approvedDeviceUi(fetch) });
   const flush = async () => { for (let i = 0; i < 6; i++) await new Promise(resolve => setImmediate(resolve)); };
+  await flush();
+  assert.equal(elements.get('ops-public-menu').hidden, false); // 로그인 전
   authChanged('SIGNED_IN', session); await flush();
   assert.equal(elements.get('ops-menu').hidden, true);
+  assert.equal(elements.get('ops-public-menu').hidden, false);
   authChanged('SIGNED_OUT', null); await flush(); administrator = true;
   authChanged('SIGNED_IN', session); await flush();
   assert.equal(elements.get('ops-menu').hidden, false);
@@ -283,6 +289,7 @@ test('자료실은 관리자 전용 작전실 링크만 표시하고 작전실 U
   assert.equal(calls.some(url => url.includes('operations')), false);
   authChanged('SIGNED_OUT', null); await flush();
   assert.equal(elements.get('ops-menu').hidden, true);
+  assert.equal(elements.get('ops-public-menu').hidden, false); // 로그아웃 뒤에도 공개 요약 링크 유지
 });
 
 test('제작 3: README에 ALEPH SDP 엔진 사용 출처·학생 몫 구분·구성 요소별 설치·실행·중지·복구·재현 순서, 비밀값 없음', async () => {

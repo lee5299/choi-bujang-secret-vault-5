@@ -249,11 +249,10 @@ test('N7: 사건은 요청자 기준으로 집계하고 A의 정상 120건은 B�
   assert.deepEqual(detect(events('learner_a', 120)), { action: 'observe' });
 });
 
-test('제작 1 화면: 관리자·승인 기기·서버 진입 확인 뒤에만 작전실 표시, 실제 결과만 기록', async () => {
+test('자료실은 관리자 전용 작전실 링크만 표시하고 작전실 UI·요약 API를 포함하지 않음', async () => {
   const html = await readFile(new URL('../public/index.html', import.meta.url), 'utf8');
-  assert.match(html, /<section id="ops-room"[^>]*hidden>/u);
-  assert.match(html, /기록 없음은 안전하다는 뜻이 아닙니다/u);
-  assert.match(html, /html\[data-offline="true"\] #ops-room \{ display: none !important; \}/u);
+  assert.match(html, /id="ops-menu" href="\/operations-room" hidden/u);
+  assert.doesNotMatch(html, /id="ops-room"|id="ops-refresh"|id="ops-areas"|id="ops-log"|\/api\/operations-summary/u);
   class Element {
     children = []; listeners = {}; value = ''; textContent = ''; hidden = false; disabled = false;
     append(...nodes) { this.children.push(...nodes); } replaceChildren(...nodes) { this.children = nodes; }
@@ -261,73 +260,29 @@ test('제작 1 화면: 관리자·승인 기기·서버 진입 확인 뒤에만 
     querySelectorAll() { return []; }
     set innerHTML(value) { throw new Error('Unsafe HTML rendering'); }
   }
-  const text = node => [node.textContent, ...node.children.map(text)].join('\n');
   const elements = new Map([...html.matchAll(/id="([^"]+)"/gu)].map(match => [match[1], new Element()]));
   const document = { querySelector: selector => elements.get(selector.slice(1)), createElement: tag => Object.assign(new Element(), { tag }) };
-  let authChanged;
-  const session = { access_token: 'synthetic-ops-session' };
+  let authChanged, administrator = false;
+  const session = { access_token: 'synthetic-menu-session' };
   const sdk = { createClient: () => ({ auth: { onAuthStateChange(callback) { authChanged = callback; },
     async getSession() { return { data: { session: null } }; } } }) };
-  const noteId = '00000000-0000-4000-8000-000000000012';
-  const requests = [];
-  const summaryId = randomUUID();
-  let administrator = false;
-  let denySummary = false;
-  const fetch = async url => {
-    requests.push(url);
-    if (url === '/operations-room') return Response.json({ schema: 'vault.operations-access.v1', allowed: true });
-    if (url === '/api/operations-summary') {
-      if (denySummary) return Response.json({ error: 'administrator_required', message: 'x' }, { status: 403 });
-      return Response.json(buildOperationsSummary({ requestId: summaryId, env: {}, deviceRows: [{ status: 'approved' }] }),
-        { headers: { 'x-request-id': summaryId } });
-    }
-    if (url === '/api/notes') return Response.json([{ id: noteId, title: 'Secret virtual title', body: 'Secret virtual body' }], { headers: { 'x-request-id': 'note-list-id' } });
-    return Response.json({ error: 'route_not_allowed', message: 'x' }, { status: 404, headers: { 'x-request-id': 'other-id' } });
-  };
+  const calls = [];
+  const fetch = async url => { calls.push(url); return Response.json([]); };
   let script = html.match(/<script type="module">([\s\S]*?)<\/script>/u)[1];
   script = script.replace(/await import\('https:\/\/cdn\.jsdelivr\.net\/npm\/@supabase\/supabase-js@2\.117\.2\/\+esm'\)/u, 'sdk');
   await new Function('document', 'fetch', 'AbortController', 'sdk', 'globalThis', `return (async () => { ${script} })();`)
-    (document, async url => {
-      assert.equal(url, '/api/auth?route=user');
-      return Response.json({ instructor: true, administrator });
-    }, AbortController, sdk, { VaultDeviceClient: approvedDeviceUi(fetch) });
+    (document, async url => { assert.equal(url, '/api/auth?route=user'); return Response.json({ instructor: true, administrator }); },
+      AbortController, sdk, { VaultDeviceClient: approvedDeviceUi(fetch) });
   const flush = async () => { for (let i = 0; i < 6; i++) await new Promise(resolve => setImmediate(resolve)); };
-  assert.equal(elements.get('ops-room').hidden, true);
   authChanged('SIGNED_IN', session); await flush();
-  assert.equal(elements.get('ops-menu').hidden, true); // 승인 기기·강사라도 관리자 아님
-  await elements.get('ops-menu').listeners.click({ preventDefault() {} });
-  await elements.get('ops-refresh').listeners.click();
-  assert.equal(requests.includes('/operations-room'), false);
-  assert.equal(requests.includes('/api/operations-summary'), false);
-  authChanged('SIGNED_OUT', null); await flush();
-  administrator = true;
-  authChanged('SIGNED_IN', session); await flush();
-  assert.equal(elements.get('ops-room').hidden, true);
-  assert.equal(elements.get('ops-menu').hidden, false);
-  await elements.get('ops-menu').listeners.click({ preventDefault() {} });
-  assert.equal(elements.get('ops-room').hidden, false);
-  assert.equal(requests.includes('/api/operations-summary'), false); // 자동 요청 없음
-  await elements.get('ops-refresh').listeners.click(); await flush();
-  assert.equal(requests.filter(url => url === '/api/operations-summary').length, 1);
-  const areas = text(elements.get('ops-areas'));
-  assert.match(areas, /미연결/u); assert.match(areas, /미실행/u); assert.match(areas, /모름\(0건 아님\)/u);
-  assert.match(areas, new RegExp(summaryId, 'u'));
-  const log = text(elements.get('ops-log'));
-  assert.match(log, /GET \/api\/operations-summary → HTTP 200/u);
-  assert.match(log, new RegExp(`요청 ID: ${summaryId}`, 'u'));
-  assert.match(log, /GET \/api\/notes → HTTP 200/u);
-  assert.doesNotMatch(log + areas, /Secret virtual|00000000-0000-4000-8000-000000000012/u);
-  // 제작 2: 실제 응답 목록만 내보내고 기록표 명령을 안내합니다.
-  await elements.get('ops-export').listeners.click();
-  assert.match(elements.get('ops-status').textContent, /실제 응답 \d+건을 내보냈습니다.*regression:table/u);
-  denySummary = true;
-  await elements.get('ops-refresh').listeners.click();
-  assert.equal(elements.get('ops-room').hidden, true);
   assert.equal(elements.get('ops-menu').hidden, true);
-  assert.equal(elements.get('ops-areas').children.length, 0);
+  authChanged('SIGNED_OUT', null); await flush(); administrator = true;
+  authChanged('SIGNED_IN', session); await flush();
+  assert.equal(elements.get('ops-menu').hidden, false);
+  assert.equal(elements.get('ops-menu').listeners.click, undefined); // 실제 문서 이동 링크
+  assert.equal(calls.some(url => url.includes('operations')), false);
   authChanged('SIGNED_OUT', null); await flush();
-  assert.equal(elements.get('ops-room').hidden, true);
-  assert.doesNotMatch(text(elements.get('ops-log')), /operations-summary/u);
+  assert.equal(elements.get('ops-menu').hidden, true);
 });
 
 test('제작 3: README에 ALEPH SDP 엔진 사용 출처·학생 몫 구분·구성 요소별 설치·실행·중지·복구·재현 순서, 비밀값 없음', async () => {

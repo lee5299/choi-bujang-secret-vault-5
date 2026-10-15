@@ -23,9 +23,16 @@ export default async function handler(request, response) {
     response.setHeader('Allow', 'GET');
     return response.status(405).json({ error: 'method_not_allowed', message: '지원하지 않는 요청 방식입니다.' });
   }
+  // 주소창/자료실 링크의 새 문서는 토큰 헤더가 없으므로 전용 로그인 문서로 안내합니다.
+  // JSON 요청은 종전과 같이 401이며 보호 데이터·작전실 UI를 반환하지 않습니다.
+  if (path === '/operations-room' && !request.headers?.authorization
+      && /(?:^|,)\s*text\/html(?:\s*[;,]|$)/iu.test(request.headers?.accept ?? '')) {
+    response.setHeader('Location', '/operations-login.html');
+    return response.status(303).end();
+  }
   const authenticated = await authenticateResource(request, response, unavailable, { administratorRequired: true });
   if (!authenticated) return response;
-  // SPA의 메뉴 클릭도 이 보호 경로를 먼저 확인합니다. 브라우저 직접 접근·위조 헤더도 같은 검사를 거칩니다.
+  // 독립 작전실 문서도 이 보호 경로로 입장 전에 관리자·기기 서명을 확인합니다.
   if (path === '/operations-room') return response.status(200).json({ schema: 'vault.operations-access.v1', allowed: true, requestId });
   let deviceRows = null;
   try {

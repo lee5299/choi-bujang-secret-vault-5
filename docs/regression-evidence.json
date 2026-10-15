@@ -270,6 +270,106 @@
       "error": "login_required",
       "requestId": null,
       "commit": "85552df5c973733e7fac6bf4f259ac322094900a"
+    },
+    {
+      "key": "T04-4",
+      "origin": "https://choi-bujang-secret-vault-5.vercel.app",
+      "source": "screen_observed",
+      "at": "2026-10-15T11:48:28.707Z",
+      "status": 200,
+      "error": null,
+      "requestId": "7f27559f-f49a-43ee-88de-4c0a4ff8ae1f",
+      "commit": null
+    },
+    {
+      "key": "S01-0",
+      "origin": "https://choi-bujang-secret-vault-5.vercel.app",
+      "source": "live_http",
+      "at": "2026-10-15T11:52:08.994Z",
+      "status": 200,
+      "error": null,
+      "requestId": null,
+      "commit": "f40a64a7e2fdb8f2094be4b49e7e56cfae47eff3"
+    },
+    {
+      "key": "T01-0",
+      "origin": "https://choi-bujang-secret-vault-5.vercel.app",
+      "source": "live_http",
+      "at": "2026-10-15T11:52:09.060Z",
+      "status": 404,
+      "error": null,
+      "requestId": null,
+      "commit": "f40a64a7e2fdb8f2094be4b49e7e56cfae47eff3"
+    },
+    {
+      "key": "T04-0",
+      "origin": "https://choi-bujang-secret-vault-5.vercel.app",
+      "source": "live_http",
+      "at": "2026-10-15T11:52:09.342Z",
+      "status": 401,
+      "error": "login_required",
+      "requestId": "52956966-5295-43df-816b-af15fd9f0bcd",
+      "commit": "f40a64a7e2fdb8f2094be4b49e7e56cfae47eff3"
+    },
+    {
+      "key": "T04-1",
+      "origin": "https://choi-bujang-secret-vault-5.vercel.app",
+      "source": "live_http",
+      "at": "2026-10-15T11:52:10.282Z",
+      "status": 401,
+      "error": "login_required",
+      "requestId": "2734d56f-7537-400a-be69-3ca39713ef1b",
+      "commit": "f40a64a7e2fdb8f2094be4b49e7e56cfae47eff3"
+    },
+    {
+      "key": "T04-2",
+      "origin": "https://choi-bujang-secret-vault-5.vercel.app",
+      "source": "live_http",
+      "at": "2026-10-15T11:52:10.528Z",
+      "status": 401,
+      "error": "login_required",
+      "requestId": "2b4b0fb7-a17f-4ae1-b2a7-78a161d03b06",
+      "commit": "f40a64a7e2fdb8f2094be4b49e7e56cfae47eff3"
+    },
+    {
+      "key": "T04-3",
+      "origin": "https://choi-bujang-secret-vault-5.vercel.app",
+      "source": "live_http",
+      "at": "2026-10-15T11:52:11.557Z",
+      "status": 401,
+      "error": "login_required",
+      "requestId": "65fa2648-6e86-43d3-952a-2b1b5f10ff5a",
+      "commit": "f40a64a7e2fdb8f2094be4b49e7e56cfae47eff3"
+    },
+    {
+      "key": "T11-0",
+      "origin": "https://choi-bujang-secret-vault-5.vercel.app",
+      "source": "live_http",
+      "at": "2026-10-15T11:52:11.579Z",
+      "status": 200,
+      "error": null,
+      "requestId": null,
+      "commit": "f40a64a7e2fdb8f2094be4b49e7e56cfae47eff3"
+    },
+    {
+      "key": "T11-1",
+      "origin": "https://choi-bujang-secret-vault-5.vercel.app",
+      "source": "live_http",
+      "at": "2026-10-15T11:52:11.811Z",
+      "status": 401,
+      "error": "login_required",
+      "requestId": "7c3f74db-f9ca-478e-acb9-4075d0848939",
+      "commit": "f40a64a7e2fdb8f2094be4b49e7e56cfae47eff3"
+    },
+    {
+      "key": "T34-0",
+      "origin": "https://choi-bujang-secret-vault-5.vercel.app",
+      "source": "live_http",
+      "at": "2026-10-15T11:52:12.074Z",
+      "status": 401,
+      "error": "login_required",
+      "requestId": null,
+      "commit": "f40a64a7e2fdb8f2094be4b49e7e56cfae47eff3"
     }
   ]
 }

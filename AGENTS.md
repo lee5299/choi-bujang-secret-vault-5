@@ -42,12 +42,12 @@
 
 ## 반복 절차
 
-요청에 해당하는 docs/workflows/ 문서를 먼저 읽고 순서·기록 형식을 따릅니다. 이전 단계 기록에서 절차를 추측하지 않습니다. GPT와 Claude가 같은 문서를 사용합니다.
+요청에 해당하는 docs/workflows/ 문서를 먼저 읽고 순서·기록 형식을 따릅니다. 이전 단계 기록에서 절차를 추측하지 않습니다.
 
 | 요청 | 절차 |
 | --- | --- |
 | 새 단계·폴더 생성·이어받기 | docs/workflows/stage-start.md |
-| 요구사항 정리·교차 검토 | docs/workflows/requirements.md (작성하지 않은 쪽이 검토, 검토자는 코드 수정 안 함, 작성자 반영 후 제작 시작) |
+| 요구사항 정리·점검 | docs/workflows/requirements.md |
 | 제작 k | docs/workflows/stage-build.md |
 | 저장점·배포·제출·채점 결과 | docs/workflows/savepoint.md |
 | 보너스 XDR | docs/workflows/xdr-module.md |

@@ -4,7 +4,7 @@
 
 ## 순서
 
-0. `N/요구사항.md`에 검토와 작성자 반영 기록이 있는지 확인합니다. 없으면 [requirements.md](requirements.md)부터 합니다.
+0. `N/요구사항.md`에 이번 요청의 요구사항과 자체 점검이 정리되어 있는지 확인합니다. 없으면 [requirements.md](requirements.md)부터 합니다.
 1. 손댈 파일과 이유를 한 줄로 먼저 알립니다. 변경이 요구사항 표의 어느 행을 위한 것인지 적습니다.
 2. 계약 확인
    - `src/decider.mjs` → `docs/DECIDER_REQUEST.md`. 계약에 있는 필드만 사용. `decide(request)`와 응답 다섯 항목 유지.

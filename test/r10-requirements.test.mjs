@@ -136,7 +136,7 @@ test('배포 식별 JSON·제출 묶음에 restoreRoute가 실린다', () => {
 test('10단계 제출 자기 점검은 무로그인 복구 POST 한 건을 더 보내고 로그인·본문을 쓰지 않는다', async t => {
   const saved = globalThis.fetch;
   t.after(() => { globalThis.fetch = saved; });
-  const fixture = { ...config, publicAppUrl: 'https://fixture.vercel.app' };
+  const fixture = { ...config, step: 10, publicAppUrl: 'https://fixture.vercel.app' };
   const calls = [];
   globalThis.fetch = async (input, options) => {
     const path = new URL(input).pathname;
@@ -157,4 +157,36 @@ test('10단계 제출 자기 점검은 무로그인 복구 POST 한 건을 더 �
   assert.equal(row.observed, 'HTTP 401 · JSON 오류 확인');
   assert.equal(new Set(attempts.map(item => item.attackId)).size, attempts.length);
   assert.doesNotMatch(JSON.stringify(attempts), /심판 통과|복구 성공/u);
+});
+
+test('12단계 제출 점검은 GET만 보내고 복구 POST 결과는 not_run으로 남긴다', async t => {
+  const saved = globalThis.fetch;
+  t.after(() => { globalThis.fetch = saved; });
+  const fixture = { ...config, step: 12, publicAppUrl: 'https://fixture.vercel.app' };
+  const calls = [];
+  globalThis.fetch = async (input, options) => {
+    const target = new URL(input);
+    const method = options.method ?? 'GET';
+    calls.push(`${method} ${target.pathname}${target.search}`);
+    assert.equal(method, 'GET');
+    assert.equal(target.protocol, 'https:');
+    assert.equal(options.headers, undefined);
+    assert.equal(options.body, undefined);
+    if (target.pathname.startsWith('/api/')) return Response.json({ error: 'login_required', message: 'x' }, { status: 401 });
+    if (target.pathname === '/') return new Response('<html></html>', { headers: { 'X-Content-Type-Options': 'nosniff' } });
+    if (target.pathname === '/data.json') return new Response(null, { status: 404 });
+    return Response.json({});
+  };
+  const attempts = await runAttackChecks(fixture);
+  assert.deepEqual(calls, [
+    'GET /api/notes', 'GET /aleph.json', 'GET /', 'GET /data.json',
+    'GET /api/announcements', 'GET /api/announcements/00000000-0000-4000-8000-000000000008',
+    'GET /access-app.json', 'GET /manifest.webmanifest', 'GET /api/device?route=status',
+    'GET /api/operations-summary',
+  ]);
+  assert.equal(attempts.length, 12);
+  const skipped = attempts.find(item => item.attackId === 'anonymous_note_restore');
+  assert.deepEqual(skipped, { attackId: 'anonymous_note_restore',
+    expected: '무로그인 메모 복구 POST는 401 또는 403 JSON 오류', observed: 'not_run' });
+  assert.equal(attempts.filter(item => item.observed === 'not_run').length, 1);
 });

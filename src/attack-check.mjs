@@ -5,7 +5,7 @@ export async function runAttackChecks(config) {
   // 12단계는 무로그인 작전실 요약 GET 한 건을 더 보냅니다. 로그인·승인 기기·서명 뒤의 정상 요약은 여기서 확인하지 않습니다.
   // 11단계는 공개 앱 선언·manifest·무로그인 기기 상태를 점검합니다. 실제 승인·서명 공격은 별도 시험입니다.
   // 9단계도 기존 공개 HTTP 경로만 점검합니다. 이 결과로 탐지·회수·심판 통과를 주장하지 않습니다.
-  // 10단계는 무로그인 메모 복구 POST 한 건을 더 보냅니다. 로그인한 B의 복구 성공은 여기서 확인하지 않습니다.
+  // 10·11단계는 무로그인 메모 복구 POST를 점검합니다. 12단계 제출 점검에서는 쓰기 요청을 보내지 않고 not_run으로 남깁니다.
   let app;
   try {
     app = new URL(config.publicAppUrl);
@@ -40,6 +40,10 @@ export async function runAttackChecks(config) {
       ] : []),
     ];
     for (const [path, attackId, expected, method = 'GET'] of targets) {
+      if (config.step >= 12 && attackId === 'anonymous_note_restore') {
+        attempts.push({ attackId, expected, observed: 'not_run' });
+        continue;
+      }
       let observed;
       try {
         const result = await fetch(new URL(path, app), {

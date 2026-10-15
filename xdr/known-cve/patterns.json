@@ -1,0 +1,45 @@
+{
+  "schema": "aleph.xdr.patterns.v1",
+  "moduleKey": "known-cve",
+  "cve": "CVE-2021-44228",
+  "technique": "T1190",
+  "scopeNote": "수업 경보의 알려진 형태 목록입니다. 요청 신호는 악용 성공의 증명이 아니며 대상의 Log4j 사용·버전·실행 여부는 이 경보만으로 확인할 수 없습니다. 반복 횟수·시간·수준·차단 임계값은 이번 제작에서 정하지 않습니다.",
+  "patterns": [
+    {
+      "name": "header_jndi_lookup",
+      "condition": {
+        "fields": ["data.useragent", "rule.description"],
+        "signal": "수집된 요청 머리글(User-Agent)에 외부 목적지를 지정한 완전한 JNDI 원격 조회 표현식이 있거나 수업 경보가 머리글의 해당 조회 구문을 명시함",
+        "require": "조회 표현식과 원격 목적지의 결합을 확인하고, 설명을 보조 근거로 쓸 때는 머리글 위치·원격 조회 존재가 명시되어야 함",
+        "exclude": "CVE-2021-44228·jndi 단어만 등장, 중괄호만 존재, 잘린 조회 문자열, 조회 구문이 없다는 설명, 높은 규칙 수준만 존재"
+      },
+      "evidence": "Apache는 CVE-2021-44228을 공격자가 제어하는 로그 입력의 JNDI 외부 조회 취약점으로 설명하며 MITRE T1190에는 해당 CVE 악용 사례가 있습니다.",
+      "source": "https://logging.apache.org/security.html#CVE-2021-44228",
+      "detailSource": "https://attack.mitre.org/techniques/T1190/"
+    },
+    {
+      "name": "parameter_jndi_lookup",
+      "condition": {
+        "fields": ["data.url", "rule.description"],
+        "signal": "수집된 요청 URL의 인자에 외부 목적지를 지정한 완전한 JNDI 원격 조회 표현식이 있거나 수업 경보가 요청 인자의 해당 조회 구문을 명시함",
+        "require": "인자 안의 조회 표현식과 원격 목적지의 결합을 확인하고, 설명을 보조 근거로 쓸 때는 요청 인자 위치·원격 조회 존재가 명시되어야 함",
+        "exclude": "취약점 이름 검색·수업 문서 조회·라이브러리 이름만 등장, jndi 단어만 존재, 잘린 조회 문자열, 조회 구문이 없다는 설명"
+      },
+      "evidence": "Apache는 공격자가 제어하는 로그 메시지·매개변수의 JNDI 조회가 CVE-2021-44228 악용 경로임을 설명하므로 로그에 남을 수 있는 요청 인자의 조회 구문을 확인합니다.",
+      "source": "https://logging.apache.org/security.html#CVE-2021-44228",
+      "detailSource": "https://attack.mitre.org/techniques/T1190/"
+    },
+    {
+      "name": "vulnerability_scanner_trace",
+      "condition": {
+        "fields": ["data.useragent", "data.url", "rule.description"],
+        "signal": "수업 경보가 알려진 취약점 점검 흔적을 명시하거나 공식 근거로 확인된 취약점 점검 도구 식별자가 요청 머리글·인자에 존재함",
+        "require": "도구 흔적은 보조 신호로만 사용함. T1190 악용 시도와 연결하려면 머리글 또는 인자의 JNDI 원격 조회 근거를 별도로 확인하며 도구 흔적만으로 차단·악용 성공을 확정하지 않음",
+        "exclude": "비슷한 수업용 프로그램 이름, 임의 scan 단어, 취약점 목록 문서 열람, 출처가 확인되지 않은 도구명"
+      },
+      "evidence": "MITRE T1595.002는 취약점 스캔을 악용 후보를 찾는 정찰로 구분하고 Log4j 대상 스캔 사례를 제시하므로 점검 도구 흔적은 악용 확정이 아닌 보조 근거입니다.",
+      "source": "https://attack.mitre.org/techniques/T1595/002/",
+      "detailSource": "https://attack.mitre.org/techniques/T1190/"
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+우선 만들기 5이후 계속 질문하겠습니다.
+문구 복사
+만들기 5: 제작 5 · 시험 경보로 돌려 보기
+ 1)npm run xdr:run -- known-cve 를 실행해서 xdr/known-cve/result.json 을 만들고, block·alert·record 건수와 정상 이벤트를 block 한 경우가 있는지 알려 줘.
+ 2)정상 이벤트를 막았으면 그 경보 하나만 골라 원인을 고쳐 줘.
+
+*** result.json 의 counts 가 나오고, 정상 이벤트를 막은 경우가 없어야 합니다.

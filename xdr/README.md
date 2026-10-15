@@ -4,14 +4,14 @@
 
 ## 도구별 목차와 작업 기록
 
-전달받아 구현한 제작 요청은 XDR-01 (`brute-force`)과 XDR-02 (`web-injection`)입니다.
+전달받아 구현한 제작 요청은 XDR-01 (`brute-force`), XDR-02 (`web-injection`), XDR3 (`known-cve`, 제작 1~5)입니다.
 나머지 항목은 기존 저장소의 가상 경보 이름이며, 과제 번호·제작 요구사항은 전달받지 않았습니다.
 
 | 도구 | 항목 | 작업 기록·현재 상태 | 원본 가상 경보 |
 | --- | --- | --- | --- |
 | XDR-01 | `brute-force` · 무차별 로그인 | [작업 기록](brute-force/README.md) · 로컬 구현·가상 시험 완료, 실제 연결 미완료 | [경보](fixtures/brute-force.json) |
 | XDR-02 | `web-injection` · 웹 주입 | [작업 기록](web-injection/README.md) · 제작 1~5·로컬 가상 시험 완료, 실제 연결 미완료 | [경보](fixtures/web-injection.json) |
-| 번호 미확인 | `known-cve` · 알려진 취약점 | 제작 요청 미전달 · 기존 가상 경보만 보관 | [경보](fixtures/known-cve.json) |
+| XDR3 | `known-cve` · 알려진 취약점 | [작업 기록](known-cve/README.md) · 제작 1~5·가상 시험 완료, 정상 오차단 0건, 실제 운영 연결 미완료 | [경보](fixtures/known-cve.json) |
 | 번호 미확인 | `persistence` · 지속성 | 제작 요청 미전달 · 기존 가상 경보만 보관 | [경보](fixtures/persistence.json) |
 | 번호 미확인 | `privilege` · 권한 상승 | 제작 요청 미전달 · 기존 가상 경보만 보관 | [경보](fixtures/privilege.json) |
 | 번호 미확인 | `exfiltration` · 자료 유출 | 제작 요청 미전달 · 기존 가상 경보만 보관 | [경보](fixtures/exfiltration.json) |
@@ -63,7 +63,13 @@ node scripts/xdr-run.mjs brute-force
 
 `npm run xdr:run -- brute-force` 도 같은 명령입니다. 실행기는 해당 경보마다 `decide` 를 부르고, 결과를 `xdr/<moduleKey>/result.json` 에 씁니다. 형식은 `aleph.xdr.result.v1` 이고, `decisions` 에는 경보 id·행동·확신도·이유가, `counts` 에는 `block`·`alert`·`record` 건수가 있습니다.
 
-현재 실행 가능한 구현은 `brute-force`와 `web-injection`입니다. 다른 네 도구는 제작 후 해당 키로 실행합니다.
+현재 판단을 실행할 수 있는 구현은 `brute-force`, `web-injection`, `known-cve`입니다. 다른 세 도구는 제작 후 해당 키로 실행합니다.
+
+XDR3는 확인용 읽기·[패턴 목록](known-cve/patterns.json)·[단일 파일 판단](known-cve/decide.mjs)을 작성했습니다. `node xdr/known-cve/read-alerts.mjs`로 다섯 항목의 JSON 24줄을 출력합니다.
+판단은 `node --test test/xdr-known-cve.test.mjs`로 재확인합니다. 제작 4 실행 명령은 `npm.cmd run xdr:run -- known-cve`입니다.
+실행하면 이 모듈의 결과·만료가 있는 가상 차단 규칙·다시 흘려 본 시험 결과를 저장하고 공통 알림 파일 끝에 기록을 추가합니다. 공격 8건 거부·나머지 16건 통과를 가상 요청으로 확인했습니다. 기본 운영 모드에는 적용하지 않습니다. [제작 안내](../xdr3/README.md)를 참고하세요.
+
+2026-10-15 제작 5에서 같은 명령을 새로 실행했습니다. `result.json`의 counts는 block 8·alert 4·record 12이며 정상 이벤트 차단과 정상 주소 차단은 각각 0건입니다. 정상 기대 사례 8건도 판단 결과와 별도로 대조해 모두 record임을 확인했습니다. 이번 전체 시험 340개가 통과했고 오차단이 없어 코드는 수정하지 않았습니다.
 
 XDR-02도 동기 단일 파일 `decide.mjs`이며 확인용 읽기와 파일 쓰기·추가 연결은 분리합니다.
 단계 폴더 입구의 [XDR-01 README](../XDR-01/README.md)와 [XDR-02 README](../XDR-02/README.md)에서

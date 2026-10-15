@@ -184,3 +184,27 @@
 {"moduleKey":"web-injection","mode":"fixture","alertId":"wi-15","action":"alert","confidence":0.5,"pattern":"패턴 없음"}
 {"moduleKey":"web-injection","mode":"fixture","alertId":"wi-16","action":"alert","confidence":0.5,"pattern":"패턴 없음"}
 {"moduleKey":"web-injection","mode":"fixture","alertId":"wi-17","action":"alert","confidence":0.5,"pattern":"패턴 없음"}
+{"moduleKey":"known-cve","mode":"fixture","alertId":"kc-01","action":"block","confidence":0.95,"pattern":"header_jndi_lookup"}
+{"moduleKey":"known-cve","mode":"fixture","alertId":"kc-02","action":"block","confidence":0.95,"pattern":"parameter_jndi_lookup"}
+{"moduleKey":"known-cve","mode":"fixture","alertId":"kc-03","action":"block","confidence":0.95,"pattern":"parameter_jndi_lookup"}
+{"moduleKey":"known-cve","mode":"fixture","alertId":"kc-04","action":"block","confidence":0.95,"pattern":"header_jndi_lookup"}
+{"moduleKey":"known-cve","mode":"fixture","alertId":"kc-05","action":"block","confidence":0.95,"pattern":"parameter_jndi_lookup"}
+{"moduleKey":"known-cve","mode":"fixture","alertId":"kc-06","action":"block","confidence":0.95,"pattern":"parameter_jndi_lookup"}
+{"moduleKey":"known-cve","mode":"fixture","alertId":"kc-07","action":"block","confidence":0.95,"pattern":"header_jndi_lookup"}
+{"moduleKey":"known-cve","mode":"fixture","alertId":"kc-08","action":"block","confidence":0.95,"pattern":"header_jndi_lookup"}
+{"moduleKey":"known-cve","mode":"fixture","alertId":"kc-09","action":"alert","confidence":0.5,"pattern":"parameter_jndi_lookup"}
+{"moduleKey":"known-cve","mode":"fixture","alertId":"kc-10","action":"alert","confidence":0.5,"pattern":"parameter_jndi_lookup"}
+{"moduleKey":"known-cve","mode":"fixture","alertId":"kc-15","action":"alert","confidence":0.6,"pattern":"parameter_jndi_lookup"}
+{"moduleKey":"known-cve","mode":"fixture","alertId":"kc-16","action":"alert","confidence":0.5,"pattern":"parameter_jndi_lookup"}
+{"moduleKey":"known-cve","mode":"fixture","alertId":"kc-01","action":"block","confidence":0.95,"pattern":"header_jndi_lookup"}
+{"moduleKey":"known-cve","mode":"fixture","alertId":"kc-02","action":"block","confidence":0.95,"pattern":"parameter_jndi_lookup"}
+{"moduleKey":"known-cve","mode":"fixture","alertId":"kc-03","action":"block","confidence":0.95,"pattern":"parameter_jndi_lookup"}
+{"moduleKey":"known-cve","mode":"fixture","alertId":"kc-04","action":"block","confidence":0.95,"pattern":"header_jndi_lookup"}
+{"moduleKey":"known-cve","mode":"fixture","alertId":"kc-05","action":"block","confidence":0.95,"pattern":"parameter_jndi_lookup"}
+{"moduleKey":"known-cve","mode":"fixture","alertId":"kc-06","action":"block","confidence":0.95,"pattern":"parameter_jndi_lookup"}
+{"moduleKey":"known-cve","mode":"fixture","alertId":"kc-07","action":"block","confidence":0.95,"pattern":"header_jndi_lookup"}
+{"moduleKey":"known-cve","mode":"fixture","alertId":"kc-08","action":"block","confidence":0.95,"pattern":"header_jndi_lookup"}
+{"moduleKey":"known-cve","mode":"fixture","alertId":"kc-09","action":"alert","confidence":0.5,"pattern":"parameter_jndi_lookup"}
+{"moduleKey":"known-cve","mode":"fixture","alertId":"kc-10","action":"alert","confidence":0.5,"pattern":"parameter_jndi_lookup"}
+{"moduleKey":"known-cve","mode":"fixture","alertId":"kc-15","action":"alert","confidence":0.6,"pattern":"parameter_jndi_lookup"}
+{"moduleKey":"known-cve","mode":"fixture","alertId":"kc-16","action":"alert","confidence":0.5,"pattern":"parameter_jndi_lookup"}

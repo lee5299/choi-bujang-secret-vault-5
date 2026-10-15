@@ -19,7 +19,7 @@ const targets = [
   ['anonymous_operations_summary', '/api/operations-summary'],
 ];
 
-test('12단계: 모든 실행 attackId의 주소·상태·서버 요청 ID는 그 행의 실제 fetch 응답에서 나온다', async t => {
+test('12단계: 모든 실행 attackId의 observed는 그 행의 실제 fetch 응답 HTTP 상태 숫자만이다', async t => {
   const calls = [];
   t.mock.method(globalThis, 'fetch', async (url, options) => {
     assert.equal(typeof url, 'string');
@@ -41,12 +41,9 @@ test('12단계: 모든 실행 attackId의 주소·상태·서버 요청 ID는 �
     const call = calls[index];
     assert.equal(call.url, new URL(path, fixture.publicAppUrl).href);
     const row = attempts.find(item => item.attackId === attackId);
-    assert.ok(row.observed.startsWith(`GET ${call.url} → HTTP ${call.status} · `), attackId);
-    assert.ok(row.observed.endsWith(`requestId=${call.requestId}`), attackId);
-    assert.ok(row.observed.length <= 300, attackId);
+    assert.equal(row.observed, String(call.status), attackId);
     assert.deepEqual(Object.keys(row).sort(), ['attackId', 'expected', 'observed']);
   }
-  assert.match(attempts.find(row => row.attackId === 'public_page_key_marker_scan').observed, /키·표식 검출/u);
   // 괴물 1: 무인증 한 건 조회 바로 뒤에 타인 메모 조회 행이 오며, 보내지 않았으므로 not_run입니다.
   const ids = attempts.map(row => row.attackId);
   assert.equal(ids.indexOf('other_user_note_read'), ids.indexOf('anonymous_note_detail') + 1);
@@ -62,7 +59,7 @@ test('12단계: 응답 없는 모든 항목은 not_run이며 요청 ID·상태�
   assert.ok(attempts.every(row => row.observed === 'not_run'));
 });
 
-test('12단계: 첫 화면 키 검사는 자신의 / 응답만 읽으며 헤더가 없는 요청 ID는 기록하지 않는다', async t => {
+test('12단계: 첫 화면 두 점검은 각자의 / 응답 상태만 기록하고 요청 ID·설명을 붙이지 않는다', async t => {
   let rootCalls = 0;
   t.mock.method(globalThis, 'fetch', async url => {
     if (new URL(url).pathname === '/') {
@@ -75,8 +72,9 @@ test('12단계: 첫 화면 키 검사는 자신의 / 응답만 읽으며 헤더�
   const attempts = await runAttackChecks(fixture);
   assert.equal(rootCalls, 2);
   const scan = attempts.find(row => row.attackId === 'public_page_key_marker_scan');
-  assert.match(scan.observed, /^GET https:\/\/fixture\.vercel\.app\/ → HTTP 200 · 첫 화면 키·표식 미검출/u);
-  assert.ok(attempts.every(row => !row.observed.includes('requestId=')));
+  assert.equal(scan.observed, '200');
+  assert.equal(attempts.find(row => row.attackId === 'security_header').observed, '200');
+  assert.ok(attempts.every(row => /^(?:\d{3}|not_run)$/u.test(row.observed)));
 });
 
 test('12단계: 본문 읽기 실패는 받은 HTTP 상태만 남기고 키 검사 성공을 주장하지 않는다', async t => {
@@ -88,6 +86,5 @@ test('12단계: 본문 읽기 실패는 받은 HTTP 상태만 남기고 키 검�
   });
   const attempts = await runAttackChecks(fixture);
   const scan = attempts.find(row => row.attackId === 'public_page_key_marker_scan');
-  assert.equal(scan.observed, 'GET https://fixture.vercel.app/ → HTTP 503 · 응답 검사 미완료');
-  assert.doesNotMatch(scan.observed, /미검출|requestId=/u);
+  assert.equal(scan.observed, '503');
 });

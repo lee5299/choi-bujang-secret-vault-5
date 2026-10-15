@@ -55,16 +55,12 @@ export async function runAttackChecks(config) {
       }
       let observed;
       let responseStatus;
-      let requestId;
       const requestUrl = new URL(path, app).href;
       try {
         const result = await fetch(requestUrl, {
           method, redirect: 'error', cache: 'no-store', signal: AbortSignal.timeout(10000),
         });
         responseStatus = result.status;
-        const receivedId = result.headers.get('x-request-id');
-        // 서버가 실제로 돌려준 안전한 요청 ID만 기록합니다. 없는 ID를 만들지 않습니다.
-        if (/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/iu.test(receivedId ?? '')) requestId = receivedId;
         if (path === '/') {
           const secured = result.headers.get('x-content-type-options')?.toLowerCase() === 'nosniff'
             || Boolean(result.headers.get('content-security-policy'));
@@ -117,11 +113,9 @@ export async function runAttackChecks(config) {
           ? (responseStatus === undefined ? 'not_run' : `HTTP ${responseStatus} · 응답 검사 미완료`)
           : '요청 실패 · 확인 미완료';
       }
-      // attackId와 같은 행에 실제 요청 동작·주소·응답 상태를 묶습니다.
-      // fetch 응답이 없으면 HTTP 상태나 요청 ID를 추측해 기록하지 않습니다.
-      if (config.step >= 12 && responseStatus !== undefined) {
-        observed = `${method} ${requestUrl} → ${observed}${requestId ? ` · requestId=${requestId}` : ''}`;
-      }
+      // 12단계 심판 대조: 보낸 점검은 실제로 받은 HTTP 상태 숫자만, 응답을 받지 못한 점검은 not_run만 적습니다.
+      // 주소·요청 ID·설명 문구를 붙이지 않고 상태를 추측해 채우지 않습니다.
+      if (config.step >= 12) observed = responseStatus === undefined ? 'not_run' : String(responseStatus);
       attempts.push({ attackId, expected, observed });
     }
     return attempts;

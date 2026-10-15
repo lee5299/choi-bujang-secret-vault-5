@@ -425,6 +425,29 @@ npm.cmd run regression:table -- --local
 3. 계정 A·B로 화면에서 시험 요청을 보내고 「실제 결과 내보내기(JSON)」 → `npm.cmd run regression:table -- --import <파일> --case <시험 ID> --account <A 또는 B>`.
 4. 표의 요청 ID를 Vercel **Logs**에서 `vault_api_result`로 찾아 상태를 대조합니다.
 
+### 실제 API와 Vercel 로그 대조 (2026-10-15)
+
+대상 배포 커밋: `d221a45ea5e8e7ecc72b92ee36e73c77a20301fb`. 2026-10-15 17:55:24 KST(08:55:24 UTC)에 아래 공개 HTTPS GET을 실제로 보냈습니다. 응답의 `X-Request-Id`와 [Vercel Logs](https://vercel.com/aleph7/choi-bujang-secret-vault-5/logs)의 `vault_api_result`를 같은 요청 ID로 찾아 method·HTTP 상태·오류 코드를 대조했습니다. 이 기록은 학생의 별도 확인이며 심판 요청 기록이나 심판 통과 결과가 아닙니다.
+
+| 실제 요청 | 실제 HTTP / 오류 | 응답과 서버 로그가 일치한 요청 ID | 대조 결과 |
+| --- | --- | --- | --- |
+| `GET /api/operations-public` | 200 / 오류 없음 | `bbaaefd8-668a-4f78-bfaa-6d9239cc894a` | `operations_public` · GET · 200 · error null 일치. 응답 본문의 요청 ID도 헤더와 일치 |
+| 무로그인 `GET /api/operations-summary` | 401 / `login_required` | `ea6e738e-2c87-4480-8663-06d58f1a2439` | `operations_summary` · GET · 401 · 오류 코드 일치 |
+| 무로그인 `GET /api/notes` | 401 / `login_required` | `f673b498-9187-42da-9dce-cbfd06c195f0` | `notes` · GET · 401 · 오류 코드 일치 |
+
+공개 요약 수치는 첫 행과 같은 요청 ID의 서버 기록 `operations_public_result`로 따로 대조했습니다. `vault_api_result`는 요청 ID·HTTP 상태 확인에 사용하며, 집계 수치를 담는 로그는 `operations_public_result`입니다.
+
+| 항목 | 실제 API 응답 | 같은 요청 ID의 서버 기록 | 대조 결과 |
+| --- | --- | --- | --- |
+| 단계 / 배포 커밋 | 12 / `d221a45ea5e8…` | 12 / `d221a45ea5e8` | 일치 |
+| 배포 코드 규칙 수 / 허용 경로 수 | 6 / 7 | 6 / 7 | 일치 |
+| 배포 코드의 가상 판정 사례 | 7/7 | `deciderFixtures: '7/7'` | 일치. 실제 운영 판정 수가 아님 |
+| 배포 코드의 가상 탐지 사례 | 2/2 | `detectionFixtures: '2/2'` | 일치. 실제 운영 탐지 수가 아님 |
+| 운영 판정 / 운영 탐지 | 둘 다 `not_connected` | 둘 다 `not_connected` | 일치. 미연결 유지 |
+| 공식 41종 시험 | executed 0 / total 41 / `not_run` | `officialTests: '0/41 not_run'` | 일치. 전부 미실행 유지 |
+
+같은 커밋의 로컬 Node.js v24.21.0에서 `npm.cmd run bundle`은 종료 코드 0으로 제출 JSON을 생성했습니다. 최종 실행의 15개 항목 중 실제 HTTP 응답 기록은 13개이고, `other_user_note_read`·`anonymous_note_restore`는 `observed: not_run`, `result: not_run`으로 유지했습니다. 위 3건은 bundle 뒤 별도로 보낸 로그 대조 요청이며, bundle 요청과 같은 요청 ID라고 주장하지 않습니다. 심판 환경의 불러오기 오류 해결 여부와 관리자 정상 요약의 이번 로그 대조는 미확인입니다.
+
 ### 비밀값
 
 탈환 작전실은 별도로 지정한 관리자만 이용합니다. 운영자의 지정·해제와 일반 사용자·강사·관리자 확인 순서는 [관리자 안내](docs/ADMINISTRATOR.md)를 따릅니다. 로그인·승인 기기 확인 후 서버가 관리자임을 확인한 경우 상단 메뉴가 나타납니다. 메뉴를 누르면 직접 경로에서도 관리자·기기 서명을 다시 확인합니다.

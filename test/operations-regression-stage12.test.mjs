@@ -80,6 +80,32 @@ function screen() {
   return { nodes, document, text };
 }
 
+test('B 요청별 표: 반복 요청의 성공·거부·응답 없는 시도를 각각 보존하고 미실행과 구분한다', async () => {
+  const app = screen();
+  const row = rows.find(row => row.key === 'T04-4');
+  const secondId = 'abcdef12-1234-4123-8123-123456789abc';
+  const history = [record(row.key), record(row.key, { at: '2026-10-15T12:01:00Z', status: 401,
+    error: 'login_required', requestId: secondId }), record(row.key, { at: '2026-10-15T12:02:00Z', status: null, requestId: null })];
+  await initializeRegression({ document: app.document, location: { origin }, events: {},
+    fetch: async () => Response.json({ schema: REPORT_SCHEMA, origin, rows, records: history }) });
+  assert.equal(app.nodes['regression-rows'].children.length, rows.length + 2);
+  const requests = app.nodes['regression-rows'].children.filter(node => app.text(node).includes('T04 ·')
+    && node.children[3].textContent === row.account && node.children[4].textContent === 'GET /api/notes');
+  assert.equal(requests.length, 3);
+  assert.match(app.text(requests[0]), /허용 · HTTP 200/u);
+  assert.match(app.text(requests[0]), /기대 일치/u);
+  assert.match(app.text(requests[1]), /거부·미제공 · HTTP 401 · login_required/u);
+  assert.match(app.text(requests[1]), /기대 불일치/u);
+  assert.ok(app.text(requests[1]).includes(secondId));
+  assert.match(app.text(requests[2]), /응답 없음/u);
+  assert.match(app.text(requests[2]), /확인 미완료/u);
+  assert.ok(app.text(requests[0]).includes(origin));
+  app.nodes['regression-filter'].value = '기대 불일치';
+  await app.nodes['regression-filter'].fire('change');
+  assert.equal(app.nodes['regression-rows'].children.length, 1);
+  assert.ok(app.text(app.nodes['regression-rows']).includes(secondId));
+});
+
 test('B 만들기2: 표의 전체 열·정상/거부 수를 표시하고 파일 없이 선택한 한 행만 자료실 응답과 연결한다', async () => {
   const app = screen(), channels = [], opened = [];
   const result = await initializeRegression({ document: app.document, location: { origin }, events: {},

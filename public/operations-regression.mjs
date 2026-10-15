@@ -16,13 +16,22 @@ export async function initializeRegression({ document, fetch = globalThis.fetch,
   };
   const render = () => {
     const all = report.rows.map(row => ({ row, ...assessEvidence(row, records, origin.value) }));
-    const shown = all.filter(item => (!stage.value || String(item.row.stage) === stage.value)
+    const attempts = report.rows.flatMap(row => {
+      const history = records.filter(record => record.key === row.key && record.origin === origin.value);
+      return history.length ? history.map(record => ({ row, ...assessEvidence(row, [record], origin.value) }))
+        : [{ row, ...assessEvidence(row, [], origin.value) }];
+    });
+    const shown = attempts.filter(item => (!stage.value || String(item.row.stage) === stage.value)
       && (!filter.value || item.status === filter.value));
     body.replaceChildren(...shown.map(({ row, status: result, record }) => {
       const tr = node('tr');
       const kind = row.expectStatus === null ? '별도 확인' : row.expectStatus < 300 ? '정상 허용' : '금지 거부';
-      const actual = record ? `${record.status === null ? '응답 없음' : `HTTP ${record.status}`}${record.error ? ` · ${record.error}` : ''}` : '—';
-      const info = record ? `${record.at}\n${record.source === 'screen_observed' ? '연결한 자료실의 실제 응답(계정·시험대상은 사용자 지정)' : '인증 없는 직접 HTTP'}\n배포 커밋 ${record.commit?.slice(0, 12) ?? '미확인'}\n서버 로그 대조: 별도 확인` : row.how || '아직 보낸 요청 없음';
+      const handling = !record || record.status === null ? '응답 없음'
+        : record.status >= 200 && record.status < 300 ? '허용'
+        : record.status >= 400 && record.status < 500 ? '거부·미제공'
+        : record.status >= 500 ? '서버 오류' : '처리 확인 필요';
+      const actual = record ? `${handling}${record.status === null ? '' : ` · HTTP ${record.status}`}${record.error ? ` · ${record.error}` : ''}` : '— (미실행)';
+      const info = record ? `${record.at}\n${record.origin}\n${record.source === 'screen_observed' ? '연결한 자료실의 실제 응답(계정·시험대상은 사용자 지정)' : '인증 없는 직접 HTTP'}\n배포 커밋 ${record.commit?.slice(0, 12) ?? '미확인'}\n서버 로그 대조: 별도 확인` : row.how || '아직 보낸 요청 없음';
       const cells = [`${row.stage}단계`, `${row.id} · ${row.title}`, kind, row.account,
         row.method ? `${row.method} ${row.path}` : 'HTTP 요청 아님(가상·SQL·운영·수동 절차)',
         row.method ? `HTTP ${row.expectStatus}${row.expectError ? ` · ${row.expectError}` : ''}` : row.expected,
@@ -33,7 +42,8 @@ export async function initializeRegression({ document, fetch = globalThis.fetch,
     const normal = matches.filter(item => item.row.expectStatus < 300);
     const protectedNormal = normal.filter(item => item.row.path.startsWith('/api/'));
     const denied = matches.filter(item => item.row.expectStatus >= 400);
-    el('regression-counts').textContent = `현재 환경 ${origin.value} · 표시 ${shown.length}/${all.length}행 · 정상 허용 실측 ${normal.length}행(보호 API ${protectedNormal.length}행) · 금지 거부 실측 ${denied.length}행 · 미실행 ${all.filter(item => item.status.startsWith('미실행')).length}행.`;
+    const history = records.filter(record => record.origin === origin.value);
+    el('regression-counts').textContent = `현재 환경 ${origin.value} · 시험 항목 ${all.length}개 · 응답 기록 ${history.filter(record => record.status !== null).length}건 · 응답 없는 시도 ${history.filter(record => record.status === null).length}건 · 표시 ${shown.length}/${attempts.length}행 · 최신 결과 기준 정상 허용 실측 ${normal.length}행(보호 API ${protectedNormal.length}행) · 금지 거부 실측 ${denied.length}행 · 미실행 ${all.filter(item => item.status.startsWith('미실행')).length}행.`;
     el('regression-coverage').textContent = protectedNormal.length && denied.length
       ? '보호 API 정상 허용과 금지 거부의 응답 기록이 있습니다. 전체 단계·연속 시험 완료나 심판 통과를 의미하지 않습니다.'
       : '실측 조건 미충족: 보호 API 정상 허용과 금지 거부 기록이 모두 필요합니다. 공개 첫 화면 200으로 정상 사용자 접근을 대신하지 않습니다.';

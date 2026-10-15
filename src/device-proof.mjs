@@ -7,7 +7,7 @@ import { deviceRepository } from './device-repository.mjs';
 const origin = new URL(config.publicAppUrl).origin;
 const rpID = new URL(origin).hostname;
 // 요청 서명을 발급하는 보호 API: 메모·공지와 12단계 작전실 요약(쿼리·하위 경로 없는 정확한 경로만).
-export const SIGNED_PATH = /^\/api\/(?:(?:notes|announcements)(?:\/|\?|$)|operations-summary$)/u;
+export const SIGNED_PATH = /^(?:\/api\/(?:(?:notes|announcements)(?:\/|\?|$)|operations-summary$)|\/operations-room$)/u;
 export const digest = value => createHash('sha256').update(value).digest('hex');
 const sessionHash = request => digest(request.headers.authorization);
 export class DeviceError extends Error {

@@ -2,6 +2,7 @@ import config from '../aleph.config.json' with { type: 'json' };
 import { createLoginVerifier } from './verify-login.mjs';
 import { createClient } from '@supabase/supabase-js';
 import { requireDeviceProof } from './device-proof.mjs';
+import { isAdministrator } from './administrator.mjs';
 
 let verifier;
 let verifierKey;
@@ -16,7 +17,7 @@ function issuerKind(authorization) {
   } catch { return 'unreadable'; }
 }
 
-export async function authenticateResource(request, response, unavailable, { deviceProofRequired = true } = {}) {
+export async function authenticateResource(request, response, unavailable, { deviceProofRequired = true, administratorRequired = false } = {}) {
   // 거부 사유: 응답에는 짧은 코드, 서버 로그에는 원인 분류만 남깁니다.
   const unauthorized = (reason, issuer = 'none') => {
     console.warn('resource_api_unauthorized', { reason, issuer });
@@ -38,6 +39,7 @@ export async function authenticateResource(request, response, unavailable, { dev
   } catch { unavailable(response, 503, 'LOGIN_CONFIG_INVALID'); return null; }
   const identity = await verifier(authorization);
   if (!identity?.userId) { unauthorized('TOKEN_REJECTED', issuerKind(authorization)); return null; }
+  let administrator = false;
   if (identity.kind === 'student') {
     try {
       const authClient = createClient(new URL(config.identityProvider.issuer).origin, secretKey, {
@@ -50,7 +52,12 @@ export async function authenticateResource(request, response, unavailable, { dev
         unavailable(response, 503, 'AUTH_SERVICE_UNAVAILABLE'); return null;
       }
       if (error || data?.user?.id !== identity.userId) { unauthorized('SESSION_REJECTED', 'student'); return null; }
+      administrator = isAdministrator(data.user);
     } catch { unavailable(response, 503, 'AUTH_SERVICE_UNAVAILABLE'); return null; }
+  }
+  if (administratorRequired && !administrator) {
+    response.status(403).json({ error: 'administrator_required', message: '관리자 권한이 필요합니다.' });
+    return null;
   }
   const authenticated = { identity, databaseUrl, secretKey };
   try { databaseEndpoint(databaseUrl, '/'); }

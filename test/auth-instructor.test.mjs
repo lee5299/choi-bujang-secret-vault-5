@@ -8,7 +8,7 @@ function response() {
   return { headers: {}, setHeader(k, v) { this.headers[k] = v; }, status(s) { this.statusCode = s; return this; },
     json(data) { this.data = data; return this; }, end() { return this; } };
 }
-async function callUser({ secret = 'synthetic-secret', url = 'https://kwmdcywakbaydceasxpx.supabase.co', authUserId = userId, rows, restStatus = 200, restThrows = false } = {}) {
+async function callUser({ secret = 'synthetic-secret', url = 'https://kwmdcywakbaydceasxpx.supabase.co', authUserId = userId, rows, restStatus = 200, restThrows = false, appMetadata, userMetadata } = {}) {
   const saved = { fetch: globalThis.fetch, pub: process.env.SUPABASE_PUBLISHABLE_KEY, sec: process.env.SUPABASE_SECRET_KEY, url: process.env.SUPABASE_URL };
   const calls = [];
   process.env.SUPABASE_PUBLISHABLE_KEY = 'synthetic-publishable';
@@ -17,7 +17,7 @@ async function callUser({ secret = 'synthetic-secret', url = 'https://kwmdcywakb
   globalThis.fetch = async (input, options) => {
     const endpoint = new URL(input);
     calls.push({ path: endpoint.pathname, search: endpoint.searchParams, apikey: options.headers.apikey });
-    if (endpoint.pathname === '/auth/v1/user') return Response.json({ id: authUserId, email: 'hidden' });
+    if (endpoint.pathname === '/auth/v1/user') return Response.json({ id: authUserId, email: 'hidden', app_metadata: appMetadata, user_metadata: userMetadata });
     if (restThrows) throw new Error('network');
     return Response.json(rows ?? [], { status: restStatus });
   };
@@ -37,7 +37,7 @@ async function callUser({ secret = 'synthetic-secret', url = 'https://kwmdcywakb
 test('활성 강사 행이 있으면 instructor true, 조회는 Auth가 검증한 ID와 active=true로만', async () => {
   const { res, calls } = await callUser({ rows: [{ user_id: userId }] });
   assert.equal(res.statusCode, 200);
-  assert.deepEqual(res.data, { id: userId, aud: 'authenticated', instructor: true });
+  assert.deepEqual(res.data, { id: userId, aud: 'authenticated', instructor: true, administrator: false });
   const rest = calls.find(c => c.path === '/rest/v1/library_instructors');
   assert.equal(rest.search.get('user_id'), `eq.${userId}`);
   assert.equal(rest.search.get('active'), 'eq.true');
@@ -56,9 +56,20 @@ test('강사 행 없음·조회 실패·네트워크 오류·다른 사용자 �
     const { res, calls } = await callUser(options);
     assert.equal(res.statusCode, 200);
     assert.equal(res.data.instructor, false, JSON.stringify(options));
-    assert.deepEqual(Object.keys(res.data).sort(), ['aud', 'id', 'instructor']);
+    assert.deepEqual(Object.keys(res.data).sort(), ['administrator', 'aud', 'id', 'instructor']);
     if (options.secret === null) {
       assert.equal(calls.some(c => c.path.startsWith('/rest/')), false);
     }
   }
+});
+
+test('관리자 표시값은 Auth 서버 app_metadata만 사용하고 강사·자기 프로필과 분리한다', async () => {
+  const granted = await callUser({ appMetadata: { vault_admin: true } });
+  assert.equal(granted.res.data.administrator, true);
+  assert.equal(granted.res.data.instructor, false);
+  for (const options of [
+    { rows: [{ user_id: userId }] },
+    { userMetadata: { vault_admin: true, administrator: true } },
+    { appMetadata: { vault_admin: 'true' } },
+  ]) assert.equal((await callUser(options)).res.data.administrator, false);
 });

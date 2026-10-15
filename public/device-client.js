@@ -90,7 +90,8 @@
         protectedFetch: (url, options = {}) => run(async (token, generation) => {
           if (!state.approved) throw new Error('device_not_registered');
           const target = new URL(url, location.origin);
-          if (target.origin !== location.origin || !/^\/api\/(?:(?:notes|announcements)(?:\/|$)|operations-summary$)/u.test(target.pathname)) throw new Error('invalid_device_target');
+          if (target.origin !== location.origin || !/^(?:\/api\/(?:(?:notes|announcements)(?:\/|$)|operations-summary$)|\/operations-room$)/u.test(target.pathname)
+              || (target.pathname === '/operations-room' && target.search)) throw new Error('invalid_device_target');
           const intent = { method: options.method ?? 'GET', path: target.pathname + target.search, bodyHash: await bodyHash(options.body) };
           const proof = await assertion('request', intent, token, generation);
           const response = await fetch(url, { ...options, cache: 'no-store', redirect: 'error',

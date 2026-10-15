@@ -42,7 +42,7 @@
 ## 보호 요청의 서명
 
 1. 로그인 메모리 세션으로 authentication-options에 `purpose:request`와 요청 intent를 보냅니다.
-2. `method`는 실제 HTTP 동작, `path`는 `/api/...` 경로와 쿼리를 붙인 문자열, `bodyHash`는 다음 방식의 SHA-256 64자리 소문자 hex입니다.
+2. `method`는 실제 HTTP 동작, `path`는 보호 경로와 쿼리를 붙인 문자열, `bodyHash`는 다음 방식의 SHA-256 64자리 소문자 hex입니다. 자료 API 외에 관리자 작전실의 정확한 `/operations-room`도 서명하며, 이 경로에는 쿼리·하위 경로를 허용하지 않습니다.
 3. 서버는 120초 만료의 확인값과 사용자·로그인 토큰 지문·목적·intent를 저장합니다.
 4. 클라이언트는 인증기로 그 확인값에 서명합니다. 응답 JSON을 UTF-8 → base64url로 인코딩해 `x-vault-device-proof` 헤더에 붙이고 실제 자료 요청을 보냅니다.
 5. 자료 API는 로그인 검증 후 확인값을 원래 사용자·세션·목적으로 **원자적으로 한 번만 소비**합니다. 실제 동작·경로·쿼리·본문 지문을 비교하고, 승인 공개키의 서명·UV·RP·origin·백업 플래그·카운터를 검증합니다.
@@ -58,6 +58,7 @@
 
 | 서버 구역 | 대표 사유 코드 | 처리 |
 | --- | --- | --- |
+| 작전실 관리자 | `administrator_required` | `/operations-room`·`/api/operations-summary`는 최신 Auth `app_metadata.vault_admin`이 true인 사용자만 허용. 강사·기기 승인과 별개. [설정](ADMINISTRATOR.md) |
 | 앱 서명 필수 | `app_signature_required` | 무서명 403, 자료 DB 접근 없음 |
 | 실제 요청 경로·동작 결합 | `app_signature_path_mismatch` | 경로·쿼리·동작 변경 403 |
 | 실제 요청 본문 결합 | `app_signature_body_mismatch` | 본문 값 변경 403, 수정 없음 |

@@ -176,9 +176,9 @@ test('N8·N1: 작전실 API와 메모 API의 요청 ID가 응답 헤더·본문�
   const userA = randomUUID(), userB = randomUUID(), noteId = randomUUID(), pool = virtualDevices();
   pool.keyFor(userA); pool.keyFor(userB);
   const now = Math.floor(Date.now() / 1000);
-  const tokenFor = sub => new SignJWT({ iss: config.judgeIssuer, aud: new URL(config.publicAppUrl).hostname, sub,
-    aleph_run: randomUUID(), aleph_role: 'judge', aleph_identity: 'a', iat: now, exp: now + 300 })
-    .setProtectedHeader({ alg: 'ES256', kid: jwk.kid }).sign(pair.privateKey);
+  const tokenFor = sub => new SignJWT({ iss: config.identityProvider.issuer, aud: config.identityProvider.audience, sub,
+    role: 'authenticated', iat: now, exp: now + 300 })
+    .setProtectedHeader({ alg: 'HS256' }).sign(new Uint8Array(32).fill(7));
   const tokenA = await tokenFor(userA);
   let noteCalls = 0;
   process.env.SUPABASE_URL = new URL(config.identityProvider.issuer).origin;
@@ -186,6 +186,7 @@ test('N8·N1: 작전실 API와 메모 API의 요청 ID가 응답 헤더·본문�
   globalThis.fetch = pool.wrapFetch(async input => {
     const target = new URL(input);
     if (target.href === `${config.judgeIssuer}/.well-known/jwks.json`) return Response.json({ keys: [jwk] });
+    if (target.pathname === '/auth/v1/user') return Response.json({ id: userA, aud: 'authenticated', app_metadata: { vault_admin: true } });
     assert.equal(target.pathname, '/rest/v1/library_notes'); noteCalls++;
     return Response.json([{ id: noteId, owner_id: userA, title: 'Virtual title', content: 'Virtual body' }]);
   });
@@ -248,7 +249,7 @@ test('N7: 사건은 요청자 기준으로 집계하고 A의 정상 120건은 B�
   assert.deepEqual(detect(events('learner_a', 120)), { action: 'observe' });
 });
 
-test('제작 1 화면: 승인 뒤에만 작전실 표시, 버튼으로만 요청, 실제 응답 상태·요청 ID만 기록하고 메모 내용은 표시 안 함', async () => {
+test('제작 1 화면: 관리자·승인 기기·서버 진입 확인 뒤에만 작전실 표시, 실제 결과만 기록', async () => {
   const html = await readFile(new URL('../public/index.html', import.meta.url), 'utf8');
   assert.match(html, /<section id="ops-room"[^>]*hidden>/u);
   assert.match(html, /기록 없음은 안전하다는 뜻이 아닙니다/u);
@@ -270,9 +271,13 @@ test('제작 1 화면: 승인 뒤에만 작전실 표시, 버튼으로만 요청
   const noteId = '00000000-0000-4000-8000-000000000012';
   const requests = [];
   const summaryId = randomUUID();
+  let administrator = false;
+  let denySummary = false;
   const fetch = async url => {
     requests.push(url);
+    if (url === '/operations-room') return Response.json({ schema: 'vault.operations-access.v1', allowed: true });
     if (url === '/api/operations-summary') {
+      if (denySummary) return Response.json({ error: 'administrator_required', message: 'x' }, { status: 403 });
       return Response.json(buildOperationsSummary({ requestId: summaryId, env: {}, deviceRows: [{ status: 'approved' }] }),
         { headers: { 'x-request-id': summaryId } });
     }
@@ -282,10 +287,24 @@ test('제작 1 화면: 승인 뒤에만 작전실 표시, 버튼으로만 요청
   let script = html.match(/<script type="module">([\s\S]*?)<\/script>/u)[1];
   script = script.replace(/await import\('https:\/\/cdn\.jsdelivr\.net\/npm\/@supabase\/supabase-js@2\.117\.2\/\+esm'\)/u, 'sdk');
   await new Function('document', 'fetch', 'AbortController', 'sdk', 'globalThis', `return (async () => { ${script} })();`)
-    (document, () => { throw new Error('direct fetch'); }, AbortController, sdk, { VaultDeviceClient: approvedDeviceUi(fetch) });
+    (document, async url => {
+      assert.equal(url, '/api/auth?route=user');
+      return Response.json({ instructor: true, administrator });
+    }, AbortController, sdk, { VaultDeviceClient: approvedDeviceUi(fetch) });
   const flush = async () => { for (let i = 0; i < 6; i++) await new Promise(resolve => setImmediate(resolve)); };
   assert.equal(elements.get('ops-room').hidden, true);
   authChanged('SIGNED_IN', session); await flush();
+  assert.equal(elements.get('ops-menu').hidden, true); // 승인 기기·강사라도 관리자 아님
+  await elements.get('ops-menu').listeners.click({ preventDefault() {} });
+  await elements.get('ops-refresh').listeners.click();
+  assert.equal(requests.includes('/operations-room'), false);
+  assert.equal(requests.includes('/api/operations-summary'), false);
+  authChanged('SIGNED_OUT', null); await flush();
+  administrator = true;
+  authChanged('SIGNED_IN', session); await flush();
+  assert.equal(elements.get('ops-room').hidden, true);
+  assert.equal(elements.get('ops-menu').hidden, false);
+  await elements.get('ops-menu').listeners.click({ preventDefault() {} });
   assert.equal(elements.get('ops-room').hidden, false);
   assert.equal(requests.includes('/api/operations-summary'), false); // 자동 요청 없음
   await elements.get('ops-refresh').listeners.click(); await flush();
@@ -301,6 +320,11 @@ test('제작 1 화면: 승인 뒤에만 작전실 표시, 버튼으로만 요청
   // 제작 2: 실제 응답 목록만 내보내고 기록표 명령을 안내합니다.
   await elements.get('ops-export').listeners.click();
   assert.match(elements.get('ops-status').textContent, /실제 응답 \d+건을 내보냈습니다.*regression:table/u);
+  denySummary = true;
+  await elements.get('ops-refresh').listeners.click();
+  assert.equal(elements.get('ops-room').hidden, true);
+  assert.equal(elements.get('ops-menu').hidden, true);
+  assert.equal(elements.get('ops-areas').children.length, 0);
   authChanged('SIGNED_OUT', null); await flush();
   assert.equal(elements.get('ops-room').hidden, true);
   assert.doesNotMatch(text(elements.get('ops-log')), /operations-summary/u);

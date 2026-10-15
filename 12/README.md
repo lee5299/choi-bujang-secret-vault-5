@@ -194,3 +194,42 @@
 - 실제 공개 요청을 쓰는 bundle과 배포 커밋 대조는 수정 커밋에서 별도로 확인합니다. 재채점은 사용자가 직접 제출하며, 새 심판 결과는 아직 없습니다.
 
 다시 확인하기: `npm.cmd run bundle`. 공식 방어전 화면의 12단계 제출란에는 기존 배포·저장소 주소를 사용합니다. 정상 자기 점검은 각 행의 실제 GET 주소·HTTP 상태 기록, 거부 기대는 무로그인 보호 API의 401 JSON 오류이며 복구 POST는 계속 `not_run`입니다. 41종 실행 완료나 심판 통과를 뜻하지 않습니다.
+
+### 수정 커밋의 bundle 실측과 원격 반영 대기
+
+- 별도 복제본 로컬 커밋: `42f2251fb5f0`(5개 파일). `npm.cmd run build -- --local`과 `npm.cmd run bundle` 정상 완료.
+- bundle 실행 때 fetch를 감싼 검증용 모듈로 실제 GET 11건의 동작·URL·HTTP 상태와 서버가 준 안전한 요청 ID만 기록했습니다. 실행 결과 11행과 모두 일치했고, 복구 POST 1행은 `not_run`입니다. 검증용 모듈은 `local-only/`에 두며 제출 소스에 넣지 않았습니다.
+- 자기 점검 JSON 비밀값·연락처 패턴 0건. 후보 사본은 `local-only/submission-records/stage12-42f2251fb5f0-candidate-not-pushed.json`, 실측 증거는 같은 폴더의 `stage12-42f2251fb5f0-request-proof.json`입니다.
+- 자동 승인 검토가 새 main push를 거절했습니다. 사유는 이번 5개 파일 범위와 새 main push의 명시적 승인이 없다는 것입니다. 원격 main·배포는 아직 이전 `d198a693ceff`이며, 후보 JSON을 현재 배포용 `artifacts/submission.json`에 덮어쓰지 않았습니다.
+- 남은 작업: 사용자 push 승인 → 일반 push·배포 → 배포 커밋 대조·bundle 재생성 → 사용자가 직접 재제출. 심판이 수집한 요청 기록과의 일치 및 새 점수는 미확인입니다.
+
+### 승인 후 main 반영·배포·최종 bundle (2026-10-15)
+
+- 사용자가 main push·배포를 명시적으로 승인해 `42f2251fb5f019772a5665af09ee079bea79e8c4`를 일반 push했습니다. 자동 승인 거절로 대기하던 원격 반영은 완료됐습니다.
+- 공개 `/aleph.json` 실측: step 12, 배포 커밋 = 위 main 커밋, 허용 경로 = 설정과 일치(14:15 한국 시각).
+- 배포 후 `npm.cmd run bundle` 재실행 성공: 결과 12행, 실제 HTTPS GET 11건과 실행 결과 11행의 동작·URL·상태 일치, 복구 POST `not_run` 1행. 무로그인 메모·공지·기기 상태·작전실 요약은 401, `/data.json` 404, 나머지 공개 경로 200입니다.
+- 최종 JSON 비밀값·연락처 패턴 0건. 기존 `artifacts/submission.json`을 백업한 뒤 최종 묶음으로 갱신했습니다. 보관본은 `local-only/submission-records/stage12-42f2251fb5f0-submission.json`, 배포·요청 대조 증거는 같은 폴더의 `stage12-42f2251fb5f0-deployment-proof.json`, `stage12-42f2251fb5f0-final-request-proof.json`입니다.
+- 이 완료 기록은 작업공간에 남깁니다. 제출 커밋을 유지하기 위해 추가 push는 하지 않았습니다. 공식 재제출은 사용자가 직접 하며 새 심판 결과는 미확인입니다.
+
+## 사용자 추가 요청: 관리자 전용 작전실 (2026-10-15)
+
+사용자 요청 A1~A3(별도 관리자·상단 메뉴 제한·매 요청 서버 접근 제한)을 `42f2251fb5f0` 기반 별도 복제본에서 구현했습니다. 기존 공격별 실제 요청 기록 연결과 복구 POST `not_run`을 유지합니다.
+
+- `src/administrator.mjs`, `src/resource-auth.mjs`: 서버 Auth `getUser`의 최신 `app_metadata.vault_admin === true`만 인정합니다. 강사·승인 기기·user_metadata·요청 본문·헤더·JWT의 과거 관리자 값은 관리자 권한을 만들지 못합니다. 권한 해제 후 같은 토큰도 다음 요청에서 거부됩니다.
+- `api/auth.js`: 서버 확인 관리자 여부를 화면 표시값으로 전달합니다. 권한 부여 API는 추가하지 않습니다.
+- `api/operations-summary.js`, `vercel.json`: GET `/operations-room` 진입 확인과 `/api/operations-summary` 모두 로그인·최신 관리자·요청 서명을 검사합니다. 무로그인 401, 비관리자 403 `administrator_required`, 관리자 무서명 403 `app_signature_required`. 기존 본인 범위 요약과 안전한 요청 ID 기록을 유지합니다.
+- `public/index.html`, `public/device-client.js`, `src/device-proof.mjs`: 상단 메뉴는 서버가 확인한 관리자·승인 기기에게만 표시하고, 메뉴 클릭 때 서명된 직접 경로를 다시 확인한 뒤 같은 SPA 화면에서 작전실을 엽니다. 거부·로그아웃 때 화면·결과를 지웁니다. RS256(Windows Hello) 지원은 보존했습니다.
+- `docs/ADMINISTRATOR.md`, `docs/sql/stage12-administrator.sql`: 운영자 직접 지정·해제 절차와 자리표시자 SQL입니다. 실제 계정·키는 포함하지 않습니다. SQL은 실행하지 않았고 실제 관리자 지정은 미완료입니다.
+- 요구사항 표 A1~A3, 접속 앱 계약, 루트 실행 안내, 시험·작업 위치 기록을 갱신했습니다. 판정기·RULE_IDS·엔진 allowedRoutes·DB 자료·41종 미실행은 변경하지 않았습니다.
+
+### 실제 실행한 로컬 검증
+
+| 명령 | 결과 |
+| --- | --- |
+| `node --test test/admin-stage12.test.mjs test/r12-requirements.test.mjs test/auth-instructor.test.mjs` | 20개 통과 |
+| `node --test test/*.test.mjs` | **298개 통과, 실패 0** |
+| `npm.cmd run test:stage12` | **263개 통과, 실패 0** |
+
+시험은 가상 Auth·가상 기기와 실제 핸들러를 사용합니다. 일반 사용자/강사 거부, 관리자·무서명 거부, 관리자·유효 서명 정상, 관리자 해제, 과거 JWT 역할 무시, X-Original-URL·X-Rewrite-URL 우회 거부, Auth 장애, 메뉴·로그아웃·권한 해제 뒤 화면 비우기를 확인했습니다. 종전 승인 기기만으로 요약을 허용하던 12단계 시험은 사용자 요청에 맞춰 관리자 조건을 추가했습니다. 이전 단계의 동작·기대값은 유지합니다.
+
+이 기록 시점의 미실행: 실제 관리자 지정·관리자 로그인/기기 서명 배포 실측·운영 로그 대조·새 심판 결과. 배포 후 공개 거부 요청·bundle은 별도 확인합니다. 관리자 지정 전에는 메뉴가 모두 숨겨지고 작전실 접근은 거부됩니다. 정상 확인은 [관리자 안내](../docs/ADMINISTRATOR.md)의 순서로 수행합니다.

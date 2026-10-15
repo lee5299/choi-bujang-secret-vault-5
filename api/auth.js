@@ -1,4 +1,5 @@
 import config from '../aleph.config.json' with { type: 'json' };
+import { isAdministrator } from '../src/administrator.mjs';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
 
@@ -88,7 +89,8 @@ export default async function handler(request, response) {
     if (route === 'user') {
       if (typeof data?.id !== 'string') return fail(502, 'auth_unavailable');
       // instructor는 화면 표시용 힌트입니다. 공지 API는 이 값을 읽지 않고 요청마다 DB 함수로 다시 검사합니다.
-      return response.status(200).json({ id: data.id, aud: 'authenticated', instructor: await isActiveInstructor(data.id) });
+      return response.status(200).json({ id: data.id, aud: 'authenticated', instructor: await isActiveInstructor(data.id),
+        administrator: isAdministrator(data) });
     }
     if (typeof data?.access_token !== 'string' || typeof data?.refresh_token !== 'string'
         || !Number.isFinite(data.expires_in) || typeof data?.user?.id !== 'string') return fail(502, 'auth_unavailable');

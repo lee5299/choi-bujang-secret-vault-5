@@ -40,6 +40,7 @@
     html[data-offline="true"] #notes,
     html[data-offline="true"] #notice-board { display: none !important; }
     html[data-offline="true"] #ops-room { display: none !important; }
+    html[data-offline="true"] #ops-menu { display: none !important; }
     .ops-note { font-size: 15px; color: #ffe3a8; }
     #ops-areas li, #ops-log li { font-size: 15px; }
   </style>
@@ -48,6 +49,7 @@
   <main>
     <div class="eyebrow">BYTE BACK · 12단계</div>
     <h1>내 자료실</h1>
+    <nav aria-label="상단 메뉴"><a id="ops-menu" href="/operations-room" hidden>탈환 작전실</a></nav>
     <p>아래 기록은 모두 실습을 위해 만든 가상 자료입니다.</p>
     <section class="auth" aria-labelledby="app-heading">
       <h2 id="app-heading">BYTE BACK 내 자료실 앱</h2>
@@ -183,6 +185,9 @@
     let noticeAbort;
     let noticeVersion = 0;
     const opsRoom = document.querySelector('#ops-room');
+    const opsMenu = document.querySelector('#ops-menu');
+    let administratorHint = false;
+    let opsAccessGranted = false;
     const opsRefresh = document.querySelector('#ops-refresh');
     const opsStatus = document.querySelector('#ops-status');
     const opsAreas = document.querySelector('#ops-areas');
@@ -224,7 +229,7 @@
           resetOps();
         }
         memoEditor.hidden = !deviceApproved; noticeBoard.hidden = !deviceApproved; notesList.hidden = !deviceApproved;
-        opsRoom.hidden = !deviceApproved;
+        showOpsAccess();
         updateControls();
         if (deviceApproved && !wasApproved) { void loadNotes(currentSession); void loadNoticeBoard(currentSession); }
       } });
@@ -271,6 +276,9 @@
         `오류 코드: ${entry.error ?? '없음'}`, `요청 ID: ${entry.requestId ?? '응답에 없음'}`, `확인 시각(UTC): ${entry.at}`])));
     }
     function resetOps() {
+      administratorHint = false;
+      opsAccessGranted = false;
+      showOpsAccess();
       opsVersion++;
       opsObserved = [];
       opsCommit = null;
@@ -300,13 +308,17 @@
           `서버 확인 시각(UTC): ${summary.checkedAt}`, `요청 ID: ${summary.requestId}`, '범위: 본인 계정']));
     }
     async function loadOps() {
-      if (!ready || !signedIn || !deviceApproved || busy || opsBusy) return;
+      if (!ready || !signedIn || !deviceApproved || !administratorHint || !opsAccessGranted || busy || opsBusy) return;
       const version = opsVersion;
       opsBusy = true; opsStatus.textContent = '요약을 불러오는 중입니다.'; updateControls();
       try {
         const response = await protectedFetch('/api/operations-summary', { method: 'GET', headers: { Accept: 'application/json' } });
         if (version !== opsVersion) return;
-        if (!response.ok) { opsStatus.textContent = `요약을 불러오지 못했습니다(HTTP ${response.status}).`; return; }
+        if (!response.ok) {
+          if (response.status === 401 || response.status === 403) resetOps();
+          opsStatus.textContent = `요약을 불러오지 못했습니다(HTTP ${response.status}).`;
+          return;
+        }
         const summary = await response.json();
         if (version !== opsVersion) return;
         if (summary?.schema !== 'vault.operations-summary.v1' || summary.requestId !== response.headers?.get?.('x-request-id')) {
@@ -321,8 +333,35 @@
       }
     }
     opsRefresh.addEventListener('click', () => loadOps());
+    function showOpsAccess() {
+      opsMenu.hidden = !(signedIn && deviceApproved && administratorHint);
+      opsRoom.hidden = !(signedIn && deviceApproved && administratorHint && opsAccessGranted);
+    }
+    opsMenu.addEventListener('click', async event => {
+      event.preventDefault();
+      if (!ready || !signedIn || !deviceApproved || !administratorHint || busy || opsBusy) return;
+      const version = opsVersion;
+      opsBusy = true; updateControls();
+      try {
+        // 링크를 직접 열어도 같은 서버 경로에서 관리자·기기 서명을 검사합니다.
+        const response = await protectedFetch('/operations-room', { method: 'GET', headers: { Accept: 'application/json' } });
+        if (version !== opsVersion) return;
+        const access = response.ok ? await response.json() : null;
+        if (version !== opsVersion) return;
+        if (!response.ok || access?.schema !== 'vault.operations-access.v1' || access.allowed !== true) {
+          resetOps(); authError.textContent = '관리자 권한 또는 기기 인증을 확인하지 못했습니다.'; return;
+        }
+        opsAccessGranted = true; showOpsAccess();
+      } catch {
+        if (version === opsVersion) { resetOps(); authError.textContent = '작전실 접근을 확인하지 못했습니다.'; }
+      } finally {
+        if (version === opsVersion) opsBusy = false;
+        updateControls();
+      }
+    });
     // 제작 2 시험 기록표에 넣을 실제 응답 목록(상태·오류 코드·요청 ID·시각·경로 모양)만 내려받습니다. 토큰·자료는 넣지 않습니다.
     function exportOps() {
+      if (!administratorHint || !opsAccessGranted || !deviceApproved) return;
       if (!opsObserved.length) { opsStatus.textContent = '내보낼 실제 응답이 없습니다(미실행).'; return; }
       const data = JSON.stringify({ schema: 'vault.ops-observed.v1', exportedAt: new Date().toISOString(), commit: opsCommit,
         entries: opsObserved.map(({ at, method, route, status, error, requestId }) => ({ at, method, route, status, error, requestId })) }, null, 2);
@@ -521,11 +560,15 @@
         const data = response.ok ? await response.json() : null;
         if (version !== noticeVersion) return;
         instructorHint = data?.instructor === true;
+        if (data?.administrator !== true) resetOps();
+        administratorHint = data?.administrator === true;
       } catch {
         if (version !== noticeVersion) return;
         instructorHint = false;
+        resetOps();
       }
       showNoticeRole();
+      showOpsAccess();
       await loadNotices(session, version);
     }
 
@@ -696,8 +739,8 @@
       deviceRegister.disabled = !ready || !signedIn || busy || deviceBusy || deviceApproved;
       deviceVerify.disabled = !ready || !signedIn || busy || deviceBusy;
       deviceRefresh.disabled = !ready || !signedIn || busy || deviceBusy;
-      opsRefresh.disabled = !ready || !signedIn || !deviceApproved || busy || opsBusy;
-      opsExport.disabled = !ready || !signedIn || !deviceApproved;
+      opsRefresh.disabled = !ready || !signedIn || !deviceApproved || !administratorHint || !opsAccessGranted || busy || opsBusy;
+      opsExport.disabled = !ready || !signedIn || !deviceApproved || !administratorHint || !opsAccessGranted;
     }
 
     function showSession(session) {
@@ -707,7 +750,7 @@
       logoutButton.hidden = !signedIn;
       memoEditor.hidden = !deviceApproved;
       noticeBoard.hidden = !deviceApproved;
-      opsRoom.hidden = !deviceApproved;
+      showOpsAccess();
       authStatus.textContent = signedIn ? '로그인되었습니다.' : '로그인하지 않은 상태입니다.';
       if (signedIn) passwordInput.value = '';
       updateControls();

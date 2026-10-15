@@ -3,6 +3,7 @@ import { deviceRepository } from '../src/device-repository.mjs';
 import { requestPath } from '../src/resource-id.mjs';
 import { traceRequest } from '../src/request-trace.mjs';
 import { buildOperationsSummary } from '../src/operations-summary.mjs';
+import { buildPublicOperations, publicLogRecord } from '../src/operations-public.mjs';
 
 // 12단계 탈환 작전실 요약: 학생 직접 API GET /api/operations-summary.
 // 엔진 중계 허용 경로(aleph.config.json allowedRoutes)에는 넣지 않습니다. 엔진 경로로 오면 판정기가 resource_scope_denied로 거부합니다.
@@ -14,8 +15,27 @@ function unavailable(response, status, reason) {
 
 export default async function handler(request, response) {
   response.setHeader('Cache-Control', 'no-store');
-  const requestId = traceRequest(request, response, 'operations_summary');
   const path = requestPath(request.url);
+  // 공개 작전실 요약(vercel.json이 /api/operations-public을 이 함수로 연결): 로그인 없이 집계·가상 실행 결과만 돌려줍니다.
+  // 관리자 작전실(/operations-room, /api/operations-summary)의 관리자·기기 서명 검사는 아래에서 그대로 유지합니다.
+  if (path === '/api/operations-public') {
+    const publicId = traceRequest(request, response, 'operations_public');
+    if (new URL(request.url ?? '/', 'https://local.invalid').search) {
+      return response.status(404).json({ error: 'route_not_allowed', message: '허용되지 않은 경로입니다.' });
+    }
+    if (request.method !== 'GET') {
+      response.setHeader('Allow', 'GET');
+      return response.status(405).json({ error: 'method_not_allowed', message: '지원하지 않는 요청 방식입니다.' });
+    }
+    try {
+      const summary = await buildPublicOperations({ requestId: publicId });
+      console.info('operations_public_result', publicLogRecord(summary));
+      return response.status(200).json(summary);
+    } catch {
+      return unavailable(response, 503, 'PUBLIC_SUMMARY_FAILED');
+    }
+  }
+  const requestId = traceRequest(request, response, 'operations_summary');
   if (!['/api/operations-summary', '/operations-room'].includes(path) || new URL(request.url ?? '/', 'https://local.invalid').search) {
     return response.status(404).json({ error: 'route_not_allowed', message: '허용되지 않은 경로입니다.' });
   }

@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101a28">
+  <title>BYTE BACK | 탈환 작전실 공개 요약</title>
+  <link rel="icon" href="/icons/vault-192.png" type="image/png">
+  <link rel="stylesheet" href="/operations.css">
+  <script type="module" src="/operations-public.mjs"></script>
+</head>
+<body>
+  <main id="ops-public">
+    <nav><a href="/">자료실로 돌아가기</a><a href="/operations-login.html">관리자 작전실</a></nav>
+    <p class="eyebrow">BYTE BACK · 공개 요약</p>
+    <h1>탈환 작전실 공개 요약</h1>
+    <p class="ops-note">서버 <code>GET /api/operations-public</code>가 이번 요청에서 실제로 돌려준 값만 표시합니다. 판정기·탐지는 배포된 코드에 고정 가상 입력을 넣어 실행한 결과이며 실제 접속·운영 사건이 아닙니다. 연결되지 않은 영역은 「미연결」, 실행하지 않은 확인은 「미실행」이고, 기록 없음은 안전하다는 뜻이 아닙니다. 이 화면의 문구는 심판 통과 근거가 아닙니다.</p>
+    <section class="auth">
+      <button id="public-refresh" type="button">공개 요약 다시 불러오기</button>
+      <p id="public-status" role="status">요약을 아직 불러오지 않았습니다(미실행).</p>
+      <ul id="public-areas" aria-live="polite"></ul>
+    </section>
+  </main>
+</body>
+</html>

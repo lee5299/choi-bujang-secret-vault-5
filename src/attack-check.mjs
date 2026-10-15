@@ -11,6 +11,7 @@ const STAGE = {
   anonymous_note_list: 4, anonymous_note_detail: 12, other_user_note_read: 12, deployment_identity: 4, security_header: 4,
   public_page_key_marker_scan: 5, public_data_removed: 4, anonymous_announcement_list: 8, anonymous_announcement_detail: 8,
   anonymous_note_restore: 10, access_app_contract: 11, app_manifest: 11, anonymous_device_status: 11, anonymous_operations_summary: 12,
+  public_operations_summary: 12,
 };
 
 export async function runAttackChecks(input) {
@@ -61,6 +62,7 @@ export async function runAttackChecks(input) {
       ] : []),
       ...(config.step >= 12 ? [
         ['/api/operations-summary', 'anonymous_operations_summary', '무로그인 작전실 요약은 401 JSON 오류이며 요약 항목 없음'],
+        ['/api/operations-public', 'public_operations_summary', '공개 작전실 요약은 HTTP 200·실제 실행 결과 형식이며 메모·사용자 자료 없음'],
       ] : []),
     ];
     for (const [path, attackId, expected, method = 'GET'] of targets) {
@@ -105,6 +107,14 @@ export async function runAttackChecks(input) {
             observed = `HTTP ${result.status} · JSON 오류 ${jsonError ? '확인' : '없음'}`;
             if (path === '/api/operations-summary') observed += ` · 요약 항목 ${data && Object.hasOwn(data, 'areas') ? '노출' : '없음'}`;
             blocked = [401, 403].includes(result.status) && Boolean(jsonError) && !(data && Object.hasOwn(data, 'areas'));
+          } else if (path === '/api/operations-public') {
+            // 공개 요약의 형식과 영역만 확인합니다. 화면 수치는 같은 응답에서 나오며 메모·사용자 자료가 없어야 합니다.
+            const valid = data?.schema === 'vault.operations-public.v1' && data.scope === 'public_aggregate'
+              && typeof data.requestId === 'string' && data.requestId === result.headers.get('x-request-id')
+              && ['decider', 'detection', 'revocation', 'restore', 'officialTests'].every(key => data.areas && Object.hasOwn(data.areas, key));
+            const leaked = /"(?:content|body|title|owner_id|user_id|credential_id)"\s*:/u.test(JSON.stringify(data ?? null));
+            observed = `HTTP ${result.status} · 공개 요약 ${valid ? '확인' : '불일치 또는 없음'} · 자료 ${leaked ? '노출' : '없음'}`;
+            blocked = result.status === 200 && valid && !leaked;
           } else if (path === '/access-app.json') {
             const valid = data?.schema === 'vault.access-app.v1' && data.origin === app.origin
               && data.protocol === 'webauthn-request-v1' && !Object.hasOwn(data, 'approved');

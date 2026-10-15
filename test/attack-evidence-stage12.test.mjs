@@ -17,6 +17,7 @@ const targets = [
   ['app_manifest', '/manifest.webmanifest'],
   ['anonymous_device_status', '/api/device?route=status'],
   ['anonymous_operations_summary', '/api/operations-summary'],
+  ['public_operations_summary', '/api/operations-public'],
 ];
 
 const KEYS = ['attackId', 'expected', 'observed', 'result', 'stage'];
@@ -34,8 +35,8 @@ test('12단계: 실행 행은 공식 다섯 칸이며 observed는 그 행의 실
     return new Response('{}', { status, headers: { 'x-request-id': `00000000-0000-4000-8000-${String(index).padStart(12, '0')}`, 'content-type': 'application/json' } });
   });
   const attempts = await runAttackChecks(fixture);
-  assert.equal(calls.length, 12);
-  assert.equal(attempts.length, 14);
+  assert.equal(calls.length, 13);
+  assert.equal(attempts.length, 15);
   for (const [index, [attackId, path]] of targets.entries()) {
     const call = calls[index];
     assert.equal(call.url, new URL(path, fixture.publicAppUrl).href);
@@ -68,6 +69,11 @@ test('12단계: 실제 배포 응답 모양이면 기대 충족 행은 blocked, 
     if (pathname === '/access-app.json') return Response.json({ schema: 'vault.access-app.v1', origin: 'https://fixture.vercel.app', protocol: 'webauthn-request-v1' });
     if (pathname === '/manifest.webmanifest') return Response.json({ name: 'x', start_url: '/', scope: '/', icons: [{}] });
     if (pathname === '/api/operations-summary' && leak) return Response.json({ areas: {} });
+    if (pathname === '/api/operations-public') {
+      const body = { schema: 'vault.operations-public.v1', scope: 'public_aggregate', requestId: 'public-fixture-id',
+        areas: { decider: {}, detection: {}, revocation: {}, restore: {}, officialTests: {} }, ...(leak ? { content: 'Virtual body' } : {}) };
+      return Response.json(body, { headers: { 'x-request-id': 'public-fixture-id' } });
+    }
     return leak ? Response.json([{ id: 1 }]) : Response.json({ error: 'login_required', message: 'x' }, { status: 401 });
   };
   t.mock.method(globalThis, 'fetch', async url => respond(new URL(url).pathname, false));
@@ -77,7 +83,7 @@ test('12단계: 실제 배포 응답 모양이면 기대 충족 행은 blocked, 
   t.mock.restoreAll();
   t.mock.method(globalThis, 'fetch', async url => respond(new URL(url).pathname, true));
   const leaked = await runAttackChecks(fixture);
-  for (const id of ['anonymous_note_list', 'anonymous_note_detail', 'public_page_key_marker_scan', 'public_data_removed', 'anonymous_operations_summary']) {
+  for (const id of ['anonymous_note_list', 'anonymous_note_detail', 'public_page_key_marker_scan', 'public_data_removed', 'anonymous_operations_summary', 'public_operations_summary']) {
     assert.equal(leaked.find(row => row.attackId === id).result, 'breached', id);
   }
 });
@@ -85,7 +91,7 @@ test('12단계: 실제 배포 응답 모양이면 기대 충족 행은 blocked, 
 test('12단계: 응답 없는 모든 항목은 network_error·not_run이며 상태를 생성하지 않는다', async t => {
   t.mock.method(globalThis, 'fetch', async () => { throw new Error('fixture network unavailable'); });
   const attempts = await runAttackChecks(fixture);
-  assert.equal(attempts.length, 14);
+  assert.equal(attempts.length, 15);
   assert.ok(attempts.every(row => row.result === 'not_run' && ['network_error', 'not_run'].includes(row.observed)));
   assert.ok(attempts.every(row => !/HTTP/u.test(row.observed)));
 });
@@ -107,7 +113,7 @@ test('12단계: 배포 주소 문자열을 받으면 저장소 설정과 함께 
   t.mock.method(globalThis, 'fetch', async url => { hosts.add(new URL(url).host); return new Response(null, { status: 404 }); });
   const attempts = await runAttackChecks('https://fixture-string.vercel.app');
   assert.deepEqual([...hosts], ['fixture-string.vercel.app']);
-  assert.equal(attempts.length, 14);
+  assert.equal(attempts.length, 15);
   assert.ok(attempts.every(row => Object.keys(row).sort().join() === KEYS.join()));
 });
 

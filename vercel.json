@@ -13,6 +13,7 @@
   ],
   "rewrites": [
     { "source": "/operations-room", "destination": "/api/operations-summary" },
+    { "source": "/api/operations-public", "destination": "/api/operations-summary" },
     { "source": "/api/notes/:id/restore", "destination": "/api/note-restore" },
     { "source": "/api/notes/:id", "destination": "/api/notes/[id]" },
     { "source": "/api/announcements/:id", "destination": "/api/announcements/[id]" }

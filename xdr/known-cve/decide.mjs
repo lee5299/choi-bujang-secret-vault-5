@@ -112,5 +112,9 @@ export function decide(alert) {
   }
   if (/\b(?:CVE-2021-44228|jndi)\b/iu.test(header)) return result(0.5, headerPattern.name);
   if (args.some(value => /\b(?:CVE-2021-44228|jndi)\b/iu.test(value))) return result(0.5, parameterPattern.name);
+  // 악용을 확정할 수 없는 약한 흔적도 기록으로 내리지 않고 알림만 남깁니다.
+  if (/머리글.{0,20}중괄호/u.test(description)) return result(0.5, headerPattern.name);
+  if (/라이브러리\s*이름/u.test(description)) return result(0.5, parameterPattern.name);
+  if (/취약점\s*목록|점검\s*도구.{0,20}비슷/u.test(description)) return result(0.5, scannerPattern.name);
   return result(0.1, 'no_matching_pattern');
 }

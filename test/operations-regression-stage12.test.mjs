@@ -74,7 +74,7 @@ function screen() {
     set innerHTML(_) { throw new Error('unsafe HTML'); }
     async fire(type = 'click') { await this.listeners[type]?.({}); }
   }
-  const nodes = Object.fromEntries(['status', 'rows', 'stage', 'filter', 'origin', 'target', 'probe', 'collect', 'counts', 'coverage'].map(name => [`regression-${name}`, new Element()]));
+  const nodes = Object.fromEntries(['status', 'rows', 'stage', 'filter', 'origin', 'target', 'probe', 'collect', 'launch', 'counts', 'coverage'].map(name => [`regression-${name}`, new Element()]));
   const document = { querySelector: selector => nodes[selector.slice(1)], createElement: () => new Element() };
   const text = node => [node.textContent, ...node.children.map(text)].join('\n');
   return { nodes, document, text };
@@ -93,6 +93,9 @@ test('B 만들기2: 표의 전체 열·정상/거부 수를 표시하고 파일 
   app.nodes['regression-target'].value = row.key;
   await app.nodes['regression-collect'].fire();
   assert.equal(opened[0], `${origin}/#request-check=${id}`);
+  const fallback = app.nodes['regression-launch'].children[0];
+  assert.equal(fallback.href, opened[0]); assert.equal(fallback.rel, 'noopener noreferrer');
+  assert.match(app.nodes['regression-status'].textContent, /새 창이 열리지 않으면/u);
   assert.equal(result.records.length, 0); // 창을 여는 것만으로 정상 허용을 만들지 않음
   const entry = { method: 'GET', route: row.path, at, status: 200, requestId: id, body: 'PRIVATE', token: 'PRIVATE' };
   channels[0].onmessage({ data: { schema: 'vault.observed-response.v1', entry: { ...entry, route: '/api/wrong' } } });

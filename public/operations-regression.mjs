@@ -87,8 +87,11 @@ export async function initializeRegression({ document, fetch = globalThis.fetch,
         status.textContent = `${row.id} · ${row.account}의 ${row.method} ${row.path} 실제 응답을 연결했습니다. 계정·시험대상은 사용자 지정이며 서버 로그 대조는 별도 확인입니다.`;
         active.close(); channel = null; render();
       };
-      open(new URL(`/#request-check=${id}`, location.origin).href);
-      status.textContent = `자료실을 새 창으로 열었습니다. ${row.account} 계정으로 직접 로그인·기기 확인 후 ${row.method} ${row.path} 요청을 실행하세요. 실제 응답 전에는 미실행입니다.`;
+      const url = new URL(`/#request-check=${id}`, location.origin).href;
+      const link = node('a', '연결된 자료실 열기'); link.href = url; link.target = '_blank'; link.rel = 'noopener noreferrer';
+      el('regression-launch').replaceChildren(link);
+      open(url);
+      status.textContent = `자료실 연결을 준비했습니다. 새 창이 열리지 않으면 「연결된 자료실 열기」를 누르세요. ${row.account} 계정으로 직접 로그인·기기 확인 후 ${row.method} ${row.path} 요청을 실행하세요. 실제 응답 전에는 미실행입니다.`;
     } catch { channel?.close(); channel = null; status.textContent = '자료실 연결을 열지 못했습니다. 지원하는 브라우저와 새 창 차단 여부를 확인하세요.'; }
   });
   events.addEventListener?.('pagehide', () => { channel?.close(); channel = null; records = []; });

@@ -20,6 +20,12 @@ export async function runAttackChecks(config) {
     const attempts = [];
     const targets = [
       ['/api/notes', 'anonymous_note_list', '무로그인 메모 목록은 401 또는 403 JSON 오류'],
+      // 12단계 괴물 1: 같은 제출본에서 무인증 메모 한 건 조회 → 타인 메모 조회를 연속으로 기록합니다.
+      // 타인 메모 조회는 다른 사용자의 로그인·승인 기기 서명이 필요해 bundle이 보내지 않으므로 not_run입니다.
+      ...(config.step >= 12 ? [
+        ['/api/notes/00000000-0000-4000-8000-000000000012', 'anonymous_note_detail', '무로그인 메모 한 건 직접 조회는 401 JSON 오류이며 메모 자료 없음'],
+        ['/api/notes/:other-user-note', 'other_user_note_read', '다른 사용자 메모 조회는 404 not_found_or_not_owner이며 메모 자료 없음'],
+      ] : []),
       ['/aleph.json', 'deployment_identity', '현재 단계의 배포 식별 JSON은 HTTP 200'],
       ['/', 'security_header', '첫 화면은 HTTP 200과 nosniff 또는 CSP 헤더'],
       ...(config.step >= 12 ? [
@@ -43,7 +49,7 @@ export async function runAttackChecks(config) {
       ] : []),
     ];
     for (const [path, attackId, expected, method = 'GET'] of targets) {
-      if (config.step >= 12 && attackId === 'anonymous_note_restore') {
+      if (config.step >= 12 && (attackId === 'anonymous_note_restore' || attackId === 'other_user_note_read')) {
         attempts.push({ attackId, expected, observed: 'not_run' });
         continue;
       }
@@ -77,7 +83,7 @@ export async function runAttackChecks(config) {
           if (jsonType) {
             try { data = await result.json(); } catch { /* 본문이나 원본 오류를 기록하지 않습니다. */ }
           }
-          if (path === '/api/notes' || path.startsWith('/api/announcements') || path.startsWith('/api/device') || path.endsWith('/restore')
+          if (path === '/api/notes' || path.startsWith('/api/notes/') || path.startsWith('/api/announcements') || path.startsWith('/api/device') || path.endsWith('/restore')
               || path === '/api/operations-summary') {
             const jsonError = data && !Array.isArray(data)
               && [data.message, data.error].some(value => typeof value === 'string' && value.trim());

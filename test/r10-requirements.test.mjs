@@ -179,14 +179,15 @@ test('12단계 제출 점검은 GET만 보내고 복구 POST 결과는 not_run�
   };
   const attempts = await runAttackChecks(fixture);
   assert.deepEqual(calls, [
-    'GET /api/notes', 'GET /aleph.json', 'GET /', 'GET /', 'GET /data.json',
+    'GET /api/notes', 'GET /api/notes/00000000-0000-4000-8000-000000000012', 'GET /aleph.json', 'GET /', 'GET /', 'GET /data.json',
     'GET /api/announcements', 'GET /api/announcements/00000000-0000-4000-8000-000000000008',
     'GET /access-app.json', 'GET /manifest.webmanifest', 'GET /api/device?route=status',
     'GET /api/operations-summary',
   ]);
-  assert.equal(attempts.length, 12);
+  assert.equal(attempts.length, 14);
   const skipped = attempts.find(item => item.attackId === 'anonymous_note_restore');
   assert.deepEqual(skipped, { attackId: 'anonymous_note_restore',
     expected: '무로그인 메모 복구 POST는 401 또는 403 JSON 오류', observed: 'not_run' });
-  assert.equal(attempts.filter(item => item.observed === 'not_run').length, 1);
+  // 12단계 괴물 1의 타인 메모 조회는 로그인 정보 없이 보낼 수 없어 함께 not_run입니다.
+  assert.deepEqual(attempts.filter(item => item.observed === 'not_run').map(item => item.attackId), ['other_user_note_read', 'anonymous_note_restore']);
 });

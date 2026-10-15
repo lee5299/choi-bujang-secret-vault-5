@@ -22,6 +22,9 @@ export async function runAttackChecks(config) {
       ['/api/notes', 'anonymous_note_list', '무로그인 메모 목록은 401 또는 403 JSON 오류'],
       ['/aleph.json', 'deployment_identity', '현재 단계의 배포 식별 JSON은 HTTP 200'],
       ['/', 'security_header', '첫 화면은 HTTP 200과 nosniff 또는 CSP 헤더'],
+      ...(config.step >= 12 ? [
+        ['/', 'public_page_key_marker_scan', '요청한 첫 화면에 Supabase 키·시드 표식 없음'],
+      ] : []),
       ['/data.json', 'public_data_removed', '공개 자료 파일은 404 또는 메모 0건'],
       ...(config.step >= 8 ? [
         ['/api/announcements', 'anonymous_announcement_list', '무로그인 공지 목록은 401 또는 403 JSON 오류'],
@@ -45,20 +48,28 @@ export async function runAttackChecks(config) {
         continue;
       }
       let observed;
+      let responseStatus;
+      let requestId;
+      const requestUrl = new URL(path, app).href;
       try {
-        const result = await fetch(new URL(path, app), {
+        const result = await fetch(requestUrl, {
           method, redirect: 'error', cache: 'no-store', signal: AbortSignal.timeout(10000),
         });
+        responseStatus = result.status;
+        const receivedId = result.headers.get('x-request-id');
+        // 서버가 실제로 돌려준 안전한 요청 ID만 기록합니다. 없는 ID를 만들지 않습니다.
+        if (/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/iu.test(receivedId ?? '')) requestId = receivedId;
         if (path === '/') {
           const secured = result.headers.get('x-content-type-options')?.toLowerCase() === 'nosniff'
             || Boolean(result.headers.get('content-security-policy'));
           observed = `HTTP ${result.status} · 보안 헤더 ${secured ? '확인' : '없음'}`;
-          if (config.step >= 5) {
+          if ((config.step >= 5 && config.step < 12) || attackId === 'public_page_key_marker_scan') {
             const html = await result.text();
             const exposed = /sb_publishable_[A-Za-z0-9_-]+|sb_secret_[A-Za-z0-9_-]+|eyJ[A-Za-z0-9_-]{12,}\.eyJ[A-Za-z0-9_-]{12,}\.[A-Za-z0-9_-]{8,}/u.test(html)
               || (typeof config.sampleMarker === 'string' && html.includes(config.sampleMarker));
-            attempts.push({ attackId: 'public_page_key_marker_scan', expected: '요청한 첫 화면에 Supabase 키·시드 표식 없음',
-              observed: `HTTP ${result.status} · 첫 화면 키·표식 ${exposed ? '검출' : '미검출'} · 외부 묶음 미검사` });
+            const scan = `HTTP ${result.status} · 첫 화면 키·표식 ${exposed ? '검출' : '미검출'} · 외부 묶음 미검사`;
+            if (config.step >= 12) observed = scan;
+            else attempts.push({ attackId: 'public_page_key_marker_scan', expected: '요청한 첫 화면에 Supabase 키·시드 표식 없음', observed: scan });
           }
         } else {
           let data;
@@ -96,7 +107,14 @@ export async function runAttackChecks(config) {
           }
         }
       } catch {
-        observed = '요청 실패 · 확인 미완료';
+        observed = config.step >= 12
+          ? (responseStatus === undefined ? 'not_run' : `HTTP ${responseStatus} · 응답 검사 미완료`)
+          : '요청 실패 · 확인 미완료';
+      }
+      // attackId와 같은 행에 실제 요청 동작·주소·응답 상태를 묶습니다.
+      // fetch 응답이 없으면 HTTP 상태나 요청 ID를 추측해 기록하지 않습니다.
+      if (config.step >= 12 && responseStatus !== undefined) {
+        observed = `${method} ${requestUrl} → ${observed}${requestId ? ` · requestId=${requestId}` : ''}`;
       }
       attempts.push({ attackId, expected, observed });
     }

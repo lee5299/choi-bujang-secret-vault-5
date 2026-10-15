@@ -179,7 +179,7 @@ test('12단계 제출 점검은 GET만 보내고 복구 POST 결과는 not_run�
   };
   const attempts = await runAttackChecks(fixture);
   assert.deepEqual(calls, [
-    'GET /api/notes', 'GET /aleph.json', 'GET /', 'GET /data.json',
+    'GET /api/notes', 'GET /aleph.json', 'GET /', 'GET /', 'GET /data.json',
     'GET /api/announcements', 'GET /api/announcements/00000000-0000-4000-8000-000000000008',
     'GET /access-app.json', 'GET /manifest.webmanifest', 'GET /api/device?route=status',
     'GET /api/operations-summary',

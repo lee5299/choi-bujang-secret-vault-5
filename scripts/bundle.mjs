@@ -71,17 +71,22 @@ try {
   const checkerUrl = pathToFileURL(join(root, 'src', 'attack-check.mjs'));
   const { runAttackChecks } = await import(checkerUrl.href);
   if (typeof runAttackChecks !== 'function') fail('src/attack-check.mjs가 runAttackChecks를 내보내야 합니다.');
-  const attackAttempts = await runAttackChecks(config);
+  // 12단계 공식 표본 형식: 점검에는 배포 주소만 넘기고, 행마다 attackId·stage·expected·observed·result 다섯 칸을 받습니다.
+  const fiveFields = config.step >= 12;
+  const attackAttempts = await runAttackChecks(fiveFields ? config.publicAppUrl : config);
   if (!Array.isArray(attackAttempts) || !attackAttempts.length || attackAttempts.length > 20) {
     fail('직접 실행한 공격 점검 결과 1~20개가 필요합니다.');
   }
   for (const attempt of attackAttempts) {
     if (!attempt || typeof attempt !== 'object' || Array.isArray(attempt)
-        || Object.keys(attempt).sort().join(',') !== 'attackId,expected,observed'
+        || Object.keys(attempt).sort().join(',') !== (fiveFields ? 'attackId,expected,observed,result,stage' : 'attackId,expected,observed')
+        || (fiveFields && (!Number.isInteger(attempt.stage) || attempt.stage < 1 || attempt.stage > 12
+          || !['blocked', 'breached', 'not_run'].includes(attempt.result)))
         || typeof attempt.attackId !== 'string' || !/^[a-z0-9][a-z0-9_.-]{0,79}$/iu.test(attempt.attackId)
         || typeof attempt.expected !== 'string' || !attempt.expected.trim() || attempt.expected.length > 300
         || typeof attempt.observed !== 'string' || !attempt.observed.trim() || attempt.observed.length > 300) {
-      fail('공격 점검 결과에는 attackId·expected·observed만 넣어 주세요.');
+      fail(fiveFields ? '공격 점검 결과에는 attackId·stage·expected·observed·result만 넣어 주세요(result는 blocked·breached·not_run).'
+        : '공격 점검 결과에는 attackId·expected·observed만 넣어 주세요.');
     }
   }
   if (new Set(attackAttempts.map(item => item.attackId)).size !== attackAttempts.length) {
@@ -89,6 +94,7 @@ try {
   }
   const bundle = {
     schema: 'aleph.defense.submission.v2', step: config.step, commit, repoUrl,
+    ...(fiveFields ? { checkedAt: new Date().toISOString() } : {}),
     changedFiles, policyRules,
     attackAttempts, explanation: notes.explanation.trim(), blockedAt: notes.blockedAt ?? null,
     identityProvider: config.identityProvider ?? null, allowedRoutes: config.allowedRoutes ?? [],

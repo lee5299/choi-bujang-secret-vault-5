@@ -186,8 +186,8 @@ test('12단계 제출 점검은 GET만 보내고 복구 POST 결과는 not_run�
   ]);
   assert.equal(attempts.length, 14);
   const skipped = attempts.find(item => item.attackId === 'anonymous_note_restore');
-  assert.deepEqual(skipped, { attackId: 'anonymous_note_restore',
-    expected: '무로그인 메모 복구 POST는 401 또는 403 JSON 오류', observed: 'not_run' });
+  assert.deepEqual(skipped, { attackId: 'anonymous_note_restore', stage: 10,
+    expected: '무로그인 메모 복구 POST는 401 또는 403 JSON 오류', observed: 'not_run', result: 'not_run' });
   // 12단계 괴물 1의 타인 메모 조회는 로그인 정보 없이 보낼 수 없어 함께 not_run입니다.
   assert.deepEqual(attempts.filter(item => item.observed === 'not_run').map(item => item.attackId), ['other_user_note_read', 'anonymous_note_restore']);
 });

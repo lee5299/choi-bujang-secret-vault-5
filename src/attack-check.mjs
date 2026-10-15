@@ -1,6 +1,21 @@
+import projectConfig from '../aleph.config.json' with { type: 'json' };
+
 // The student changes this check as each stage adds an attack to the same app.
 // Never return tokens, private keys, real names, or note bodies.
-export async function runAttackChecks(config) {
+// 12단계 제출 점검 형식(공식 표본): 행마다 attackId·stage·expected·observed·result 다섯 칸을 적습니다.
+// - 요청마다 fetch 옵션 alephEvidence에 사례 ID(caseId = attackId)를 연결해 심판 runner가 같은 응답을 독립 관측하게 합니다.
+//   이 메타데이터는 요청 헤더나 URL로 보내지 않습니다.
+// - observed는 실제로 받은 `HTTP 상태`만, result는 기대 충족 blocked·불충족 breached·요청 미실행 not_run입니다.
+// 배포 주소 문자열(또는 URL)을 받으면 저장소의 aleph.config.json과 함께 쓰고, 설정 객체를 넘기면 그 publicAppUrl을 씁니다.
+const STAGE = {
+  anonymous_note_list: 4, anonymous_note_detail: 12, other_user_note_read: 12, deployment_identity: 4, security_header: 4,
+  public_page_key_marker_scan: 5, public_data_removed: 4, anonymous_announcement_list: 8, anonymous_announcement_detail: 8,
+  anonymous_note_restore: 10, access_app_contract: 11, app_manifest: 11, anonymous_device_status: 11, anonymous_operations_summary: 12,
+};
+
+export async function runAttackChecks(input) {
+  const config = typeof input === 'string' || input instanceof URL
+    ? { ...projectConfig, publicAppUrl: String(input) } : input;
   if (![1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].includes(config.step)) throw new Error('이 단계의 공격 점검을 src/attack-check.mjs에 구현해 주세요.');
   // 12단계는 무로그인 작전실 요약 GET 한 건을 더 보냅니다. 로그인·승인 기기·서명 뒤의 정상 요약은 여기서 확인하지 않습니다.
   // 11단계는 공개 앱 선언·manifest·무로그인 기기 상태를 점검합니다. 실제 승인·서명 공격은 별도 시험입니다.
@@ -49,28 +64,32 @@ export async function runAttackChecks(config) {
       ] : []),
     ];
     for (const [path, attackId, expected, method = 'GET'] of targets) {
+      const stage = STAGE[attackId];
       if (config.step >= 12 && (attackId === 'anonymous_note_restore' || attackId === 'other_user_note_read')) {
-        attempts.push({ attackId, expected, observed: 'not_run' });
+        attempts.push({ attackId, stage, expected, observed: 'not_run', result: 'not_run' });
         continue;
       }
       let observed;
       let responseStatus;
+      let blocked = false;
       const requestUrl = new URL(path, app).href;
       try {
         const result = await fetch(requestUrl, {
           method, redirect: 'error', cache: 'no-store', signal: AbortSignal.timeout(10000),
+          ...(config.step >= 12 ? { alephEvidence: { caseId: attackId, requestKey: 'read' } } : {}),
         });
         responseStatus = result.status;
         if (path === '/') {
           const secured = result.headers.get('x-content-type-options')?.toLowerCase() === 'nosniff'
             || Boolean(result.headers.get('content-security-policy'));
           observed = `HTTP ${result.status} · 보안 헤더 ${secured ? '확인' : '없음'}`;
+          blocked = result.status === 200 && secured;
           if ((config.step >= 5 && config.step < 12) || attackId === 'public_page_key_marker_scan') {
             const html = await result.text();
             const exposed = /sb_publishable_[A-Za-z0-9_-]+|sb_secret_[A-Za-z0-9_-]+|eyJ[A-Za-z0-9_-]{12,}\.eyJ[A-Za-z0-9_-]{12,}\.[A-Za-z0-9_-]{8,}/u.test(html)
               || (typeof config.sampleMarker === 'string' && html.includes(config.sampleMarker));
             const scan = `HTTP ${result.status} · 첫 화면 키·표식 ${exposed ? '검출' : '미검출'} · 외부 묶음 미검사`;
-            if (config.step >= 12) observed = scan;
+            if (config.step >= 12) { observed = scan; blocked = result.status === 200 && !exposed; }
             else attempts.push({ attackId: 'public_page_key_marker_scan', expected: '요청한 첫 화면에 Supabase 키·시드 표식 없음', observed: scan });
           }
         } else {
@@ -85,37 +104,50 @@ export async function runAttackChecks(config) {
               && [data.message, data.error].some(value => typeof value === 'string' && value.trim());
             observed = `HTTP ${result.status} · JSON 오류 ${jsonError ? '확인' : '없음'}`;
             if (path === '/api/operations-summary') observed += ` · 요약 항목 ${data && Object.hasOwn(data, 'areas') ? '노출' : '없음'}`;
+            blocked = [401, 403].includes(result.status) && Boolean(jsonError) && !(data && Object.hasOwn(data, 'areas'));
           } else if (path === '/access-app.json') {
             const valid = data?.schema === 'vault.access-app.v1' && data.origin === app.origin
               && data.protocol === 'webauthn-request-v1' && !Object.hasOwn(data, 'approved');
             const exposed = /sb_secret_[A-Za-z0-9_-]+|-----BEGIN [A-Z ]*PRIVATE KEY-----|eyJ[A-Za-z0-9_-]{12,}\.eyJ[A-Za-z0-9_-]{12,}\./u.test(JSON.stringify(data ?? null));
             observed = `HTTP ${result.status} · 공개 연결 선언 ${valid ? '확인' : '불일치 또는 없음'} · 비밀값 표식 ${exposed ? '검출' : '미검출'}`;
+            blocked = result.status === 200 && valid && !exposed;
           } else if (path === '/manifest.webmanifest') {
             const valid = typeof data?.name === 'string' && data.start_url === '/' && data.scope === '/' && Array.isArray(data.icons) && data.icons.length > 0;
             observed = `HTTP ${result.status} · 설치 manifest ${valid ? '확인' : '없음 또는 불일치'}`;
+            blocked = result.status === 200 && valid;
           } else if (path === '/aleph.json') {
             const valid = data?.schema === 'aleph.defense.deployment.v1' && data.step === config.step
               && data.judgeIssuer === config.judgeIssuer && data.repoUrl === config.repoUrl
               && /^[a-f0-9]{40}$/iu.test(data.commit ?? '');
             observed = `HTTP ${result.status} · 현재 단계 식별 JSON ${valid ? '확인' : '불일치 또는 없음'}`;
+            const routes = Array.isArray(data?.allowedRoutes) && data.allowedRoutes.length > 0;
+            const original = typeof data?.originalApiUrl === 'string' && data.originalApiUrl === config.originalApiUrl;
             if (config.step >= 5) {
-              observed += ` · 허용 경로 ${Array.isArray(data?.allowedRoutes) && data.allowedRoutes.length ? '확인' : '없음'}`;
-              observed += ` · 원본 주소 ${typeof data?.originalApiUrl === 'string' && data.originalApiUrl === config.originalApiUrl ? '일치' : '누락 또는 불일치'}`;
+              observed += ` · 허용 경로 ${routes ? '확인' : '없음'}`;
+              observed += ` · 원본 주소 ${original ? '일치' : '누락 또는 불일치'}`;
             }
+            blocked = result.status === 200 && valid && (config.step < 5 || (routes && original));
           } else {
             const notes = Array.isArray(data) ? data : data?.notes;
             const empty = Array.isArray(notes) && notes.length === 0;
             observed = `HTTP ${result.status} · ${result.status === 404 ? '파일 없음' : empty ? '메모 0건' : '공개 자료 차단 확인 안 됨'}`;
+            blocked = result.status === 404 || empty;
           }
         }
       } catch {
+        blocked = false;
         observed = config.step >= 12
           ? (responseStatus === undefined ? 'not_run' : `HTTP ${responseStatus} · 응답 검사 미완료`)
           : '요청 실패 · 확인 미완료';
       }
-      // 12단계 심판 대조: 보낸 점검은 실제로 받은 HTTP 상태 숫자만, 응답을 받지 못한 점검은 not_run만 적습니다.
-      // 주소·요청 ID·설명 문구를 붙이지 않고 상태를 추측해 채우지 않습니다.
-      if (config.step >= 12) observed = responseStatus === undefined ? 'not_run' : String(responseStatus);
+      // 12단계 심판 대조: 보낸 점검은 실제로 받은 `HTTP 상태`만 적고, 응답을 받지 못한 점검은 network_error·not_run입니다.
+      // 주소·요청 ID·설명 문구를 붙이지 않고 상태를 추측해 채우지 않습니다. 본문 검사를 마치지 못하면 blocked로 쓰지 않습니다.
+      if (config.step >= 12) {
+        attempts.push(responseStatus === undefined
+          ? { attackId, stage, expected, observed: 'network_error', result: 'not_run' }
+          : { attackId, stage, expected, observed: `HTTP ${responseStatus}`, result: blocked ? 'blocked' : 'breached' });
+        continue;
+      }
       attempts.push({ attackId, expected, observed });
     }
     return attempts;

@@ -14,10 +14,20 @@
 | 4 알림·차단 | `respond.mjs` | `applyRun({root, alerts, result})`. 후보 근거 재확인, `deny-rules.json`(시작·만료·근거 경보 ID), `xdr/alerts.log` 누적(moduleKey 포함), 추가 검사 부품 |
 | 5 가상 실행 | `result.json`, `check.json` | `npm.cmd run xdr:run -- <moduleKey>`. 정상 이벤트·정상 주소 오차단 0건 확인 |
 
-주의: `scripts/xdr-run.mjs`는 `brute-force`·`web-injection`·`known-cve`일 때 `respond.mjs`를 연결합니다.
+현재 `scripts/xdr-run.mjs`는 `brute-force`·`web-injection`·`known-cve`·`persistence`·`privilege`의 `respond.mjs`를 연결합니다.
 새 모듈의 응답 모듈을 연결하려면 그 조건에 moduleKey를 추가하고, 이 공통 파일 변경을 보고에 명시합니다.
 
-## 시험
+## 판단 기준
+
+- 공통 용어·변수의 실제 의미와 애매한 표현의 이전 결정은 [판단 용어와 해석 기준](../판단용어-해석기준.md)을 대조합니다. 적용 모듈·상태·근거를 확인하고 해석 변경 시 해당 ID의 이유·반례·시험을 함께 갱신합니다.
+- Wazuh 규칙 수준의 유효 범위는 0~16입니다. [공식 수준표](https://documentation.wazuh.com/current/user-manual/ruleset/rules/rules-classification.html)와 [규칙 문법](https://documentation.wazuh.com/current/user-manual/ruleset/ruleset-xml-syntax/rules.html#rule)은 수준의 의미·범위를 확인하는 근거이며 아래 프로젝트 확인 정책을 강제하지 않습니다.
+- 프로젝트 확인 정책: 규칙 수준 5~8이고 모듈의 패턴과 관련된 그룹·계정·권한 사건(조회·설명 변경·비관리자 그룹 추가·로컬 그룹 생성·취소·실패 포함)은 최소 alert로 남깁니다. 이는 공격 확정이나 block 근거가 아닙니다. 이 정책을 다루는 패턴 이름과 확인 범위는 각 patterns.json에 명시합니다.
+- 수준 2~3의 단순 조회·로그인·로그아웃은 별도 위험 신호가 없으면 record입니다. 수준 하나나 MITRE 표식만으로 block하지 않습니다. 명확한 공격 조합은 실제 변화와 추가 신호를 해당 패턴 조건에 맞춰 확인합니다.
+- 부정문·실패·차단·오탐·삭제 완료는 성공한 악용의 근거로 쓰지 않으며, MITRE 정의에 없는 필수 조건을 MITRE 요구사항으로 적지 않습니다.
+- 제작 3 뒤에는 수준별 묶음 대조표·표현을 바꾼 문장 시험·이전 XDR 모듈과의 기준 비교를 기록합니다. 경보 구간별 건수는 공식 정답으로 취급하지 않습니다.
+- 2026-10-16 XDR-05 검토 정정 반영으로 이 기준을 명시합니다. 기존 모듈의 코드 일괄 변경을 뜻하지 않으며 persistence(XDR-04)의 수준 범위·구현은 이번에 변경하지 않습니다.
+
+## 시험 순서
 
 `test/xdr-<moduleKey>.test.mjs` 추가 → 기존 `test/xdr-*.test.mjs` → 전체 회귀 `node --test test/*.test.mjs`.
 

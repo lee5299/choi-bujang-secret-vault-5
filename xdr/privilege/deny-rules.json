@@ -1,0 +1,125 @@
+{
+  "schema": "aleph.xdr.deny-rules.v1",
+  "moduleKey": "privilege",
+  "mode": "fixture",
+  "scope": "fixture_account_source",
+  "rules": [
+    {
+      "ruleId": "xdr.privilege",
+      "account": "user01",
+      "sourceIp": "203.0.113.11",
+      "startsAt": "2026-09-27T00:15:06.000Z",
+      "expiresAt": "2026-09-27T00:30:06.000Z",
+      "evidenceAlertIds": [
+        "pv-01"
+      ],
+      "patterns": [
+        "administrator_group_addition"
+      ]
+    },
+    {
+      "ruleId": "xdr.privilege",
+      "account": "user01",
+      "sourceIp": "203.0.113.11",
+      "startsAt": "2026-09-27T00:15:40.000Z",
+      "expiresAt": "2026-09-27T00:30:40.000Z",
+      "evidenceAlertIds": [
+        "pv-02"
+      ],
+      "patterns": [
+        "administrator_group_addition"
+      ]
+    },
+    {
+      "ruleId": "xdr.privilege",
+      "account": "user02",
+      "sourceIp": "198.51.100.11",
+      "startsAt": "2026-09-27T01:03:12.000Z",
+      "expiresAt": "2026-09-27T01:18:12.000Z",
+      "evidenceAlertIds": [
+        "pv-03"
+      ],
+      "patterns": [
+        "outside_business_hours_privilege_use"
+      ]
+    },
+    {
+      "ruleId": "xdr.privilege",
+      "account": "user03",
+      "sourceIp": "192.0.2.11",
+      "startsAt": "2026-09-27T01:19:08.000Z",
+      "expiresAt": "2026-09-27T01:34:08.000Z",
+      "evidenceAlertIds": [
+        "pv-04"
+      ],
+      "patterns": [
+        "administrator_group_addition"
+      ]
+    },
+    {
+      "ruleId": "xdr.privilege",
+      "account": "user04",
+      "sourceIp": "203.0.113.17",
+      "startsAt": "2026-09-27T02:06:21.000Z",
+      "expiresAt": "2026-09-27T02:21:21.000Z",
+      "evidenceAlertIds": [
+        "pv-05"
+      ],
+      "patterns": [
+        "administrator_group_addition"
+      ]
+    },
+    {
+      "ruleId": "xdr.privilege",
+      "account": "user05",
+      "sourceIp": "198.51.100.17",
+      "startsAt": "2026-09-27T04:08:02.000Z",
+      "expiresAt": "2026-09-27T04:23:02.000Z",
+      "evidenceAlertIds": [
+        "pv-06"
+      ],
+      "patterns": [
+        "unfamiliar_administrator_command"
+      ]
+    },
+    {
+      "ruleId": "xdr.privilege",
+      "account": "user06",
+      "sourceIp": "192.0.2.17",
+      "startsAt": "2026-09-27T05:16:29.000Z",
+      "expiresAt": "2026-09-27T05:31:29.000Z",
+      "evidenceAlertIds": [
+        "pv-07"
+      ],
+      "patterns": [
+        "administrator_group_addition"
+      ]
+    },
+    {
+      "ruleId": "xdr.privilege",
+      "account": "user07",
+      "sourceIp": "203.0.113.27",
+      "startsAt": "2026-09-27T06:02:18.000Z",
+      "expiresAt": "2026-09-27T06:17:18.000Z",
+      "evidenceAlertIds": [
+        "pv-08"
+      ],
+      "patterns": [
+        "unfamiliar_administrator_command"
+      ]
+    },
+    {
+      "ruleId": "xdr.privilege",
+      "account": "user08",
+      "sourceIp": "198.51.100.27",
+      "startsAt": "2026-09-27T06:33:07.000Z",
+      "expiresAt": "2026-09-27T06:48:07.000Z",
+      "evidenceAlertIds": [
+        "pv-09"
+      ],
+      "patterns": [
+        "administrator_group_addition"
+      ]
+    }
+  ]
+}

@@ -471,3 +471,7 @@ npm.cmd run regression:table -- --local
 ### 비밀값
 
 비밀값은 Vercel 환경변수 비밀 입력란에만 둡니다. `.env`, `bundle-notes.json`, `artifacts/`, `local-only/`는 Git과 제출 묶음에서 제외합니다. 시험 기록표·내보내기 파일·서버 기록에는 토큰·키·메모 본문·실제 사용자 ID를 넣지 않습니다. `npm.cmd run bundle`은 비밀값 패턴을 검사합니다.
+
+## 보너스 persistence · XDR-03
+
+제작 1~5와 판단 로직 보완을 완료했습니다. 가상 경보 결과는 block 8·alert 8·record 8, 정상 오차단 0건입니다. [단계 기록](XDR-03/README.md)을 참고하세요. 기존 known-cve XDR3와 별도 모듈이며 실제 운영 연결은 미완료입니다.

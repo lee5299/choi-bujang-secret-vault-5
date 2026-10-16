@@ -4,7 +4,7 @@
 
 ## 도구별 목차와 작업 기록
 
-전달받아 구현한 제작 요청은 XDR-01 (`brute-force`), XDR-02 (`web-injection`), XDR3 (`known-cve`, 제작 1~5)입니다.
+전달받아 구현한 제작 요청은 XDR-01 (`brute-force`), XDR-02 (`web-injection`), XDR3 (`known-cve`, 제작 1~5), XDR-03 (`persistence`, 제작 1~5)입니다.
 나머지 항목은 기존 저장소의 가상 경보 이름이며, 과제 번호·제작 요구사항은 전달받지 않았습니다.
 
 | 도구 | 항목 | 작업 기록·현재 상태 | 원본 가상 경보 |
@@ -12,7 +12,7 @@
 | XDR-01 | `brute-force` · 무차별 로그인 | [작업 기록](brute-force/README.md) · 로컬 구현·가상 시험 완료, 실제 연결 미완료 | [경보](fixtures/brute-force.json) |
 | XDR-02 | `web-injection` · 웹 주입 | [작업 기록](web-injection/README.md) · 제작 1~5·로컬 가상 시험 완료, 실제 연결 미완료 | [경보](fixtures/web-injection.json) |
 | XDR3 | `known-cve` · 알려진 취약점 | [작업 기록](known-cve/README.md) · 제작 1~5·가상 시험 완료, 정상 오차단 0건, 실제 운영 연결 미완료 | [경보](fixtures/known-cve.json) |
-| 번호 미확인 | `persistence` · 지속성 | 제작 요청 미전달 · 기존 가상 경보만 보관 | [경보](fixtures/persistence.json) |
+| XDR-03 | `persistence` · 지속성 | [단계 기록](../XDR-03/README.md) · 제작 1~5와 로직 보완, 가상 block 8·alert 8·record 8, 정상 오차단 0건, 운영 미연결 | [경보](fixtures/persistence.json) |
 | 번호 미확인 | `privilege` · 권한 상승 | 제작 요청 미전달 · 기존 가상 경보만 보관 | [경보](fixtures/privilege.json) |
 | 번호 미확인 | `exfiltration` · 자료 유출 | 제작 요청 미전달 · 기존 가상 경보만 보관 | [경보](fixtures/exfiltration.json) |
 

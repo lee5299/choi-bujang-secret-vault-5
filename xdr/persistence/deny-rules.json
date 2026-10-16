@@ -1,0 +1,93 @@
+{
+  "schema": "aleph.xdr.deny-rules.v1",
+  "moduleKey": "persistence",
+  "mode": "fixture",
+  "rules": [
+    {
+      "ruleId": "xdr.persistence",
+      "sourceIp": "203.0.113.12",
+      "startsAt": "2026-09-27T00:18:04.000Z",
+      "expiresAt": "2026-09-27T00:34:12.000Z",
+      "evidenceAlertIds": [
+        "ps-01",
+        "ps-02"
+      ],
+      "patterns": [
+        "unsigned_service_change",
+        "unfamiliar_scheduled_task"
+      ]
+    },
+    {
+      "ruleId": "xdr.persistence",
+      "sourceIp": "198.51.100.12",
+      "startsAt": "2026-09-27T01:06:28.000Z",
+      "expiresAt": "2026-09-27T01:21:28.000Z",
+      "evidenceAlertIds": [
+        "ps-03"
+      ],
+      "patterns": [
+        "startup_folder_change"
+      ]
+    },
+    {
+      "ruleId": "xdr.persistence",
+      "sourceIp": "192.0.2.12",
+      "startsAt": "2026-09-27T01:22:03.000Z",
+      "expiresAt": "2026-09-27T01:37:03.000Z",
+      "evidenceAlertIds": [
+        "ps-04"
+      ],
+      "patterns": [
+        "unsigned_service_change"
+      ]
+    },
+    {
+      "ruleId": "xdr.persistence",
+      "sourceIp": "203.0.113.19",
+      "startsAt": "2026-09-27T02:09:17.000Z",
+      "expiresAt": "2026-09-27T02:24:17.000Z",
+      "evidenceAlertIds": [
+        "ps-05"
+      ],
+      "patterns": [
+        "unfamiliar_scheduled_task"
+      ]
+    },
+    {
+      "ruleId": "xdr.persistence",
+      "sourceIp": "198.51.100.19",
+      "startsAt": "2026-09-27T04:07:45.000Z",
+      "expiresAt": "2026-09-27T04:22:45.000Z",
+      "evidenceAlertIds": [
+        "ps-06"
+      ],
+      "patterns": [
+        "unsigned_service_change"
+      ]
+    },
+    {
+      "ruleId": "xdr.persistence",
+      "sourceIp": "192.0.2.19",
+      "startsAt": "2026-09-27T05:14:08.000Z",
+      "expiresAt": "2026-09-27T05:29:08.000Z",
+      "evidenceAlertIds": [
+        "ps-07"
+      ],
+      "patterns": [
+        "unfamiliar_scheduled_task"
+      ]
+    },
+    {
+      "ruleId": "xdr.persistence",
+      "sourceIp": "203.0.113.33",
+      "startsAt": "2026-09-27T06:28:31.000Z",
+      "expiresAt": "2026-09-27T06:43:31.000Z",
+      "evidenceAlertIds": [
+        "ps-08"
+      ],
+      "patterns": [
+        "unsigned_service_change"
+      ]
+    }
+  ]
+}

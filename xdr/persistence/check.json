@@ -1,0 +1,24 @@
+{
+  "schema": "aleph.xdr.check.v1",
+  "scope": "fixture",
+  "alertCount": 24,
+  "normalEventCount": 8,
+  "normalBlocked": 0,
+  "normalAddressBlocked": 0,
+  "denyRuleCount": 7,
+  "liveZtnaConnected": false,
+  "fixtureReplay": {
+    "scope": "fixture",
+    "base": "simulated_allow",
+    "clearAttackCount": 8,
+    "clearAttackDenied": 8,
+    "ambiguousCount": 8,
+    "ambiguousPassed": 8,
+    "normalCount": 8,
+    "normalPassed": 8,
+    "normalDenied": 0,
+    "expiredRuleCount": 7,
+    "expiredRulesPassed": 7,
+    "baseResponsesPreserved": true
+  }
+}

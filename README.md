@@ -493,3 +493,5 @@ XDR-06 제작 2: [패턴 목록](xdr/exfiltration/patterns.json) 세 개와 각 
 XDR-06 제작 3: [단일 판단](xdr/exfiltration/decide.mjs)과 [판단 검증](XDR-06/판단검증.md). MITRE 근거와 과제의 수준·전송·패턴을 결합한 현재 가상 함수 판단 block 10·alert 10·record 10, 정상 10건 모두 record. 고정 바이트/횟수 기준 없이 모듈 11개·XDR 90개·전체 386개 통과. 실제 차단 연결은 미실행입니다.
 
 XDR-06 제작 4·5: [응답 부품](xdr/exfiltration/respond.mjs)과 공통 실행기를 연결했습니다. 가상 counts 10·10·10, 공격 10건 거부·애매/정상 각 10건 통과·정상 오차단 0건, 전체 392개·XDR 96개·로컬 빌드 통과. [제작·저장점 기록](XDR-06/제작45-저장점.md). 실제 Wazuh·ZTNA 운영 연결은 미완료입니다.
+
+2026-10-16 XDR-06 코드 저장점 545e424를 사용자 요청으로 GitHub main에 올리고 Vercel 배포 커밋·공개 판단 파일 해시 일치를 확인했습니다. counts block 10·alert 10·record 10·정상 오차단 0건. [배포 확인 기록](XDR-06/배포확인.md). 심판 제출은 사용자 직접 진행이며 운영 연결 미완료는 유지합니다.

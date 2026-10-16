@@ -14,7 +14,7 @@
 | 4 알림·차단 | `respond.mjs` | `applyRun({root, alerts, result})`. 후보 근거 재확인, `deny-rules.json`(시작·만료·근거 경보 ID), `xdr/alerts.log` 누적(moduleKey 포함), 추가 검사 부품 |
 | 5 가상 실행 | `result.json`, `check.json` | `npm.cmd run xdr:run -- <moduleKey>`. 정상 이벤트·정상 주소 오차단 0건 확인 |
 
-현재 `scripts/xdr-run.mjs`는 `brute-force`·`web-injection`·`known-cve`·`persistence`·`privilege`의 `respond.mjs`를 연결합니다.
+현재 `scripts/xdr-run.mjs`는 `brute-force`·`web-injection`·`known-cve`·`persistence`·`privilege`·`exfiltration`의 `respond.mjs`를 연결합니다.
 새 모듈의 응답 모듈을 연결하려면 그 조건에 moduleKey를 추가하고, 이 공통 파일 변경을 보고에 명시합니다.
 
 ## 판단 기준

@@ -7,7 +7,7 @@
 XDR-04 persistence는 사용자 보고로 작전 점수 100점·완성도 90/100 통과입니다. [통과 후 보완](../XDR-04/통과후보완.md)은 사용자 요청으로 GitHub에 반영하며 재채점 결과가 아닙니다.
 
 전달받아 구현한 제작 요청은 XDR-01 (`brute-force`), XDR-02 (`web-injection`), XDR-03 (`known-cve`, 제작 1~5), XDR-04 (`persistence`, 제작 1~5), XDR-05 (`privilege`, 제작 1~5)입니다.
-나머지 항목은 기존 저장소의 가상 경보 이름이며, 과제 번호·제작 요구사항은 전달받지 않았습니다.
+XDR-06 (`exfiltration`)은 제작 1 경보 읽기를 완료했습니다. 후속 제작은 별도 요청 시 진행합니다.
 
 | 도구 | 항목 | 작업 기록·현재 상태 | 원본 가상 경보 |
 | --- | --- | --- | --- |
@@ -16,7 +16,7 @@ XDR-04 persistence는 사용자 보고로 작전 점수 100점·완성도 90/100
 | XDR-03 | `known-cve` · 알려진 취약점 | [작업 기록](known-cve/README.md) · 제작 1~5·가상 시험 완료, 정상 오차단 0건, 실제 운영 연결 미완료 | [경보](fixtures/known-cve.json) |
 | XDR-04 | `persistence` · 지속성 | [단계 기록](../XDR-04/README.md) · 제작 1~5와 로직 보완, 가상 block 8·alert 8·record 8, 정상 오차단 0건, 운영 미연결 | [경보](fixtures/persistence.json) |
 | XDR-05 | `privilege` · 권한 상승 | [단계 기록](../XDR-05/README.md) · [상세 기록](privilege/README.md) · 제작 1~5·[작업 폴더 실행](../XDR-05/제작5.md) 완료, counts block 9·alert 8·record 9, 정상 오차단 0건, 운영 미연결 | [경보](fixtures/privilege.json) |
-| 번호 미확인 | `exfiltration` · 자료 유출 | 제작 요청 미전달 · 기존 가상 경보만 보관 | [경보](fixtures/exfiltration.json) |
+| XDR-06 | `exfiltration` · 자료 유출 | [제작 1 기록](../XDR-06/README.md) · 제작 1~5 완료: block 10·alert 10·record 10, 가상 공격 10건 거부·애매 10건/정상 10건 통과·정상 오차단 0건·운영 미연결 | [경보](fixtures/exfiltration.json) |
 
 각 도구의 제작 요청을 전달받으면 `xdr/<moduleKey>/`에 코드·패턴·결과와 작업 기록 `README.md`를 함께 둡니다.
 이 공통 문서에는 전체 목차·입출력 계약·실행 안내를 유지합니다. 아직 제작하지 않은 도구의 완료 기록은 만들지 않습니다.

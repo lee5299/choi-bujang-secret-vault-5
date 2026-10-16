@@ -1,0 +1,128 @@
+{
+  "schema": "aleph.xdr.deny-rules.v1",
+  "moduleKey": "exfiltration",
+  "mode": "fixture",
+  "scope": "fixture_destination",
+  "rules": [
+    {
+      "ruleId": "xdr.exfiltration",
+      "destinationIp": "203.0.113.50",
+      "startsAt": "2026-09-27T00:16:03.000Z",
+      "expiresAt": "2026-09-27T00:31:03.000Z",
+      "evidenceAlertIds": [
+        "ex-01"
+      ],
+      "patterns": [
+        "unfamiliar_destination_bulk_transfer"
+      ]
+    },
+    {
+      "ruleId": "xdr.exfiltration",
+      "destinationIp": "198.51.100.40",
+      "startsAt": "2026-09-27T00:16:48.000Z",
+      "expiresAt": "2026-09-27T00:31:48.000Z",
+      "evidenceAlertIds": [
+        "ex-02"
+      ],
+      "patterns": [
+        "outside_business_hours_archive_transfer"
+      ]
+    },
+    {
+      "ruleId": "xdr.exfiltration",
+      "destinationIp": "203.0.113.50",
+      "startsAt": "2026-09-27T01:05:14.000Z",
+      "expiresAt": "2026-09-27T01:20:14.000Z",
+      "evidenceAlertIds": [
+        "ex-03"
+      ],
+      "patterns": [
+        "unfamiliar_destination_bulk_transfer"
+      ]
+    },
+    {
+      "ruleId": "xdr.exfiltration",
+      "destinationIp": "198.51.100.40",
+      "startsAt": "2026-09-27T01:20:07.000Z",
+      "expiresAt": "2026-09-27T01:35:07.000Z",
+      "evidenceAlertIds": [
+        "ex-04"
+      ],
+      "patterns": [
+        "unfamiliar_destination_bulk_transfer"
+      ]
+    },
+    {
+      "ruleId": "xdr.exfiltration",
+      "destinationIp": "203.0.113.55",
+      "startsAt": "2026-09-27T02:04:26.000Z",
+      "expiresAt": "2026-09-27T02:19:26.000Z",
+      "evidenceAlertIds": [
+        "ex-05"
+      ],
+      "patterns": [
+        "unfamiliar_destination_bulk_transfer"
+      ]
+    },
+    {
+      "ruleId": "xdr.exfiltration",
+      "destinationIp": "192.0.2.90",
+      "startsAt": "2026-09-27T03:02:19.000Z",
+      "expiresAt": "2026-09-27T03:17:19.000Z",
+      "evidenceAlertIds": [
+        "ex-06"
+      ],
+      "patterns": [
+        "unfamiliar_destination_bulk_transfer"
+      ]
+    },
+    {
+      "ruleId": "xdr.exfiltration",
+      "destinationIp": "198.51.100.45",
+      "startsAt": "2026-09-27T04:12:08.000Z",
+      "expiresAt": "2026-09-27T04:27:08.000Z",
+      "evidenceAlertIds": [
+        "ex-07"
+      ],
+      "patterns": [
+        "outside_business_hours_archive_transfer"
+      ]
+    },
+    {
+      "ruleId": "xdr.exfiltration",
+      "destinationIp": "203.0.113.60",
+      "startsAt": "2026-09-27T05:03:41.000Z",
+      "expiresAt": "2026-09-27T05:18:41.000Z",
+      "evidenceAlertIds": [
+        "ex-08"
+      ],
+      "patterns": [
+        "unfamiliar_destination_bulk_transfer"
+      ]
+    },
+    {
+      "ruleId": "xdr.exfiltration",
+      "destinationIp": "203.0.113.61",
+      "startsAt": "2026-09-27T06:08:12.000Z",
+      "expiresAt": "2026-09-27T06:23:12.000Z",
+      "evidenceAlertIds": [
+        "ex-09"
+      ],
+      "patterns": [
+        "command_channel_data_transfer"
+      ]
+    },
+    {
+      "ruleId": "xdr.exfiltration",
+      "destinationIp": "198.51.100.46",
+      "startsAt": "2026-09-27T07:01:05.000Z",
+      "expiresAt": "2026-09-27T07:16:05.000Z",
+      "evidenceAlertIds": [
+        "ex-10"
+      ],
+      "patterns": [
+        "outside_business_hours_archive_transfer"
+      ]
+    }
+  ]
+}

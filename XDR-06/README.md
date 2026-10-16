@@ -1,0 +1,37 @@
+# XDR-06: 자료 빼돌리기를 잡아 냅니다
+
+제작 4·5 완료: 목적지 한정 가상 규칙·15분 만료·근거 ID·안전 알림 누적을 연결했습니다. block 10·alert 10·record 10, 공격 10건 거부·애매 10건/정상 10건 통과·정상 오차단 0건. [실행·저장점 기록](제작45-저장점.md). 아래 제작 3의 미실행 표시는 당시 기록입니다.
+
+
+현재 기준: 전달한 검토를 반영해 MITRE 근거와 과제의 수준·전송·패턴을 함께 대조합니다. **block 10·alert 10·record 10**, 정상 10건 모두 record. 모듈 11개·XDR 90개·전체 386개 통과. [현재 판단 검증](판단검증.md). 아래 초기 기록은 당시 기준과 통과 개수입니다.
+
+
+2026-10-16 제작 1 완료. 작업 폴더 `D:/defense_v2`, 브랜치 main, 인수 커밋 d9b57d4는 제작 직전 GitHub main과 같았으며 기존 미커밋 변경은 없었습니다.
+
+| 확인할 내용 | 위치 |
+| --- | --- |
+| 이번 요청 원문·요구사항과 자체 점검 | [원문](xdr-1.txt) · [요구사항](요구사항.md) |
+| 읽기 모듈·상세 기록 | [read-alerts.mjs](../xdr/exfiltration/read-alerts.mjs) · [README](../xdr/exfiltration/README.md) |
+| 보존한 원본·시험 | [가상 경보](../xdr/fixtures/exfiltration.json) · [시험](../test/xdr-exfiltration.test.mjs) |
+
+실제 로컬 확인: 원본 30건 → 다섯 항목의 JSON 30줄, 새 시험 2개·XDR 시험 81개·전체 회귀 377개 통과, 실패 0개.
+시각·출발 주소·가상 계정·규칙 수준·설명만 출력합니다. 민감 설명은 `[설명 제외]`, 무효 필드는 null로 남겨 한 경보당 한 행을 유지합니다.
+원본·기존 판정기·다른 모듈은 변경하지 않았습니다. 판단·알림·차단·운영 연결·배포·커밋·제출은 미실행입니다.
+
+실행: `node xdr/exfiltration/read-alerts.mjs`.
+편집기에서 **xdr → exfiltration → read-alerts.mjs**를 열고 터미널에서 실행합니다.
+정상 결과: 표준 출력 JSON 30줄, 표준 오류 `경보 30건 · 추출 30줄`.
+제외되어야 할 결과: 비밀번호·토큰 같은 설명, 추가 원본 필드, 허용하지 않은 주소·계정 출력.
+미완료 작업은 [TODO](../TODO.md)의 XDR-06에서 관리합니다.
+
+## 제작 2 완료 (2026-10-16)
+
+[원문](xdr-2.txt) · [패턴 목록](../xdr/exfiltration/patterns.json) · [상세 기록](../xdr/exfiltration/README.md).
+세 패턴의 이름·조건·한 줄 근거·MITRE 공식 출처를 정리했습니다. 모듈 3개·XDR 82개·전체 회귀 378개 통과입니다.
+확인: `Get-Content xdr/exfiltration/patterns.json`. 편집기 **xdr → exfiltration → patterns.json → patterns**를 엽니다. 정상은 각 패턴에 한 줄 근거가 있는 목록이며, 근거 누락·여러 줄·출처 불일치는 시험에서 거부됩니다. 판단·차단·배포·커밋은 미실행입니다.
+
+## 제작 3 초기 완료 기록 (현재 기준은 위 참고, 2026-10-16)
+
+[원문](xdr-3.txt) · [단일 판단 파일](../xdr/exfiltration/decide.mjs) · [수준별 대조와 판단 검증](판단검증.md).
+패턴 사본 내장·동기 decide 하나·import/파일/네트워크/환경변수 참조 없이 실행했습니다. 함수 판단은 block 10·alert 10·record 10, 정상 10건은 모두 record입니다. 모듈 8개·XDR 87개·전체 383개 통과.
+실행: `node --test test/xdr-exfiltration.test.mjs`. 편집기 **xdr → exfiltration → decide.mjs**에서 확인합니다. 명확한 조합은 block 후보·의심은 alert·정상은 record이며 실제 전송 차단은 아닙니다. 응답 부품·운영 연결·결과 파일 생성·배포·커밋은 미실행입니다.

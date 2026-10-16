@@ -145,6 +145,29 @@ export async function replayFixture(alerts, store) {
   return summary;
 }
 
+export function explainDecision(alert, checked, store) {
+  const clear = checked.action === 'block';
+  const knownPattern = names.has(checked.reason);
+  const row = projectAlert(alert);
+  const rule = store.rules.find(item => item.evidenceAlertIds.includes(alert?.id));
+  const level = alert?.rule?.level ?? alert?.level;
+  const high = Number.isInteger(level) && level >= 10 && level <= 16;
+  const matched = clear ? {
+    unsigned_service_change: 'service_change_with_unsigned_and_extra_signal_or_unfamiliar_persistence',
+    unfamiliar_scheduled_task: 'temporary_task_target_with_unfamiliar_shared_or_outside_hours_signal',
+    startup_folder_change: 'startup_change_with_unfamiliar_or_shared_temporary_target',
+  }[checked.reason] : { 0.78: 'service_change_and_unsigned', 0.72: 'temporary_task_target',
+    0.68: 'startup_change', 0.55: 'pattern_related_event' }[checked.confidence];
+  return {
+    matchedConditions: [...(knownPattern && matched ? [matched] : []),
+      ...(knownPattern && high ? ['rule_level_10_to_16'] : [])],
+    missingConditions: checked.action === 'alert' ? [high ? 'clear_unresolved_pattern_combination' : 'rule_level_10_to_16'] : [],
+    enforcement: rule ? 'rule_created' : !clear ? 'not_block_candidate'
+      : !row.sourceIp || !row.timestamp || !row.account ? 'invalid_fixture_metadata'
+      : 'candidate_excluded_to_protect_shared_address_or_invalid_evidence',
+  };
+}
+
 export async function applyRun({ root, alerts, result }) {
   if (result?.schema !== 'aleph.xdr.result.v1' || result.moduleKey !== 'persistence'
       || !Array.isArray(alerts) || !Array.isArray(result.decisions)) throw new Error('지속성 실행 결과 형식을 확인하세요.');
@@ -155,9 +178,12 @@ export async function applyRun({ root, alerts, result }) {
   const logs = [];
   for (const [id, alert] of uniqueAlerts) {
     const checked = decide(alert);
-    if (checked.action === 'record' || !sameDecision(byId.get(id), checked)) continue;
+    if (!sameDecision(byId.get(id), checked)) continue;
+    if (checked.action === 'record') continue;
+    const explanation = explainDecision(alert, checked, store);
     logs.push({ moduleKey: 'persistence', mode: 'fixture', alertId: id, action: checked.action,
-      confidence: checked.confidence, pattern: names.has(checked.reason) ? checked.reason : '패턴 없음' });
+      confidence: checked.confidence, pattern: names.has(checked.reason) ? checked.reason : '패턴 없음',
+      ...explanation });
   }
   const normal = alerts.filter(alert => decide(alert).action === 'record');
   const check = { schema: 'aleph.xdr.check.v1', scope: 'fixture', alertCount: alerts.length,

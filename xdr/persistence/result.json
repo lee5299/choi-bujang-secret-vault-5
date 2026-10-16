@@ -83,7 +83,7 @@
     {
       "alertId": "ps-14",
       "action": "alert",
-      "confidence": 0.55,
+      "confidence": 0.68,
       "reason": "startup_folder_change"
     },
     {

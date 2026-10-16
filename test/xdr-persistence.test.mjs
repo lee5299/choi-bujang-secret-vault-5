@@ -15,6 +15,65 @@ const judgeSource = await readFile(new URL('../xdr/persistence/decide.mjs', impo
 const freshDecide = () => new Script(judgeSource.replace('export function decide', 'function decide') + '\ndecide;')
   .runInNewContext({});
 
+test('다른 사건의 실패와 삭제 부정문이 명확한 공격을 낮추지 않습니다', () => {
+  const decide = freshDecide();
+  const attack = '서명 없는 새 서비스가 임시 폴더의 실행 파일을 가리킵니다.';
+  for (const tail of ['이전 로그인 실패가 있었습니다.', '삭제되지 않았습니다.',
+    '삭제하지 않았습니다.', '제거되지 않았습니다.', '삭제가 실패했습니다.']) {
+    assert.equal(decide({ rule: { level: 12, description: `${attack} ${tail}` } }).action, 'block', tail);
+  }
+  for (const tail of ['해당 서비스는 삭제되었습니다.', '해당 서비스 등록은 차단됐습니다.']) {
+    assert.equal(decide({ rule: { level: 12, description: `${attack} ${tail}` } }).action, 'alert', tail);
+  }
+  const other = '다른 예약 작업 등록은 실패했습니다.';
+  assert.equal(decide({ rule: { level: 12, description: `${attack} ${other}` } }).action, 'block');
+  assert.equal(decide({ rule: { level: 12, description: `${other} ${attack}` } }).action, 'block');
+});
+
+test('영문 서비스·예약 작업·시작 폴더 경보와 단순 표현 변형을 인식합니다', () => {
+  const decide = freshDecide();
+  const descriptions = [
+    'A new unsigned service points to an executable in a temporary folder.',
+    'An unfamiliar scheduled task runs a program from a temporary directory outside class hours.',
+    'A program not in the baseline was added to the startup folder.',
+    'An unknown service was registered to persist after reboot.',
+    '서명 없는 서비스가 새로 등록되어 임시 디렉터리의 실행 파일을 가리킵니다.',
+  ];
+  for (const description of descriptions) {
+    assert.equal(decide({ rule: { level: 12, description } }).action, 'block', description);
+    assert.equal(decide({ rule: { level: 9, description } }).action, 'alert', description);
+  }
+  for (const description of [
+    'A new service points to a temporary folder. Its signature is unknown.',
+    'An unfamiliar scheduled task in a temporary folder was deleted.',
+    'Registration of an unsigned service in a temporary folder was blocked.',
+    'An unfamiliar scheduled task runs a program from a temporary folder. The scheduled task was deleted.',
+    'A new unsigned service in a temporary folder was not deleted.',
+  ]) {
+    const expected = description.includes('not deleted') ? 'block' : 'alert';
+    assert.equal(decide({ rule: { level: 12, description } }).action, expected, description);
+  }
+});
+
+test('정상 재시작·승인된 서명 수업 도구는 기록하되 위험 신호를 승인 문구로 덮지 않습니다', () => {
+  const decide = freshDecide();
+  for (const description of [
+    '기존 서비스가 서명된 채로 다시 시작했습니다.',
+    'An existing signed service was restarted with the same executable.',
+    '평소 목록에 없는 서명된 수업 도구가 시작 폴더에 추가됐습니다. 관리자가 승인했습니다.',
+    'An administrator-approved signed classroom tool was added to the startup folder.',
+  ]) assert.equal(decide({ rule: { level: 12, description } }).action, 'record', description);
+  for (const description of [
+    '서명 없는 새 서비스가 임시 폴더의 실행 파일을 가리킵니다. 관리자가 승인했습니다.',
+    '처음 보는 예약 작업이 임시 폴더를 가리킵니다. 다른 수업 도구는 관리자가 승인했습니다.',
+    'An unfamiliar scheduled task runs an unsigned executable from a temporary folder. Administrator approved.',
+  ]) assert.equal(decide({ rule: { level: 12, description } }).action, 'block', description);
+  for (const description of [
+    '평소 목록에 없는 수업 도구가 시작 폴더에 추가됐습니다. 관리자가 승인했습니다.',
+    '서명된 수업 도구가 시작 폴더에 추가됐습니다. 관리자가 승인하지 않았습니다.',
+  ]) assert.notEqual(decide({ rule: { level: 12, description } }).action, 'record', description);
+});
+
 test('판단 파일 맨 위 상수는 패턴 목록과 같고 동기 decide 하나만 내보냅니다', async () => {
   const patterns = JSON.parse(await readFile(new URL('../xdr/persistence/patterns.json', import.meta.url), 'utf8')).patterns;
   const embedded = judgeSource.match(/^const PATTERNS = ([\s\S]*?);\s*\/\//u);
@@ -229,9 +288,19 @@ test('시험 경보를 다시 흘리면 명확한 공격만 막히고 애매·�
       assert.equal(lines.length, 1 + 16 * round, '알림·차단 후보만 한 줄씩 누적');
       for (const line of lines.slice(1)) {
         const row = JSON.parse(line);
-        assert.deepEqual(Object.keys(row), ['moduleKey', 'mode', 'alertId', 'action', 'confidence', 'pattern']);
+        assert.deepEqual(Object.keys(row), ['moduleKey', 'mode', 'alertId', 'action', 'confidence', 'pattern',
+          'matchedConditions', 'missingConditions', 'enforcement']);
         assert.equal(row.moduleKey, 'persistence');
         assert.ok(['block', 'alert'].includes(row.action));
+        assert.ok(row.matchedConditions.length > 0);
+        if (row.action === 'block') {
+          assert.ok(row.matchedConditions.includes('rule_level_10_to_16'));
+          assert.deepEqual(row.missingConditions, []);
+          assert.equal(row.enforcement, 'rule_created');
+        } else {
+          assert.ok(row.missingConditions.length > 0);
+          assert.equal(row.enforcement, 'not_block_candidate');
+        }
         assert.doesNotMatch(line, /\d+\.\d+\.\d+\.\d+|user\d|svc-lab|임시|서명/u);
       }
     }
@@ -239,6 +308,27 @@ test('시험 경보를 다시 흘리면 명확한 공격만 막히고 애매·�
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
+});
+
+test('알림 근거는 미충족 수준·공유 주소 제외를 구분하고 원문이나 비밀값을 포함하지 않습니다', async () => {
+  const { buildFixtureRules, explainDecision } = await import(respondUrl);
+  const fixture = JSON.parse(await readFile(fixtureUrl, 'utf8'));
+  const alert = structuredClone(fixture.alerts[0]);
+  alert.rule.level = 9;
+  const checked = judgeModule.decide(alert);
+  const none = { rules: [] };
+  const low = explainDecision(alert, checked, none);
+  assert.deepEqual(low.missingConditions, ['rule_level_10_to_16']);
+  assert.ok(!low.matchedConditions.includes('rule_level_10_to_16'));
+  const shared = structuredClone(fixture.alerts[16]);
+  shared.data.srcip = fixture.alerts[0].data.srcip;
+  shared.timestamp = fixture.alerts[0].timestamp;
+  const alerts = [...fixture.alerts, shared];
+  const result = await fixtureRun(alerts);
+  const store = buildFixtureRules(alerts, result.decisions);
+  const blockedCandidate = explainDecision(fixture.alerts[0], judgeModule.decide(fixture.alerts[0]), store);
+  assert.equal(blockedCandidate.enforcement, 'candidate_excluded_to_protect_shared_address_or_invalid_evidence');
+  assert.doesNotMatch(JSON.stringify(blockedCandidate), /203\.0\.113|user01|임시|서명/u);
 });
 
 test('정상·애매한 사용자가 같은 주소를 쓰거나 결과가 위조되면 차단 규칙을 만들지 않습니다', async () => {

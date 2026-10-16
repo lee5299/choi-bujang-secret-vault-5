@@ -6,7 +6,7 @@
 
 ## 현재 위치
 
-- 2026-10-16 사용자 요청으로 persistence XDR-03 제작 1~5와 판단 로직 보완본을 GitHub에 올립니다. 결과는 가상 block 8·alert 8·record 8입니다. [XDR-03 기록](XDR-03/README.md)을 확인하며 기존 known-cve XDR3와 구분합니다.
+- 2026-10-16 사용자 요청으로 persistence XDR-04 제작 1~5와 판단 로직 보완본을 GitHub에 올립니다. 결과는 가상 block 8·alert 8·record 8입니다. [XDR-04 기록](XDR-04/README.md)을 확인하며 기존 known-cve XDR3와 구분합니다.
 
 - 현재는 XDR3의 `X03_AMBIGUOUS_NOT_ALERT` 및 정상 기록 건수 오류를 보완한 수정본의 재제출 준비입니다. 실행 코드 변경은 `xdr/known-cve/decide.mjs`의 확신도 분기 네 줄뿐입니다. 결과는 block 8·alert 8·record 8, 정상 차단 0건이며 단일 파일 검사·전체 시험 341개·로컬 빌드가 통과했습니다. 코드 저장점 `c16acce35727f02559c910f633f9916db5870281`를 GitHub main에 올렸고 공개 판단 파일의 해시 일치를 확인했습니다. `respond.mjs`와 기존 ZTNA 규칙은 보존합니다. 배포 확인 후 설명 문구만 전달하고 최종 제출은 사용자가 직접 합니다. 이 결과 기록만 담는 커밋과 코드 저장점은 구분하며 아래 cbf23ce·814e2ab는 이전 제출본 기록입니다.
 

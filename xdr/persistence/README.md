@@ -1,8 +1,8 @@
-# XDR-03 persistence · 제작 기록
+# XDR-04 persistence · 제작 기록
 
 ## 목표와 준비 확인
 
-2026-10-16, [제작 1 요청 원문](../../XDR-03/xdr-1.txt)부터 시작하여 후속 요청에 따라 제작 1~5를 구현했습니다.
+2026-10-16, [제작 1 요청 원문](../../XDR-04/xdr-1.txt)부터 시작하여 후속 요청에 따라 제작 1~5를 구현했습니다.
 AGENTS.md, 루트 README, TODO, 단계 시작·XDR 절차와 기존 읽기 모듈을 확인했습니다.
 인수 HEAD는 `ecd8603`(12단계 저장점), 설정 step 12·판정기 RULE_IDS 6개입니다.
 루트 README 최신 제출 기록과 HEAD 차이가 있어 준비 때 보고했고, 이후 사용자 제작 1 요청 범위에서 진행했습니다.
@@ -28,7 +28,7 @@ AGENTS.md, 루트 README, TODO, 단계 시작·XDR 절차와 기존 읽기 모�
 
 - `xdr/persistence/read-alerts.mjs`: 안전한 다섯 항목 투영과 JSON Lines 출력.
 - `test/xdr-persistence.test.mjs`: CLI 줄 수·원본 보존·비밀값 제외·형식 오류 검사.
-- `XDR-03/README.md`, `XDR-03/xdr-1.txt`, 이 파일: 단계 안내·원문·수행 결과.
+- `XDR-04/README.md`, `XDR-04/xdr-1.txt`, 이 파일: 단계 안내·원문·수행 결과.
 - 루트 `README.md`, `xdr/README.md`, `TODO.md`: 목차와 후속 작업 연결.
 
 ## 시험과 검증 범위
@@ -47,7 +47,7 @@ AGENTS.md, 루트 README, TODO, 단계 시작·XDR 절차와 기존 읽기 모�
 
 ## 제작 2 · 패턴 목록 (2026-10-16)
 
-[제작 2 요청 원문](../../XDR-03/xdr-2.txt)에 따라 [patterns.json](patterns.json)을 추가했습니다.
+[제작 2 요청 원문](../../XDR-04/xdr-2.txt)에 따라 [patterns.json](patterns.json)을 추가했습니다.
 각 패턴은 이름·찾는 조건(signal/require/exclude)·한 줄 근거(evidence)·공식 출처(source)를 가집니다.
 
 | 패턴 | 직접 근거 |
@@ -65,19 +65,19 @@ AGENTS.md, 루트 README, TODO, 단계 시작·XDR 절차와 기존 읽기 모�
 제작 1과 같이 TEMP·TMP를 Git 제외 로컬 시험 폴더로 지정했습니다.
 시험 로그는 `local-only/xdr03-patterns-tests.log`, `local-only/xdr03-patterns-regression.log`입니다.
 실행 명령: `node --test test/xdr-persistence.test.mjs` (현재 4개 시험).
-파일 목록에서 **XDR-03 → README.md → patterns.json**을 누릅니다.
+파일 목록에서 **XDR-04 → README.md → patterns.json**을 누릅니다.
 정상 예상: 세 패턴 모두 한 줄 근거와 공식 출처 존재. 거부 예상: 시험에서 빈 근거·줄바꿈이 든 근거·누락 조건·잘못된 출처를 실패로 처리.
 실제 경보 판정·PC 격리·운영 연결·배포·커밋·심판 시험은 미실행입니다.
 
 ## 다시 실행하기
 
 프로젝트 루트에서 `node xdr/persistence/read-alerts.mjs`.
-파일 목록에서 **XDR-03 → README.md → 확인용 읽기 모듈**을 누릅니다.
+파일 목록에서 **XDR-04 → README.md → 확인용 읽기 모듈**을 누릅니다.
 정상: JSON 24줄과 stderr 건수 요약. 제외: 민감 설명 `[설명 제외]`, 허용 범위 밖 주소·계정 null.
 
 ## 제작 3 · 독립 판단 (2026-10-16)
 
-[요청 원문](../../XDR-03/xdr-3.txt)에 따라 `decide.mjs`를 추가했습니다.
+[요청 원문](../../XDR-04/xdr-3.txt)에 따라 `decide.mjs`를 추가했습니다.
 파일 맨 위 PATTERNS는 patterns.json의 patterns 배열 전체 사본이며 시험에서 구조·내용 일치를 확인합니다.
 패턴 이름은 이 상수에서 가져오고 관찰 조건은 같은 파일의 명시적 신호 검사로 구현했습니다.
 내보내기는 동기 `decide(alert)` 하나뿐이며 다른 파일·패키지·네트워크·환경변수·시계·외부 상태를 사용하지 않습니다.
@@ -101,7 +101,7 @@ ps-08은 목록 밖 서비스와 지속성 신호가 있지만 서비스 패턴�
 원본 경보와 제작 2 패턴을 수정해 그 근거를 보충하지 않았습니다.
 reason에는 일치하는 패턴 이름 하나만 반환하고, 여러 패턴은 가장 높은 점수·동점 시 목록 순서로 선택합니다.
 
-추가·수정 파일: `decide.mjs`, `test/xdr-persistence.test.mjs`, `XDR-03/xdr-3.txt` 및 단계/루트 목차·TODO입니다.
+추가·수정 파일: `decide.mjs`, `test/xdr-persistence.test.mjs`, `XDR-04/xdr-3.txt` 및 단계/루트 목차·TODO입니다.
 기존 ZTNA 판정기·공통 실행기·다른 모듈·가상 원본을 보존했습니다.
 
 검증:
@@ -113,13 +113,13 @@ reason에는 일치하는 패턴 이름 하나만 반환하고, 여러 패턴은
 - TEMP·TMP는 앞선 제작과 같은 로컬 전용 시험 폴더로 지정했습니다. 로그는 `local-only/xdr03-decide-tests.log`·`local-only/xdr03-decide-regression.log`입니다.
 
 학생 실행 명령: `node --test test/xdr-persistence.test.mjs`.
-파일 목록 **XDR-03 → README.md → 독립 판단**을 누릅니다.
+파일 목록 **XDR-04 → README.md → 독립 판단**을 누릅니다.
 정상 예상은 8개 시험 통과이며, 높은 수준만으로 정상 사건을 block하거나 서명 미확인을 서명 없음으로 처리하면 시험에서 거부합니다.
 제작 4 응답·제작 5 실행 기록은 아직 없습니다. result.json 생성·알림·실제 PC 격리·운영 연결·배포·커밋·심판 시험은 미실행입니다.
 
 ## 제작 4 · 알림과 차단 (2026-10-16)
 
-[요청 원문](../../XDR-03/xdr-4.txt)에 따라 `respond.mjs`를 완성했습니다. 이전 세션이 만든 초안을 이어받아 겹치는 규칙 처리를 고치고 시험을 추가했습니다.
+[요청 원문](../../XDR-04/xdr-4.txt)에 따라 `respond.mjs`를 완성했습니다. 이전 세션이 만든 초안을 이어받아 겹치는 규칙 처리를 고치고 시험을 추가했습니다.
 `decide.mjs`는 변경하지 않았습니다. 파일 쓰기·규칙 생성·판정기 연결은 모두 `respond.mjs`에서만 합니다.
 
 동작:
@@ -152,7 +152,7 @@ reason에는 일치하는 패턴 이름 하나만 반환하고, 여러 패턴은
 - `xdr/persistence/respond.mjs`: 규칙 합치기와 근거 수 기반 수명 검사 추가.
 - `scripts/xdr-run.mjs`: 응답 모듈 연결 조건에 `persistence` 추가(공통 파일 변경, 절차 문서 xdr-module.md 주의 항목에 따름). 이전 세션 초안에서 이미 반영돼 있었습니다.
 - `test/xdr-persistence.test.mjs`: 재생·정상 공유 주소·위조 결과·실제 판정기 연결·변조 규칙 시험 4개 추가.
-- `XDR-03/xdr-4.txt`, `XDR-03/README.md`, 이 파일, `xdr/README.md`, 루트 `README.md`, `TODO.md`: 원문과 기록.
+- `XDR-04/xdr-4.txt`, `XDR-04/README.md`, 이 파일, `xdr/README.md`, 루트 `README.md`, `TODO.md`: 원문과 기록.
 
 검증:
 
@@ -161,13 +161,13 @@ reason에는 일치하는 패턴 이름 하나만 반환하고, 여러 패턴은
 - 위 시험은 Claude 작업 공간(Node 22)에서 실행했습니다. 전체 회귀는 제작 5에서 실행했습니다(아래).
 
 학생 실행 명령: `node --test test/xdr-persistence.test.mjs`.
-파일 목록 **XDR-03 → README.md → 알림과 차단**을 누릅니다.
+파일 목록 **XDR-04 → README.md → 알림과 차단**을 누릅니다.
 정상 예상: 12개 통과. 거부 예상: 정상 사용자 주소 차단·위조 block 규칙화·만료 연장 규칙 적용·기존 deny/step_up 덮어쓰기가 생기면 시험 실패.
 저장소의 `result.json`·`check.json`·`deny-rules.json` 생성과 `xdr/alerts.log` 실제 누적은 제작 5 실행에서 합니다. 실제 PC 격리·운영 ZTNA 연결·배포·커밋·심판 시험은 미실행입니다.
 
 ## 제작 5 · 시험 경보로 돌려 보기 (2026-10-16)
 
-[요청 원문](../../XDR-03/xdr-5.txt)에 따라 `npm run xdr:run -- persistence`를 실행했습니다.
+[요청 원문](../../XDR-04/xdr-5.txt)에 따라 `npm run xdr:run -- persistence`를 실행했습니다.
 이 세션은 PC 터미널에 입력할 수 없어, PC 저장소의 최신 파일(실행기·판단·응답·패턴·원본 경보·alerts.log)을 그대로 복사한 Claude 작업 공간(Node 22)에서 같은 명령을 실행하고 결과 파일을 PC 저장소에 썼습니다.
 
 | 항목 | 결과 |
@@ -183,21 +183,21 @@ reason에는 일치하는 패턴 이름 하나만 반환하고, 여러 패턴은
 block 7건은 서명 없는 서비스 생성·변경(ps-01·04·06), 낯선 예약 작업·임시 실행 대상(ps-02·05·07), 시작 폴더 추가(ps-03)입니다.
 ps-08은 당시 결정대로 alert(0.55)였습니다. 이후 판단 로직 점검으로 block이 됐습니다(아래).
 
-변경·생성 파일: `xdr/persistence/result.json`, `check.json`, `deny-rules.json`, `xdr/alerts.log`(추가만), `XDR-03/xdr-5.txt`, 기록 문서들.
+변경·생성 파일: `xdr/persistence/result.json`, `check.json`, `deny-rules.json`, `xdr/alerts.log`(추가만), `XDR-04/xdr-5.txt`, 기록 문서들.
 
 전체 회귀: `node --test test/*.test.mjs` **315개 통과, 실패 0**.
 PC의 `local-only/node_modules.zip`(package.json과 같은 jose 6.2.12·supabase-js 2.117.2·@simplewebauthn/server 14.0.0)을 풀어 새 패키지를 설치하지 않고 실행했습니다.
 TMPDIR은 저장소 안 `local-only/xdr03-test-temp`로 지정했고, 로그는 `local-only/xdr03-run-regression.log`입니다.
 
 학생 실행 명령: `npm.cmd run xdr:run -- persistence`.
-파일 목록 **XDR-03 → README.md → result.json → counts**, 이어 **check.json → fixtureReplay**를 누릅니다.
+파일 목록 **XDR-04 → README.md → result.json → counts**, 이어 **check.json → fixtureReplay**를 누릅니다.
 정상 예상: `block 7 · alert 9 · record 8`, normalBlocked 0. 거부 예상: 명확한 지속성 공격 7건이 block, 유효한 가상 규칙에서 deny.
 다시 실행하면 alerts.log에 16줄이 더 쌓이며, 만료는 경보 시각 기준이라 차단이 되살아나지 않습니다.
 실제 Wazuh 수신·운영 ZTNA 차단·PC 격리·배포·커밋·심판 시험은 미실행입니다.
 
 ## 판단 로직 점검·수정 (2026-10-16)
 
-[요청 기록](../../XDR-03/xdr-logic-check.txt): confidence 계산 방식 질문 뒤, 사용자가 결과가 8·8·8이 아닌 이유를 근거로 점검해 달라고 요청했고 반영을 지시했습니다.
+[요청 기록](../../XDR-04/xdr-logic-check.txt): confidence 계산 방식 질문 뒤, 사용자가 결과가 8·8·8이 아닌 이유를 근거로 점검해 달라고 요청했고 반영을 지시했습니다.
 **ps-08 alert 유지라는 이전 결정은 이 지시로 대체됩니다.** 앞으로 ps-08은 block이 기준입니다.
 
 점검 근거:

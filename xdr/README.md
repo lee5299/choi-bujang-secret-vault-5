@@ -16,7 +16,7 @@ XDR-06 (`exfiltration`)은 제작 1 경보 읽기를 완료했습니다. 후속 
 | XDR-03 | `known-cve` · 알려진 취약점 | [작업 기록](known-cve/README.md) · 제작 1~5·가상 시험 완료, 정상 오차단 0건, 실제 운영 연결 미완료 | [경보](fixtures/known-cve.json) |
 | XDR-04 | `persistence` · 지속성 | [단계 기록](../XDR-04/README.md) · 제작 1~5와 로직 보완, 가상 block 8·alert 8·record 8, 정상 오차단 0건, 운영 미연결 | [경보](fixtures/persistence.json) |
 | XDR-05 | `privilege` · 권한 상승 | [단계 기록](../XDR-05/README.md) · [상세 기록](privilege/README.md) · 제작 1~5·[작업 폴더 실행](../XDR-05/제작5.md) 완료, counts block 9·alert 8·record 9, 정상 오차단 0건, 운영 미연결 | [경보](fixtures/privilege.json) |
-| XDR-06 | `exfiltration` · 자료 유출 | [제작 1 기록](../XDR-06/README.md) · 제작 1~5 완료: block 10·alert 10·record 10, 가상 공격 10건 거부·애매 10건/정상 10건 통과·정상 오차단 0건·운영 미연결 | [경보](fixtures/exfiltration.json) |
+| XDR-06 | `exfiltration` · 자료 유출 | [제작 1 기록](../XDR-06/README.md) · 사용자 보고로 과제 통과(점수 미전달). 제작 1~5 완료·block 10·alert 10·record 10·정상 오차단 0건·운영 미연결 | [경보](fixtures/exfiltration.json) |
 
 각 도구의 제작 요청을 전달받으면 `xdr/<moduleKey>/`에 코드·패턴·결과와 작업 기록 `README.md`를 함께 둡니다.
 이 공통 문서에는 전체 목차·입출력 계약·실행 안내를 유지합니다. 아직 제작하지 않은 도구의 완료 기록은 만들지 않습니다.
